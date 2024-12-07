@@ -1,0 +1,48 @@
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@mixin button-base {
+  font-family: $font-family;
+  font-weight: $font-weight-medium;
+  border-radius: $border-radius-pill;
+  padding: $spacing-md $spacing-lg;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  transition: $transition-default;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+@mixin button-primary {
+  @include button-base;
+  background-color: $primary;
+  color: $primary-contrast;
+
+  &:hover {
+    background-color: $primary-dark;
+  }
+}
+
+@mixin button-outlined {
+  @include button-base;
+  background-color: transparent;
+  border: 1px solid $primary;
+  color: $primary;
+
+  &:hover {
+    background-color: rgba($primary, 0.04);
+  }
+} 

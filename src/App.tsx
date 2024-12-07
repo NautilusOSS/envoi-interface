@@ -14,10 +14,10 @@ import {
   WalletManager,
   WalletProvider,
 } from "@txnlab/use-wallet-react";
-import { ThemeProvider } from "@mui/material/styles";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import CssBaseline from "@mui/material/CssBaseline";
-import { theme } from "./theme";
 import EnvoiLayout from "./layouts/EnvoiLayout";
+import ProfilePage from "./pages/ProfilePage";
 
 // New component that uses the wallet hook
 const AppRoutes: React.FC = () => {
@@ -27,6 +27,7 @@ const AppRoutes: React.FC = () => {
         {routes.map((el, key) => (
           <Route key={key} path={el.path} Component={el.Component} />
         ))}
+        <Route path="/:name" element={<ProfilePage />} />
       </Routes>
     </EnvoiLayout>
   );
@@ -44,16 +45,16 @@ const App: React.FC = () => {
       WalletId.KIBISIS,
       {
         id: WalletId.LUTE,
-        options: { siteName: "Envoi" },
+        options: { siteName: "enVoi" },
       },
       {
         id: WalletId.BIATEC,
         options: {
           projectId: walletConnectProjectId,
           metadata: {
-            name: "Envoi",
+            name: "enVoi",
             url: "https://envoi.voi",
-            description: "Envoi Name Service",
+            description: "enVoi Name Service",
             icons: ["https://envoi.voi/favicon.ico"],
           },
           themeMode: "light",
@@ -64,9 +65,9 @@ const App: React.FC = () => {
         options: {
           projectId: walletConnectProjectId,
           metadata: {
-            name: "Envoi",
+            name: "enVoi",
             url: "https://envoi.voi",
-            description: "Envoi Name Service",
+            description: "enVoi Name Service",
             icons: ["https://envoi.voi/favicon.ico"],
           },
           themeMode: "light",
@@ -82,7 +83,7 @@ const App: React.FC = () => {
   });
 
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider>
       <CssBaseline />
       <WalletProvider manager={walletManager}>
         <QueryClientProvider client={queryClient}>

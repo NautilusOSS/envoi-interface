@@ -6,7 +6,6 @@ import {
   Toolbar,
   Typography,
   Button,
-  useTheme,
   Drawer,
   List,
   ListItem,
@@ -14,13 +13,26 @@ import {
   Avatar,
   IconButton,
   Stack,
-  Divider,
+  Menu,
+  MenuItem,
+  Modal,
+  CircularProgress,
 } from "@mui/material";
 import { useWallet } from "@txnlab/use-wallet-react";
 import { Link, useLocation } from "react-router-dom";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { createRSVPService } from "../services/rsvp";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
+import SettingsIcon from "@mui/icons-material/Settings";
+import NetworkIcon from "@mui/icons-material/Hub";
+import { NetworkSelector } from "@/components/NetworkSelector";
+import { useVoiBalance } from "../hooks/useVoiBalance";
+import InfoIcon from "@mui/icons-material/Info";
+import ContractInfoModal from "../components/ContractInfoModal";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import LightModeIcon from "@mui/icons-material/LightMode";
+import { useTheme } from "../contexts/ThemeContext";
+import PersonIcon from "@mui/icons-material/Person";
 
 interface NavLinkProps {
   to: string;
@@ -100,16 +112,37 @@ const purpleOutlinedStyles = {
 const RSVP_CONTRACT_ID = 740413;
 const EMPTY_NODE =
   "0000000000000000000000000000000000000000000000000000000000000000";
-const USDC_APP_ID = 6779767;  // USDC asset ID on Voi
+const USDC_APP_ID = 6779767; // USDC asset ID on Voi
+
+const NETWORK_CONFIG = {
+  mainnet: {
+    indexerUrl: "https://mainnet-idx.voi.nodely.dev",
+    algodUrl: "https://mainnet-api.voi.nodely.dev",
+  },
+  testnet: {
+    indexerUrl: "https://testnet-idx.voi.nodely.dev",
+    algodUrl: "https://testnet-api.voi.nodely.dev",
+  },
+} as const;
 
 const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
   const { activeAccount, activeAddress, wallets } = useWallet();
   const location = useLocation();
-  const theme = useTheme();
   const [displayName, setDisplayName] = useState<string>("");
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [voiBalance, setVoiBalance] = useState<string>("0");
   const [usdcBalance, setUsdcBalance] = useState<string>("0");
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedNetwork, setSelectedNetwork] = useState<"mainnet" | "testnet">(
+    () =>
+      (localStorage.getItem("selectedNetwork") as "mainnet" | "testnet") ||
+      "testnet"
+  );
+  const [networkModalOpen, setNetworkModalOpen] = useState(false);
+  const [infoModalOpen, setInfoModalOpen] = useState(false);
+  const { mode, toggleTheme } = useTheme();
+
+  const { balance, loading } = useVoiBalance(activeAddress, selectedNetwork);
 
   useEffect(() => {
     const fetchName = async () => {
@@ -171,8 +204,8 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
       }
 
       try {
-        const balance = await activeAccount.balance();
-        // Convert microAlgos to VOI and format to 2 decimal places
+        const accountInfo = await activeAccount.getAccountInfo();
+        const balance = accountInfo.amount || 0;
         const voiAmount = (balance / 1e6).toFixed(2);
         setVoiBalance(voiAmount);
       } catch (err) {
@@ -192,9 +225,11 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
       }
 
       try {
-        const accountInfo = await activeAccount.getAssetHolding(USDC_APP_ID);
-        const balance = accountInfo?.amount || 0;
-        // USDC has 6 decimals
+        const accountInfo = await activeAccount.getAccountInfo();
+        const assetHolding = accountInfo.assets?.find(
+          (asset) => asset.assetId === USDC_APP_ID
+        );
+        const balance = assetHolding?.amount || 0;
         const usdcAmount = (balance / 1e6).toFixed(2);
         setUsdcBalance(usdcAmount);
       } catch (err) {
@@ -230,6 +265,58 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
     handleDrawerClose();
   };
 
+  const handleSettingsClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleSettingsClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleNetworkChange = (network: "mainnet" | "testnet") => {
+    setSelectedNetwork(network);
+    localStorage.setItem("selectedNetwork", network);
+    handleSettingsClose();
+  };
+
+  const handleNetworkModalOpen = () => {
+    setNetworkModalOpen(true);
+    handleSettingsClose();
+  };
+
+  const handleNetworkModalClose = () => {
+    setNetworkModalOpen(false);
+  };
+
+  const handleInfoModalOpen = () => {
+    setInfoModalOpen(true);
+    handleSettingsClose();
+  };
+
+  const handleInfoModalClose = () => {
+    setInfoModalOpen(false);
+  };
+
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "selectedNetwork") {
+        const newNetwork = e.newValue as "mainnet" | "testnet";
+        if (newNetwork && newNetwork !== selectedNetwork) {
+          setSelectedNetwork(newNetwork);
+        }
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [selectedNetwork]);
+
+  useEffect(() => {
+    const currentEndpoints = NETWORK_CONFIG[selectedNetwork];
+
+    console.log("Current endpoints:", currentEndpoints);
+  }, [selectedNetwork]);
+
   return (
     <Box
       sx={{
@@ -258,12 +345,12 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
                   mr: 4,
                   fontWeight: "bold",
                   "& .voi-text": {
-                    color: "#8B5CF6", // Purple color for VOI
+                    color: "#8B5CF6",
                     fontWeight: 600,
                   },
                 }}
               >
-                En<span className="voi-text">voi</span>
+                en<span className="voi-text">voi</span>
               </Typography>
 
               {/* Add navlinks here */}
@@ -299,13 +386,14 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
         onClose={handleDrawerClose}
         PaperProps={{
           sx: {
-            backgroundColor: "white",
+            backgroundColor: "background.paper",
+            color: "text.primary",
             boxShadow: "none",
             padding: "20px 0",
-            borderLeft: "1px solid #E5E7EB",
+            borderLeft: `1px solid ${mode === "light" ? "#E5E7EB" : "#374151"}`,
             width: {
-              xs: "300px",  // Default width for mobile
-              sm: "400px",  // Wider on screens sm and up
+              xs: "300px",
+              sm: "400px",
             },
           },
         }}
@@ -323,7 +411,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
                   direction="row"
                   spacing={2}
                   alignItems="center"
-                  sx={{ mb: 1 }}
+                  sx={{ mb: 1.5 }}
                 >
                   <Avatar
                     sx={{
@@ -337,22 +425,33 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
                   <Stack direction="column" spacing={0.5} sx={{ flex: 1 }}>
                     <Typography
                       sx={{
-                        color: "#1F2937",
+                        color: "text.primary",
                         fontWeight: 600,
                         fontSize: "1.1rem",
                       }}
                     >
-                      nshell.voi
+                      {displayName}
                     </Typography>
                     <Typography
                       sx={{
-                        color: "#6B7280",
+                        color: "text.secondary",
                         fontSize: "0.875rem",
                       }}
                     >
                       {activeAddress?.slice(0, 5)}...{activeAddress?.slice(-5)}
                     </Typography>
                   </Stack>
+                  <IconButton
+                    onClick={handleSettingsClick}
+                    sx={{
+                      color: "#8B5CF6",
+                      "&:hover": {
+                        backgroundColor: "rgba(139, 92, 246, 0.04)",
+                      },
+                    }}
+                  >
+                    <SettingsIcon />
+                  </IconButton>
                   <IconButton
                     onClick={handleDisconnect}
                     sx={{
@@ -365,48 +464,104 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
                     <PowerSettingsNewIcon />
                   </IconButton>
                 </Stack>
-              </Stack>
-              <Divider
-                sx={{
-                  borderColor: "#E5E7EB",
-                }}
-              />
-              <Stack 
-                direction="row" 
-                justifyContent="space-between" 
-                alignItems="center"
-                sx={{ 
-                  px: 3, 
-                  py: 2,
-                  borderBottom: "1px solid #E5E7EB"
-                }}
-              >
-                <Typography
+
+                <ListItem
+                  component={Link}
+                  to={`/${displayName}`}
+                  onClick={handleDrawerClose}
                   sx={{
-                    color: "#6B7280",
-                    fontSize: "0.875rem",
+                    cursor: "pointer",
+                    "&:hover": {
+                      backgroundColor:
+                        mode === "light"
+                          ? "rgba(139, 92, 246, 0.04)"
+                          : "rgba(139, 92, 246, 0.08)",
+                    },
+                    borderRadius: "8px",
+                    mb: 1,
+                    mt: 2,
+                    display: "flex",
+                    alignItems: "center",
+                    textDecoration: "none",
                   }}
                 >
-                  Balance
-                </Typography>
-                <Stack direction="row" spacing={2}>
+                  <PersonIcon
+                    sx={{
+                      color: "#8B5CF6",
+                      mr: 2,
+                      fontSize: 20,
+                    }}
+                  />
+                  <Typography
+                    sx={{
+                      color: "text.primary",
+                      fontSize: "0.875rem",
+                      fontWeight: 500,
+                    }}
+                  >
+                    View Profile
+                  </Typography>
+                </ListItem>
+
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  spacing={1}
+                  sx={{
+                    bgcolor: mode === "light" ? "#F9FAFB" : "#1F2937",
+                    py: 1,
+                    px: 2,
+                    borderRadius: 1.5,
+                    border: "1px solid",
+                    borderColor: mode === "light" ? "#E5E7EB" : "#374151",
+                    mt: 2,
+                  }}
+                >
+                  <Box
+                    component="span"
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      bgcolor: "#10B981",
+                      display: "inline-block",
+                    }}
+                  />
                   <Typography
                     sx={{
                       color: "#1F2937",
-                      fontWeight: 500,
                       fontSize: "0.875rem",
+                      fontWeight: 500,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 0.5,
+                      flex: 1,
                     }}
                   >
-                    {voiBalance} VOI
+                    {loading ? (
+                      <CircularProgress size={14} sx={{ color: "#8B5CF6" }} />
+                    ) : (
+                      <>
+                        {balance !== null
+                          ? `${balance.toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 6,
+                            })} VOI`
+                          : "-- VOI"}
+                      </>
+                    )}
                   </Typography>
                   <Typography
                     sx={{
-                      color: "#1F2937",
-                      fontWeight: 500,
-                      fontSize: "0.875rem",
+                      color: "#6B7280",
+                      fontSize: "0.75rem",
+                      bgcolor: "#E5E7EB",
+                      px: 1.5,
+                      py: 0.5,
+                      borderRadius: 1,
                     }}
                   >
-                    ${usdcBalance}
+                    {selectedNetwork === "mainnet" ? "Mainnet" : "Testnet"}
                   </Typography>
                 </Stack>
               </Stack>
@@ -450,6 +605,152 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
           </List>
         </Container>
       </Drawer>
+
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleSettingsClose}
+        PaperProps={{
+          sx: {
+            mt: 1,
+            minWidth: 180,
+            boxShadow: "0px 2px 8px rgba(0,0,0,0.15)",
+            "& .MuiList-root": {
+              padding: 1,
+            },
+          },
+        }}
+      >
+        <MenuItem
+          onClick={handleNetworkModalOpen}
+          sx={{
+            borderRadius: "8px",
+            "&:hover": {
+              backgroundColor: "rgba(139, 92, 246, 0.04)",
+            },
+            py: 1,
+          }}
+        >
+          <NetworkIcon
+            sx={{
+              mr: 2,
+              color: "#8B5CF6",
+              fontSize: 20,
+            }}
+          />
+          <Box>
+            <Typography sx={{ fontSize: "0.875rem", fontWeight: 500 }}>
+              Network
+            </Typography>
+            <Typography sx={{ fontSize: "0.75rem", color: "#6B7280" }}>
+              {selectedNetwork === "mainnet" ? "Voi Mainnet" : "Voi Testnet"}
+            </Typography>
+          </Box>
+        </MenuItem>
+
+        <MenuItem
+          onClick={() => {
+            toggleTheme();
+            handleSettingsClose();
+          }}
+          sx={{
+            borderRadius: "8px",
+            "&:hover": {
+              backgroundColor: "rgba(139, 92, 246, 0.04)",
+            },
+            py: 1,
+          }}
+        >
+          {mode === "light" ? (
+            <DarkModeIcon
+              sx={{
+                mr: 2,
+                color: "#8B5CF6",
+                fontSize: 20,
+              }}
+            />
+          ) : (
+            <LightModeIcon
+              sx={{
+                mr: 2,
+                color: "#8B5CF6",
+                fontSize: 20,
+              }}
+            />
+          )}
+          <Box>
+            <Typography sx={{ fontSize: "0.875rem", fontWeight: 500 }}>
+              Theme
+            </Typography>
+            <Typography sx={{ fontSize: "0.75rem", color: "#6B7280" }}>
+              Switch to {mode === "light" ? "Dark" : "Light"} Mode
+            </Typography>
+          </Box>
+        </MenuItem>
+
+        <MenuItem
+          onClick={handleInfoModalOpen}
+          sx={{
+            borderRadius: "8px",
+            "&:hover": {
+              backgroundColor: "rgba(139, 92, 246, 0.04)",
+            },
+            py: 1,
+          }}
+        >
+          <InfoIcon
+            sx={{
+              mr: 2,
+              color: "#8B5CF6",
+              fontSize: 20,
+            }}
+          />
+          <Box>
+            <Typography sx={{ fontSize: "0.875rem", fontWeight: 500 }}>
+              Info
+            </Typography>
+            <Typography sx={{ fontSize: "0.75rem", color: "#6B7280" }}>
+              About enVoi
+            </Typography>
+          </Box>
+        </MenuItem>
+      </Menu>
+
+      <Modal
+        open={networkModalOpen}
+        onClose={handleNetworkModalClose}
+        closeAfterTransition
+        BackdropProps={{
+          timeout: 500,
+        }}
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 400,
+            bgcolor: "background.paper",
+            border: "2px solid #000",
+            boxShadow: 24,
+            p: 4,
+          }}
+        >
+          <NetworkSelector
+            open={networkModalOpen}
+            onClose={handleNetworkModalClose}
+            selectedNetwork={selectedNetwork}
+            onNetworkChange={handleNetworkChange}
+          />
+        </Box>
+      </Modal>
+
+      <ContractInfoModal
+        open={infoModalOpen}
+        onClose={handleInfoModalClose}
+        selectedNetwork={selectedNetwork}
+      />
 
       <Box
         sx={{

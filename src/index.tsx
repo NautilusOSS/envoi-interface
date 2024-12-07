@@ -4,6 +4,10 @@ import { createRoot } from "react-dom/client";
 import "./style.css";
 import { Buffer } from "buffer";
 import { currentVersion } from "./contants/versions";
+import { ThemeProvider } from "@mui/material/styles";
+import { createTheme } from "@mui/material";
+import CssBaseline from "@mui/material/CssBaseline";
+import "./styles/theme.scss";
 
 window.Buffer = Buffer;
 
@@ -17,4 +21,14 @@ if (version < currentVersion) {
 }
 const container = document.getElementById("root");
 const root = createRoot(container!);
-root.render(<App />);
+
+const theme = createTheme();
+
+root.render(
+  <React.StrictMode>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <App />
+    </ThemeProvider>
+  </React.StrictMode>
+);

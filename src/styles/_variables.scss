@@ -1,0 +1,48 @@
+// Colors
+$primary: #8B5CF6;
+$primary-light: #A78BFA;
+$primary-dark: #7C3AED;
+$primary-contrast: #FFFFFF;
+
+$secondary: #6B7280;
+$secondary-light: #9CA3AF;
+$secondary-dark: #4B5563;
+$secondary-contrast: #FFFFFF;
+
+$background-default: #F9FAFB;
+$background-paper: #FFFFFF;
+
+$text-primary: #1F2937;
+$text-secondary: #6B7280;
+
+$divider: #E5E7EB;
+
+// Typography
+$font-family: 'Inter', 'Helvetica', 'Arial', sans-serif;
+$font-weight-regular: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+// Spacing
+$spacing-xs: 4px;
+$spacing-sm: 0.5rem;
+$spacing-md: 1rem;
+$spacing-lg: 2rem;
+$spacing-xl: 32px;
+
+// Border Radius
+$border-radius-small: 4px;
+$border-radius-medium: 8px;
+$border-radius-large: 16px;
+$border-radius-pill: 100px;
+$border-radius: 8px;
+
+// Shadows
+$shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+
+// Transitions
+$transition-default: 0.2s ease-in-out;
+$hover-bg: #f3f4f6;
+$border-color: #e5e7eb;

@@ -1,0 +1,123 @@
+@import '../styles/variables';
+
+.profile-container {
+  min-height: 100vh;
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+.profile-banner {
+  background: linear-gradient(135deg, #4863F7, #FB3FA8);
+  min-height: 200px;
+  padding: 2rem;
+  position: relative;
+}
+
+.banner-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+  padding-top: 3rem;
+}
+
+.profile-avatar {
+  position: absolute;
+  bottom: -60px;
+  border: 4px solid white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.profile-name {
+  color: white;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0;
+  padding-left: 150px;
+}
+
+.profile-details {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 4rem 2rem 2rem;
+}
+
+.details-card {
+  background: var(--card-background);
+  border-radius: 16px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  
+  h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--text-color);
+  }
+}
+
+.detail-row {
+  display: flex;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.detail-icon {
+  color: var(--icon-color);
+  margin-right: 1rem;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 4px;
+}
+
+.detail-content {
+  flex: 1;
+  
+  label {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--icon-color);
+    margin-bottom: 0.5rem;
+  }
+}
+
+.detail-value {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  color: var(--text-color);
+  
+  .address {
+    font-family: monospace;
+    word-break: break-all;
+  }
+}
+
+.copy-button, .explorer-link {
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  color: var(--icon-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: var(--hover-background);
+  }
+}
+
+.explorer-link {
+  text-decoration: none;
+} 

@@ -1,0 +1,19 @@
+:root {
+  // Light theme variables
+  --background-color: #F8FAFC;
+  --text-color: #1E293B;
+  --card-background: #FFFFFF;
+  --border-color: #E2E8F0;
+  --icon-color: #64748B;
+  --hover-background: #F1F5F9;
+}
+
+[data-theme='dark'] {
+  // Dark theme variables
+  --background-color: #0F172A;
+  --text-color: #F8FAFC;
+  --card-background: #1E293B;
+  --border-color: #334155;
+  --icon-color: #94A3B8;
+  --hover-background: #2D3748;
+} 
