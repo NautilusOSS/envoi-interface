@@ -415,7 +415,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
                 >
                   <Avatar
                     sx={{
-                      bgcolor: "#8B5CF6",
+                      bgcolor: mode === 'light' ? '#8B5CF6' : '#6D28D9',
                       width: 40,
                       height: 40,
                     }}
@@ -529,7 +529,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
                   />
                   <Typography
                     sx={{
-                      color: "#1F2937",
+                      color: mode === "light" ? "#1F2937" : "#F9FAFB",
                       fontSize: "0.875rem",
                       fontWeight: 500,
                       display: "flex",
@@ -553,9 +553,9 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
                   </Typography>
                   <Typography
                     sx={{
-                      color: "#6B7280",
+                      color: mode === "light" ? "#6B7280" : "#9CA3AF",
                       fontSize: "0.75rem",
-                      bgcolor: "#E5E7EB",
+                      bgcolor: mode === "light" ? "#E5E7EB" : "#374151",
                       px: 1.5,
                       py: 0.5,
                       borderRadius: 1,

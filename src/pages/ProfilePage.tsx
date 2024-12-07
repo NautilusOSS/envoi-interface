@@ -8,12 +8,14 @@ import "./ProfilePage.scss";
 import { RegistryService } from "@/services/registry";
 import { useWallet } from "@txnlab/use-wallet-react";
 import { Snackbar, Alert, Avatar } from "@mui/material";
+import { useTheme } from '@/contexts/ThemeContext';
 
 type NetworkType = "mainnet" | "testnet";
 
 const ProfilePage: React.FC = () => {
   const { activeAccount } = useWallet();
   const { name } = useParams<{ name: string }>();
+  const { theme } = useTheme();
 
   // Replace the hardcoded network with localStorage
   const selectedNetwork: NetworkType =
