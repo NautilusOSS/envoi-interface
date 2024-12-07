@@ -8,3 +8,7 @@ export { Activity } from "./Activity";
 export { Listings } from "./Listings";
 export { Staking } from "./Staking";
 export { CreateARC200 } from "./CreateARC200";
+export { default as SearchName } from "./SearchName";
+export { default as RegisterName } from "./RegisterName";
+export { default as MyNames } from "./MyNames";
+export { default as RSVP } from "./RSVP";

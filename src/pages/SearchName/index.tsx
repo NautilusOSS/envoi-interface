@@ -21,6 +21,8 @@ import { useWallet } from '@txnlab/use-wallet-react';
 import ClearIcon from '@mui/icons-material/Clear';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { useNavigate } from 'react-router-dom';
+import { getNamePrice } from '../../utils/price';
 
 type NameStatus = 'Registered' | 'Available' | 'Grace Period' | 'Not Supported';
 
@@ -28,6 +30,7 @@ interface NameSuggestion {
   name: string;
   status: NameStatus;
   owner?: string;
+  price?: number;
 }
 
 const StatusChip: React.FC<{ status: NameStatus }> = ({ status }) => {
@@ -69,6 +72,7 @@ const SearchName: React.FC = () => {
   const { activeAccount } = useWallet();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const navigate = useNavigate();
 
   const renderTitle = () => {
     if (isMobile) {
@@ -87,12 +91,23 @@ const SearchName: React.FC = () => {
 
   useEffect(() => {
     if (searchTerm.length > 0) {
-      // TODO: Replace with actual API call to get suggestions
+      // Only show available names
       const mockSuggestions: NameSuggestion[] = [
-        { name: `${searchTerm}.voi`, status: 'Available' },
-        { name: `my${searchTerm}.voi`, status: 'Registered', owner: '0x123...456' },
-        { name: `${searchTerm}123.voi`, status: 'Grace Period' },
-        { name: `${searchTerm}.eth`, status: 'Not Supported' },
+        { 
+          name: `${searchTerm}.voi`, 
+          status: 'Available',
+          price: getNamePrice(searchTerm)
+        },
+        { 
+          name: `my${searchTerm}.voi`, 
+          status: 'Available',
+          price: getNamePrice(`my${searchTerm}`)
+        },
+        { 
+          name: `${searchTerm}123.voi`, 
+          status: 'Available',
+          price: getNamePrice(`${searchTerm}123`)
+        },
       ];
       setSuggestions(mockSuggestions);
       setShowSuggestions(true);
@@ -114,10 +129,12 @@ const SearchName: React.FC = () => {
     
     // Navigate based on status
     switch (suggestion.status) {
-      case 'Available':
-        // TODO: Navigate to registration page with pre-filled name
-        console.log('Navigate to register:', suggestion.name);
+      case 'Available': {
+        // Remove .voi from the name before navigating
+        const baseName = suggestion.name.replace('.voi', '');
+        navigate(`/rsvp/${baseName}`);
         break;
+      }
       case 'Registered':
         // TODO: Navigate to name details/resolver page
         console.log('Navigate to details:', suggestion.name);
@@ -263,7 +280,9 @@ const SearchName: React.FC = () => {
                       </ListItemAvatar>
                       <ListItemText 
                         primary={suggestion.name}
-                        secondary={suggestion.owner}
+                        secondary={suggestion.status === 'Available' ? 
+                          `${suggestion.price?.toLocaleString()} VOI` : 
+                          suggestion.owner}
                         primaryTypographyProps={{
                           sx: { 
                             color: theme.palette.text.primary,
