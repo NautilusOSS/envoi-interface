@@ -2,10 +2,12 @@ import SearchName from "./pages/SearchName";
 import RegisterName from "./pages/RegisterName";
 import MyNames from "./pages/MyNames";
 import RSVP from "./pages/RSVP";
+import SandboxPage from "./pages/SandboxPage";
 
 interface Route {
   path: string;
   Component: React.ComponentType;
+  name?: string;
 }
 
 export const routes: Route[] = [
@@ -28,5 +30,10 @@ export const routes: Route[] = [
   {
     path: "/rsvp/:name",
     Component: RSVP,
-  }
+  },
+  {
+    path: "/sandbox",
+    Component: SandboxPage,
+    name: "Sandbox",
+  },
 ];

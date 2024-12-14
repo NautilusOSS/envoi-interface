@@ -15,7 +15,6 @@ import {
   WalletProvider,
 } from "@txnlab/use-wallet-react";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import CssBaseline from "@mui/material/CssBaseline";
 import EnvoiLayout from "./layouts/EnvoiLayout";
 import ProfilePage from "./pages/ProfilePage";
 
@@ -36,7 +35,7 @@ const AppRoutes: React.FC = () => {
 const queryClient = new QueryClient();
 
 const App: React.FC = () => {
-  const { ALGO_SERVER } = getCurrentNodeEnv();
+  const { ALGO_SERVER } = getCurrentNodeEnv("mainnet");
 
   const walletConnectProjectId = "cd7fe0125d88d239da79fa286e6de2a8";
 
@@ -84,7 +83,6 @@ const App: React.FC = () => {
 
   return (
     <ThemeProvider>
-      <CssBaseline />
       <WalletProvider manager={walletManager}>
         <QueryClientProvider client={queryClient}>
           <Provider store={store}>

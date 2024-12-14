@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
-import { createTheme } from '@mui/material';
+import { ThemeProvider as MuiThemeProvider, createTheme, Theme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 
 type ThemeMode = 'light' | 'dark';
@@ -8,79 +7,50 @@ type ThemeMode = 'light' | 'dark';
 interface ThemeContextType {
   mode: ThemeMode;
   toggleTheme: () => void;
+  theme: Theme;
 }
 
 const ThemeContext = createContext<ThemeContextType>({
   mode: 'light',
   toggleTheme: () => {},
+  theme: createTheme(),
 });
 
-const getThemeOptions = (mode: ThemeMode) => ({
-  palette: {
-    mode,
-    primary: {
-      main: '#8B5CF6',
-      light: '#A78BFA',
-      dark: '#7C3AED',
-      contrastText: '#FFFFFF',
-    },
-    secondary: {
-      main: '#6B7280',
-      light: '#9CA3AF',
-      dark: '#4B5563',
-      contrastText: '#FFFFFF',
-    },
-    background: {
-      default: mode === 'light' ? '#F9FAFB' : '#111827',
-      paper: mode === 'light' ? '#FFFFFF' : '#1F2937',
-    },
-    text: {
-      primary: mode === 'light' ? '#1F2937' : '#F9FAFB',
-      secondary: mode === 'light' ? '#6B7280' : '#9CA3AF',
-    },
-    divider: mode === 'light' ? '#E5E7EB' : '#374151',
-  },
-  typography: {
-    fontFamily: '"Inter", "Helvetica", "Arial", sans-serif',
-  },
-  components: {
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          textTransform: 'none',
-          borderRadius: '100px',
-          fontWeight: 500,
-          padding: '10px 24px',
-        },
-        contained: {
-          boxShadow: 'none',
-          '&:hover': {
-            boxShadow: 'none',
-          },
-        },
-      },
-    },
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          backgroundImage: 'none',
-        },
-      },
-    },
-  },
-});
+const THEME_MODE_KEY = 'theme-mode';
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [mode, setMode] = useState<ThemeMode>(() => 
-    (localStorage.getItem('themeMode') as ThemeMode) || 'light'
+  // Initialize theme from localStorage or default to 'light'
+  const [mode, setMode] = useState<ThemeMode>(() => {
+    const savedMode = localStorage.getItem(THEME_MODE_KEY);
+    return (savedMode as ThemeMode) || 'light';
+  });
+
+  const theme = React.useMemo(
+    () =>
+      createTheme({
+        palette: {
+          mode,
+          primary: {
+            main: '#8B5CF6',
+            light: '#A78BFA',
+            dark: '#7C3AED',
+          },
+          secondary: {
+            main: '#6B7280',
+            light: '#9CA3AF',
+            dark: '#4B5563',
+          },
+        },
+      }),
+    [mode]
   );
 
-  const theme = React.useMemo(() => createTheme(getThemeOptions(mode)), [mode]);
-
   const toggleTheme = () => {
-    const newMode = mode === 'light' ? 'dark' : 'light';
-    setMode(newMode);
-    localStorage.setItem('themeMode', newMode);
+    setMode((prevMode) => {
+      const newMode = prevMode === 'light' ? 'dark' : 'light';
+      localStorage.setItem(THEME_MODE_KEY, newMode);
+      return newMode;
+    });
   };
 
   // Apply theme class to document body
@@ -89,7 +59,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [mode]);
 
   return (
-    <ThemeContext.Provider value={{ mode, toggleTheme }}>
+    <ThemeContext.Provider value={{ mode, toggleTheme, theme }}>
       <MuiThemeProvider theme={theme}>
         <CssBaseline />
         {children}
@@ -104,4 +74,4 @@ export const useTheme = () => {
     throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;
-}; 
+};

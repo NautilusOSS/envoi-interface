@@ -30,6 +30,11 @@
   bottom: -60px;
   border: 4px solid var(--avatar-border);
   box-shadow: var(--avatar-shadow);
+  background-color: var(--avatar-background);
+  
+  svg {
+    color: var(--avatar-icon-color);
+  }
 }
 
 .profile-name {
@@ -174,6 +179,8 @@
   --avatar-border: #ffffff;
   --avatar-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   --text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --avatar-background: #ffffff;
+  --avatar-icon-color: #6D28D9;
 }
 
 body.dark {
@@ -189,6 +196,8 @@ body.dark {
   --banner-gradient: linear-gradient(to bottom right, #7C3AED, #5B21B6);
   --banner-text: #ffffff;
   --avatar-border: rgba(255, 255, 255, 0.9);
+  --avatar-background: #1F2937;
+  --avatar-icon-color: #A78BFA;
 }
 
 body.light {

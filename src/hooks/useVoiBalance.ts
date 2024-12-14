@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { WalletAccount } from '@txnlab/use-wallet-react';
+import { useState, useEffect } from "react";
+import { WalletAccount } from "@txnlab/use-wallet-react";
+import { getAlgorandClients } from "@/wallets";
 
 export const useVoiBalance = (address: string | undefined, network: string) => {
   const [balance, setBalance] = useState<number | null>(null);
@@ -14,11 +15,16 @@ export const useVoiBalance = (address: string | undefined, network: string) => {
       }
 
       try {
-        // TODO: Implement actual balance fetching logic
-        // This is a placeholder
-        setBalance(0);
+        const { algodClient } = getAlgorandClients();
+        const accInfo = await algodClient.accountInformation(address).do();
+        const { amount, ["min-balance"]: minBalance } = accInfo;
+        const availableBalance = Math.max(
+          Number(amount) - Number(minBalance),
+          0
+        );
+        setBalance(availableBalance);
       } catch (error) {
-        console.error('Error fetching balance:', error);
+        console.error("Error fetching balance:", error);
         setBalance(null);
       } finally {
         setLoading(false);
@@ -29,4 +35,4 @@ export const useVoiBalance = (address: string | undefined, network: string) => {
   }, [address, network]);
 
   return { balance, loading };
-}; 
+};

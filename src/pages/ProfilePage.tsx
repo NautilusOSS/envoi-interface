@@ -2,13 +2,13 @@ import React, { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import LaunchIcon from "@mui/icons-material/Launch";
-import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import TimerIcon from "@mui/icons-material/Timer";
 import "./ProfilePage.scss";
 import { RegistryService } from "@/services/registry";
 import { useWallet } from "@txnlab/use-wallet-react";
 import { Snackbar, Alert, Avatar } from "@mui/material";
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from "@/contexts/ThemeContext";
 
 type NetworkType = "mainnet" | "testnet";
 
@@ -17,7 +17,6 @@ const ProfilePage: React.FC = () => {
   const { name } = useParams<{ name: string }>();
   const { theme } = useTheme();
 
-  // Replace the hardcoded network with localStorage
   const selectedNetwork: NetworkType =
     (localStorage.getItem("selectedNetwork") as NetworkType) || "testnet";
   const explorerBaseUrl =
@@ -26,20 +25,24 @@ const ProfilePage: React.FC = () => {
       : "https://testnet.block.voi.network/explorer";
 
   const [openNotification, setOpenNotification] = React.useState(false);
+  const [owner, setOwner] = React.useState<string | null>(null);
+  const [expiry, setExpiry] = React.useState<Date | null>(null);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
     setOpenNotification(true);
   };
 
-  const handleCloseNotification = (event?: React.SyntheticEvent | Event, reason?: string) => {
-    if (reason === 'clickaway') {
+  const handleCloseNotification = (
+    event?: React.SyntheticEvent | Event,
+    reason?: string
+  ) => {
+    if (reason === "clickaway") {
       return;
     }
     setOpenNotification(false);
   };
 
-  const [owner, setOwner] = React.useState<string | null>(null);
   useEffect(() => {
     if (!activeAccount) return;
     const registry = new RegistryService(
@@ -47,22 +50,47 @@ const ProfilePage: React.FC = () => {
       30000,
       activeAccount.address
     );
+
     registry.ownerOf(name || "").then((owner) => {
       setOwner(owner);
     });
+
+    registry.getExpiry(name || "").then((expiryTimestamp) => {
+      if (expiryTimestamp) {
+        setExpiry(new Date(expiryTimestamp * 1000));
+      }
+    });
   }, [name]);
+
+  const formatExpiry = (date: Date | null) => {
+    if (!date) return "Loading...";
+
+    const now = new Date();
+    const diffTime = date.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      return "Expired";
+    } else if (diffDays === 0) {
+      return "Expires today";
+    } else if (diffDays === 1) {
+      return "Expires tomorrow";
+    } else {
+      return `Expires in ${diffDays} days`;
+    }
+  };
 
   return (
     <div className="profile-container">
       <div className="profile-banner">
         <div className="banner-content">
-          <Avatar 
-            sx={{ width: 120, height: 120, bgcolor: '#3B82F6' }}
+          <Avatar
+            sx={{ width: 120, height: 120, bgcolor: "#3B82F6" }}
             className="profile-avatar"
           >
             {name?.charAt(0).toUpperCase()}
           </Avatar>
-          <h1 className="profile-name">{name}.voi</h1>
+          <h1 className="profile-name">{name}</h1>
         </div>
       </div>
 
@@ -71,7 +99,7 @@ const ProfilePage: React.FC = () => {
           <div className="card-header">
             <h2>Profile Details</h2>
           </div>
-          
+
           <div className="detail-row">
             <div className="detail-icon">
               <AccountBalanceWalletIcon />
@@ -100,23 +128,27 @@ const ProfilePage: React.FC = () => {
 
           <div className="detail-row">
             <div className="detail-icon">
-              <CalendarTodayIcon />
+              <TimerIcon />
             </div>
             <div className="detail-content">
-              <label>Registration Date</label>
-              <div className="detail-value">Loading...</div>
+              <label>Expiry</label>
+              <div className="detail-value">{formatExpiry(expiry)}</div>
             </div>
           </div>
         </div>
       </div>
 
-      <Snackbar 
-        open={openNotification} 
-        autoHideDuration={2000} 
+      <Snackbar
+        open={openNotification}
+        autoHideDuration={2000}
         onClose={handleCloseNotification}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
-        <Alert onClose={handleCloseNotification} severity="success" sx={{ width: '100%' }}>
+        <Alert
+          onClose={handleCloseNotification}
+          severity="success"
+          sx={{ width: "100%" }}
+        >
           Copied to clipboard!
         </Alert>
       </Snackbar>

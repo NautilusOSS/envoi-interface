@@ -35,11 +35,11 @@ export const getCurrentNodeEnv = () => {
   let ALGO_SERVER;
   let ALGO_INDEXER_SERVER;
   switch (node) {
+    default:
     case "voi":
       ALGO_SERVER = "https://mainnet-api.voi.nodely.dev";
       ALGO_INDEXER_SERVER = "https://mainnet-idx.voi.nodely.dev";
       break;
-    default:
     case "voi-testnet":
       ALGO_SERVER = "https://testnet-api.voi.nodely.dev";
       ALGO_INDEXER_SERVER = "https://testnet-idx.voi.nodely.dev";

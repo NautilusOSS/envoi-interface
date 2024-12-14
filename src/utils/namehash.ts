@@ -1,8 +1,32 @@
-import crypto from 'crypto';
+import algosdk from "algosdk";
+import crypto from "crypto";
 
 async function sha256(data: Uint8Array): Promise<Uint8Array> {
-  const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+  const hashBuffer = await window.crypto.subtle.digest("SHA-256", data);
   return new Uint8Array(hashBuffer);
+}
+
+export function uint8ArrayToBigInt(uint8Array: Uint8Array) {
+  let result = BigInt(0); // Initialize the BigInt result
+  for (let i = 0; i < uint8Array.length; i++) {
+    result = (result << BigInt(8)) + BigInt(uint8Array[i]); // Shift 8 bits and add the current byte
+  }
+  return result;
+}
+
+function isAlgorandAddress(address: string): boolean {
+  // Check if the address length is correct
+  if (address.length !== 58) {
+    return false;
+  }
+
+  // Check if the address uses valid Base32 characters
+  const base32Regex = /^[A-Z2-7]+$/;
+  if (!base32Regex.test(address)) {
+    return false;
+  }
+
+  return true;
 }
 
 export async function namehash(name: string): Promise<Uint8Array> {
@@ -11,18 +35,21 @@ export async function namehash(name: string): Promise<Uint8Array> {
   }
 
   // Split the name into labels and reverse them
-  const labels = name.split('.').reverse();
+  const labels = name.split(".").reverse();
 
   // Start with empty hash (32 bytes of zeros)
   let node = new Uint8Array(32);
 
   // Hash each label
   for (const label of labels) {
-    if (label) { // Skip empty labels
+    if (label) {
+      // Skip empty labels
       // Hash the label
       const labelBytes = new TextEncoder().encode(label);
-      const labelHash = await sha256(labelBytes);
-      
+      const labelHash = !isAlgorandAddress(label)
+        ? await sha256(labelBytes)
+        : await sha256(algosdk.decodeAddress(label).publicKey);
+
       // Concatenate current node hash with label hash and hash again
       const combined = new Uint8Array(labelHash.length + node.length);
       combined.set(node);
@@ -43,10 +70,10 @@ export function stringToUint8Array(str: string): Uint8Array {
 
 export function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes)
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 export function bytesToBase64(bytes: Uint8Array): string {
   return window.btoa(String.fromCharCode.apply(null, Array.from(bytes)));
-} 
+}

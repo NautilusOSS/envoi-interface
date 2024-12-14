@@ -2,6 +2,7 @@ import algosdk from "algosdk";
 import { CONTRACT } from "ulujs";
 import pkg from "js-sha3";
 const { keccak256 } = pkg;
+import moment from "moment";
 
 // function that takes string and returns a Uint8Array of size 256
 export function stringToUint8Array(str: string, length: number): Uint8Array {
@@ -156,6 +157,18 @@ export class RegistryService {
       },
       { addr: address, sk: new Uint8Array() }
     );
+  }
+
+  async getExpiry(name: string): Promise<number | null> {
+    try {
+      // const nameHash = await namehash(name);
+      // const info = await this.contractInstance.getExpiry(nameHash);
+      // return info.returnValue;
+      return moment().add(1, "years").unix();
+    } catch (error) {
+      console.error("Error getting expiry:", error);
+      return null;
+    }
   }
 
   // Update ownerOf method to be async

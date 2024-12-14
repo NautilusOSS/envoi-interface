@@ -17,6 +17,9 @@ import {
   MenuItem,
   Modal,
   CircularProgress,
+  TextField,
+  Dialog,
+  DialogContent,
 } from "@mui/material";
 import { useWallet } from "@txnlab/use-wallet-react";
 import { Link, useLocation } from "react-router-dom";
@@ -33,6 +36,19 @@ import DarkModeIcon from "@mui/icons-material/DarkMode";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import { useTheme } from "../contexts/ThemeContext";
 import PersonIcon from "@mui/icons-material/Person";
+import EditIcon from "@mui/icons-material/Edit";
+import { CONTRACT, abi } from "ulujs";
+import { getAlgorandClients } from "@/wallets";
+import { APP_SPEC as ReverseRegistrarSpec } from "@/clients/ReverseRegistrarClient";
+import { APP_SPEC as VNSPublicResolverSpec } from "@/clients/VNSPublicResolverClient";
+import { APP_SPEC as RegistrySpec } from "@/clients/VNSRegistryClient";
+import algosdk from "algosdk";
+import {
+  namehash,
+  stringToUint8Array,
+  uint8ArrayToBigInt,
+} from "@/utils/namehash";
+import { useName } from "@/hooks/useName";
 
 interface NavLinkProps {
   to: string;
@@ -125,10 +141,91 @@ const NETWORK_CONFIG = {
   },
 } as const;
 
+interface SetNameModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (name: string) => Promise<void>;
+}
+
+const SetNameModal: React.FC<SetNameModalProps> = ({
+  open,
+  onClose,
+  onSubmit,
+}) => {
+  const [name, setName] = useState("");
+
+  const handleSubmit = async () => {
+    await onSubmit(name);
+    setName("");
+    onClose();
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} aria-labelledby="set-name-modal">
+      <Box
+        sx={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: 400,
+          bgcolor: "background.paper",
+          borderRadius: 2,
+          boxShadow: 24,
+          p: 4,
+        }}
+      >
+        <Typography variant="h6" component="h2" gutterBottom>
+          Set Primary Name
+        </Typography>
+        <TextField
+          fullWidth
+          label="Enter your .voi name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          sx={{ mb: 3 }}
+        />
+        <Stack direction="row" spacing={2} justifyContent="flex-end">
+          <Button onClick={onClose} variant="outlined">
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} variant="contained" disabled={!name}>
+            Update
+          </Button>
+        </Stack>
+      </Box>
+    </Modal>
+  );
+};
+
+interface TransactionPendingModalProps {
+  open: boolean;
+}
+
+const TransactionPendingModal: React.FC<TransactionPendingModalProps> = ({
+  open,
+}) => {
+  return (
+    <Dialog
+      open={open}
+      PaperProps={{ sx: { backgroundColor: "background.paper" } }}
+    >
+      <DialogContent sx={{ textAlign: "center", py: 4 }}>
+        <CircularProgress sx={{ color: "#8B5CF6", mb: 2 }} />
+        <Typography variant="h6" sx={{ color: "text.primary" }}>
+          Waiting for transaction signature...
+        </Typography>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
-  const { activeAccount, activeAddress, wallets } = useWallet();
+  const { signTransactions, activeAccount, activeAddress, wallets } =
+    useWallet();
+  const { displayName, isLoading } = useName(activeAccount?.address);
   const location = useLocation();
-  const [displayName, setDisplayName] = useState<string>("");
+  //const [displayName, setDisplayName] = useState<string>("");
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [voiBalance, setVoiBalance] = useState<string>("0");
   const [usdcBalance, setUsdcBalance] = useState<string>("0");
@@ -136,65 +233,67 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
   const [selectedNetwork, setSelectedNetwork] = useState<"mainnet" | "testnet">(
     () =>
       (localStorage.getItem("selectedNetwork") as "mainnet" | "testnet") ||
-      "testnet"
+      "mainnet"
   );
   const [networkModalOpen, setNetworkModalOpen] = useState(false);
   const [infoModalOpen, setInfoModalOpen] = useState(false);
   const { mode, toggleTheme } = useTheme();
+  const [setNameModalOpen, setSetNameModalOpen] = useState(false);
+  const [isPending, setIsPending] = useState(false);
 
   const { balance, loading } = useVoiBalance(activeAddress, selectedNetwork);
 
-  useEffect(() => {
-    const fetchName = async () => {
-      if (!activeAccount) {
-        setDisplayName("");
-        return;
-      }
+  // useEffect(() => {
+  //   const fetchName = async () => {
+  //     if (!activeAccount) {
+  //       setDisplayName("");
+  //       return;
+  //     }
 
-      try {
-        const rsvpService = createRSVPService(
-          RSVP_CONTRACT_ID,
-          activeAccount.address
-        );
+  //     try {
+  //       const rsvpService = createRSVPService(
+  //         RSVP_CONTRACT_ID,
+  //         activeAccount.address
+  //       );
 
-        // Get account node
-        const node = await rsvpService.accountNode(activeAccount.address);
-        const nodeHex = Buffer.from(node).toString("hex");
+  //       // Get account node
+  //       const node = await rsvpService.accountNode(activeAccount.address);
+  //       const nodeHex = Buffer.from(node).toString("hex");
 
-        console.log({ nodeHex });
+  //       console.log({ nodeHex });
 
-        if (nodeHex === EMPTY_NODE) {
-          setDisplayName(
-            `${activeAddress?.slice(0, 4)}...${activeAddress?.slice(-4)}`
-          );
-          return;
-        }
+  //       if (nodeHex === EMPTY_NODE) {
+  //         setDisplayName(
+  //           `${activeAddress?.slice(0, 4)}...${activeAddress?.slice(-4)}`
+  //         );
+  //         return;
+  //       }
 
-        // Get reservation name
-        const nodeNameBytes = await rsvpService.reservationName(node);
-        const decoder = new TextDecoder();
-        const nameWithNulls = decoder.decode(Buffer.from(nodeNameBytes));
-        const name = nameWithNulls.replace(/\0/g, "");
+  //       // Get reservation name
+  //       const nodeNameBytes = await rsvpService.reservationName(node);
+  //       const decoder = new TextDecoder();
+  //       const nameWithNulls = decoder.decode(Buffer.from(nodeNameBytes));
+  //       const name = nameWithNulls.replace(/\0/g, "");
 
-        console.log({ name });
+  //       console.log({ name });
 
-        if (name) {
-          setDisplayName(name);
-        } else {
-          setDisplayName(
-            `${activeAddress?.slice(0, 4)}...${activeAddress?.slice(-4)}`
-          );
-        }
-      } catch (err) {
-        console.error(err);
-        setDisplayName(
-          `${activeAddress?.slice(0, 4)}...${activeAddress?.slice(-4)}`
-        );
-      }
-    };
+  //       if (name) {
+  //         setDisplayName(name);
+  //       } else {
+  //         setDisplayName(
+  //           `${activeAddress?.slice(0, 4)}...${activeAddress?.slice(-4)}`
+  //         );
+  //       }
+  //     } catch (err) {
+  //       console.error(err);
+  //       setDisplayName(
+  //         `${activeAddress?.slice(0, 4)}...${activeAddress?.slice(-4)}`
+  //       );
+  //     }
+  //   };
 
-    fetchName();
-  }, [activeAccount, activeAddress]);
+  //   fetchName();
+  // }, [activeAccount, activeAddress]);
 
   useEffect(() => {
     const fetchBalance = async () => {
@@ -317,6 +416,165 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
     console.log("Current endpoints:", currentEndpoints);
   }, [selectedNetwork]);
 
+  const handleSetName = async (name: string) => {
+    try {
+      setIsPending(true);
+      if (!activeAccount) {
+        return;
+      }
+      const { algodClient, indexerClient } = getAlgorandClients();
+      const ci = new CONTRACT(797609, algodClient, indexerClient, abi.custom, {
+        addr: activeAccount.address,
+        sk: new Uint8Array(),
+      });
+      const ciRegistry = new CONTRACT(
+        797607,
+        algodClient,
+        indexerClient,
+        {
+          name: "registry",
+          description: "Registry",
+          methods: RegistrySpec.contract.methods,
+          events: [],
+        },
+        {
+          addr: activeAccount.address,
+          sk: new Uint8Array(),
+        }
+      );
+      const builder = {
+        arc200: new CONTRACT(
+          780596,
+          algodClient,
+          indexerClient,
+          abi.nt200,
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(),
+          },
+          true,
+          false,
+          true
+        ),
+        registrar: new CONTRACT(
+          797610,
+          algodClient,
+          indexerClient,
+          {
+            name: "reverse-registrar",
+            description: "Reverse Registrar",
+            methods: ReverseRegistrarSpec.contract.methods,
+            events: [],
+          },
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(),
+          },
+          true,
+          false,
+          true
+        ),
+        resolver: new CONTRACT(
+          797608,
+          algodClient,
+          indexerClient,
+          {
+            name: "vns-public-resolver",
+            description: "VNS Public Resolver",
+            methods: VNSPublicResolverSpec.contract.methods,
+            events: [],
+          },
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(),
+          },
+          true,
+          false,
+          true
+        ),
+      };
+      const label = `${activeAccount.address}.addr.reverse`;
+      const node = await namehash(label);
+      const ownerOfR = await ciRegistry.ownerOf(node);
+      if (!ownerOfR.success) {
+        throw new Error("Failed to get owner of node");
+      }
+      const ownerOf = ownerOfR.returnValue;
+      const doRegister = ownerOf !== activeAccount.address;
+      const buildN = [];
+      if (doRegister) {
+        // approve spending for register
+        {
+          const txnO = (
+            await builder.arc200.arc200_approve(
+              algosdk.getApplicationAddress(797610),
+              1e6
+            )
+          )?.obj;
+          buildN.push({
+            ...txnO,
+            payment: 28500,
+            note: new TextEncoder().encode(
+              `arc200 approve ${algosdk.getApplicationAddress(797610)} ${1e6}`
+            ),
+          });
+        }
+        // register with reverse registrar
+        {
+          const txnO = (
+            await builder.registrar.register(
+              algosdk.decodeAddress(activeAccount.address).publicKey,
+              activeAccount.address,
+              0
+            )
+          )?.obj;
+          buildN.push({
+            ...txnO,
+            payment: 336700,
+            note: new TextEncoder().encode(
+              `reverse-registrar register ${activeAddress}.addr.reverse`
+            ),
+          });
+        }
+      }
+      // set name with resolver
+      {
+        const txnO = (
+          await builder.resolver.setName(
+            await namehash(`${activeAddress}.addr.reverse`),
+            stringToUint8Array(name)
+          )
+        )?.obj;
+        buildN.push({
+          ...txnO,
+          payment: 336700,
+          note: new TextEncoder().encode(
+            `resolver setName ${activeAddress}.addr.reverse ${name}`
+          ),
+        });
+      }
+      ci.setFee(15000);
+      ci.setEnableGroupResourceSharing(true);
+      ci.setExtraTxns(buildN);
+      const customR = await ci.custom();
+      if (customR.success) {
+        const stxns = await signTransactions(
+          customR.txns.map((t: string) => {
+            return new Uint8Array(Buffer.from(t, "base64"));
+          })
+        );
+        const res = await algodClient
+          .sendRawTransaction(stxns as Uint8Array[])
+          .do();
+        console.log({ res });
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsPending(false);
+    }
+  };
+
   return (
     <Box
       sx={{
@@ -364,7 +622,11 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
                   endIcon={<KeyboardArrowDownIcon sx={{ color: "#8B5CF6" }} />}
                   sx={purpleOutlinedStyles}
                 >
-                  {displayName}
+                  {isLoading ? (
+                    <CircularProgress size={14} sx={{ color: "#8B5CF6" }} />
+                  ) : (
+                    displayName
+                  )}
                 </Button>
               ) : (
                 <Button
@@ -415,7 +677,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
                 >
                   <Avatar
                     sx={{
-                      bgcolor: mode === 'light' ? '#8B5CF6' : '#6D28D9',
+                      bgcolor: mode === "light" ? "#8B5CF6" : "#6D28D9",
                       width: 40,
                       height: 40,
                     }}
@@ -423,15 +685,29 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
                     {displayName.charAt(0).toUpperCase()}
                   </Avatar>
                   <Stack direction="column" spacing={0.5} sx={{ flex: 1 }}>
-                    <Typography
-                      sx={{
-                        color: "text.primary",
-                        fontWeight: 600,
-                        fontSize: "1.1rem",
-                      }}
-                    >
-                      {displayName}
-                    </Typography>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography
+                        sx={{
+                          color: "text.primary",
+                          fontWeight: 600,
+                          fontSize: "1.1rem",
+                        }}
+                      >
+                        {displayName}
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        onClick={() => setSetNameModalOpen(true)}
+                        sx={{
+                          color: "#8B5CF6",
+                          "&:hover": {
+                            backgroundColor: "rgba(139, 92, 246, 0.04)",
+                          },
+                        }}
+                      >
+                        <EditIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </Box>
                     <Typography
                       sx={{
                         color: "text.secondary",
@@ -621,6 +897,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
           },
         }}
       >
+        {/*
         <MenuItem
           onClick={handleNetworkModalOpen}
           sx={{
@@ -647,6 +924,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
             </Typography>
           </Box>
         </MenuItem>
+        */}
 
         <MenuItem
           onClick={() => {
@@ -716,6 +994,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
         </MenuItem>
       </Menu>
 
+      {/*
       <Modal
         open={networkModalOpen}
         onClose={handleNetworkModalClose}
@@ -745,12 +1024,21 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
           />
         </Box>
       </Modal>
+      */}
 
       <ContractInfoModal
         open={infoModalOpen}
         onClose={handleInfoModalClose}
         selectedNetwork={selectedNetwork}
       />
+
+      <SetNameModal
+        open={setNameModalOpen}
+        onClose={() => setSetNameModalOpen(false)}
+        onSubmit={handleSetName}
+      />
+
+      <TransactionPendingModal open={isPending} />
 
       <Box
         sx={{
