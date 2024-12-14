@@ -3,6 +3,8 @@ import { CONTRACT } from "ulujs";
 import pkg from "js-sha3";
 const { keccak256 } = pkg;
 import moment from "moment";
+import { APP_SPEC as VNSRegistrySpec } from "@/clients/VNSRegistryClient";
+import { namehash } from "@/utils/namehash";
 
 // function that takes string and returns a Uint8Array of size 256
 export function stringToUint8Array(str: string, length: number): Uint8Array {
@@ -76,32 +78,33 @@ function getCrypto() {
 }
 
 // Updated namehash function to be async
-export async function namehash(
-  name: string,
-  algorithm: string = "sha256"
-): Promise<Uint8Array> {
-  if (!name) {
-    return new Uint8Array(32);
-  }
 
-  const crypto = getCrypto();
+// export async function namehash(
+//   name: string,
+//   algorithm: string = "sha256"
+// ): Promise<Uint8Array> {
+//   if (!name) {
+//     return new Uint8Array(32);
+//   }
 
-  const labels = name.split(".").reverse();
-  let node = new Uint8Array(32);
+//   const crypto = getCrypto();
 
-  for (const label of labels) {
-    if (label) {
-      const labelHash = await hash(label, algorithm);
-      const combined = new Uint8Array([...node, ...labelHash]);
-      node =
-        algorithm === "keccak256"
-          ? new Uint8Array(keccak256.arrayBuffer(combined))
-          : new Uint8Array(await crypto.subtle.digest("SHA-256", combined));
-    }
-  }
+//   const labels = name.split(".").reverse();
+//   let node = new Uint8Array(32);
 
-  return node;
-}
+//   for (const label of labels) {
+//     if (label) {
+//       const labelHash = await hash(label, algorithm);
+//       const combined = new Uint8Array([...node, ...labelHash]);
+//       node =
+//         algorithm === "keccak256"
+//           ? new Uint8Array(keccak256.arrayBuffer(combined))
+//           : new Uint8Array(await crypto.subtle.digest("SHA-256", combined));
+//     }
+//   }
+
+//   return node;
+// }
 
 export interface RegistryInfo {
   owner: string;
@@ -116,7 +119,7 @@ export class RegistryService {
   private contractInstance: any;
   constructor(
     network: "mainnet" | "testnet",
-    registryId: number = network === "mainnet" ? 0 : 30000, // Replace 0 with mainnet ID when available
+    registryId: number = network === "mainnet" ? 797607 : 30000, // Replace 0 with mainnet ID when available
     address: string = "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ"
   ) {
     const baseServer =
@@ -137,22 +140,7 @@ export class RegistryService {
       {
         name: "registry",
         description: "Registry contract for Voi names",
-        methods: [
-          //  ownerOf(byte[32])address
-          {
-            name: "ownerOf",
-            args: [
-              {
-                type: "byte[32]",
-                name: "name",
-              },
-            ],
-            returns: {
-              type: "address",
-              name: "owner",
-            },
-          },
-        ],
+        methods: VNSRegistrySpec.contract.methods,
         events: [],
       },
       { addr: address, sk: new Uint8Array() }

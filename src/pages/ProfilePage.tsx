@@ -45,16 +45,10 @@ const ProfilePage: React.FC = () => {
 
   useEffect(() => {
     if (!activeAccount) return;
-    const registry = new RegistryService(
-      "testnet",
-      30000,
-      activeAccount.address
-    );
-
+    const registry = new RegistryService("mainnet");
     registry.ownerOf(name || "").then((owner) => {
       setOwner(owner);
     });
-
     registry.getExpiry(name || "").then((expiryTimestamp) => {
       if (expiryTimestamp) {
         setExpiry(new Date(expiryTimestamp * 1000));
