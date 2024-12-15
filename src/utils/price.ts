@@ -5,18 +5,18 @@ export const getNamePrice = (name: string): number => {
   // Price in VOI
   switch (length) {
     case 1:
-      return 50000;
+      return 160;
     case 2:
-      return 30000;
+      return 80;
     case 3:
-      return 20000;
+      return 40;
     case 4:
-      return 10000;
+      return 20;
     case 5:
-      return 5000;
+      return 10;
     case 6:
-      return 2000;
+      return 5;
     default:
-      return 1000;
+      return 5;
   }
-}; 
+};

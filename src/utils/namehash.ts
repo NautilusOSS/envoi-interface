@@ -61,8 +61,8 @@ export async function namehash(name: string): Promise<Uint8Array> {
   return node;
 }
 
-export function stringToUint8Array(str: string): Uint8Array {
-  const bytes = new Uint8Array(256);
+export function stringToUint8Array(str: string, length = 256): Uint8Array {
+  const bytes = new Uint8Array(length);
   const encoded = new TextEncoder().encode(str);
   bytes.set(encoded, 0);
   return bytes;
