@@ -49,6 +49,9 @@ import {
   uint8ArrayToBigInt,
 } from "@/utils/namehash";
 import { useName } from "@/hooks/useName";
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import ReservationsModal from '@/components/ReservationsModal';
+import { rsvps } from '@/constants/rsvps';
 
 interface NavLinkProps {
   to: string;
@@ -240,6 +243,8 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
   const { mode, toggleTheme } = useTheme();
   const [setNameModalOpen, setSetNameModalOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
+  const [reservationsModalOpen, setReservationsModalOpen] = useState(false);
+  const [hasReservations, setHasReservations] = React.useState(false);
 
   const { balance, loading } = useVoiBalance(activeAddress, selectedNetwork);
 
@@ -338,6 +343,18 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
     };
 
     fetchUSDCBalance();
+  }, [activeAccount]);
+
+  useEffect(() => {
+    if (!activeAccount) {
+      setHasReservations(false);
+      return;
+    }
+
+    const userReservations = Object.values(rsvps).some(
+      address => address === activeAccount.address
+    );
+    setHasReservations(userReservations);
   }, [activeAccount]);
 
   const handleDrawerOpen = () => {
@@ -779,6 +796,46 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
                   </Typography>
                 </ListItem>
 
+                {hasReservations && (
+                  <ListItem
+                    onClick={() => {
+                      setReservationsModalOpen(true);
+                      handleDrawerClose();
+                    }}
+                    sx={{
+                      cursor: "pointer",
+                      "&:hover": {
+                        backgroundColor:
+                          mode === "light"
+                            ? "rgba(139, 92, 246, 0.04)"
+                            : "rgba(139, 92, 246, 0.08)",
+                      },
+                      borderRadius: "8px",
+                      mb: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      textDecoration: "none",
+                    }}
+                  >
+                    <FormatListBulletedIcon
+                      sx={{
+                        color: "#8B5CF6",
+                        mr: 2,
+                        fontSize: 20,
+                      }}
+                    />
+                    <Typography
+                      sx={{
+                        color: "text.primary",
+                        fontSize: "0.875rem",
+                        fontWeight: 500,
+                      }}
+                    >
+                      Reservations
+                    </Typography>
+                  </ListItem>
+                )}
+
                 <Stack
                   direction="row"
                   alignItems="center"
@@ -1039,6 +1096,11 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
       />
 
       <TransactionPendingModal open={isPending} />
+
+      <ReservationsModal 
+        open={reservationsModalOpen}
+        onClose={() => setReservationsModalOpen(false)}
+      />
 
       <Box
         sx={{
