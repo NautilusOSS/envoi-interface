@@ -16,6 +16,7 @@ import {
   Chip,
   Fade,
   Stack,
+  Snackbar,
 } from "@mui/material";
 import { useWallet } from "@txnlab/use-wallet-react";
 import ClearIcon from "@mui/icons-material/Clear";
@@ -23,8 +24,9 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { useNavigate } from "react-router-dom";
 import { getNamePrice } from "../../utils/price";
+import { rsvps } from "../../constants/rsvps";
 
-type NameStatus = "Registered" | "Available" | "Grace Period" | "Not Supported";
+type NameStatus = "Registered" | "Available" | "Grace Period" | "Reserved";
 
 interface NameSuggestion {
   name: string;
@@ -42,7 +44,7 @@ const StatusChip: React.FC<{ status: NameStatus }> = ({ status }) => {
         return { bg: "rgba(139, 92, 246, 0.1)", color: "#8B5CF6" };
       case "Grace Period":
         return { bg: "rgba(255, 152, 0, 0.1)", color: "#FF9800" };
-      case "Not Supported":
+      case "Reserved":
         return { bg: "rgba(244, 67, 54, 0.1)", color: "#F44336" };
       default:
         return { bg: "grey.100", color: "text.secondary" };
@@ -65,6 +67,11 @@ const StatusChip: React.FC<{ status: NameStatus }> = ({ status }) => {
   );
 };
 
+const formatCompactAddress = (address: string | undefined): string => {
+  if (!address) return '';
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+};
+
 const SearchName: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [suggestions, setSuggestions] = useState<NameSuggestion[]>([]);
@@ -73,6 +80,8 @@ const SearchName: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const navigate = useNavigate();
+  const [openToast, setOpenToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
 
   const renderTitle = () => {
     if (isMobile) {
@@ -91,12 +100,21 @@ const SearchName: React.FC = () => {
 
   useEffect(() => {
     if (searchTerm.length > 0) {
-      // Only show available names
+      const searchTermWithVoi = searchTerm.endsWith('.voi') 
+        ? searchTerm 
+        : `${searchTerm}.voi`;
+      
+      // Check if name is reserved by looking it up directly in rsvps
+      const isReserved = searchTermWithVoi in rsvps;
+      const ownerAddress = isReserved ? rsvps[searchTermWithVoi] : null;
+
+      // Create suggestions based on the search term
       const mockSuggestions: NameSuggestion[] = [
         {
-          name: `${searchTerm}.voi`,
-          status: "Available",
-          price: getNamePrice(searchTerm),
+          name: searchTermWithVoi,
+          status: isReserved ? "Reserved" : "Available",
+          price: isReserved ? undefined : getNamePrice(searchTerm),
+          owner: ownerAddress // Include the owner address if it's reserved
         },
         {
           name: `my${searchTerm}.voi`,
@@ -124,15 +142,21 @@ const SearchName: React.FC = () => {
   };
 
   const handleSuggestionClick = (suggestion: NameSuggestion) => {
-    setSearchTerm(suggestion.name);
-    setShowSuggestions(false);
+    if (suggestion.status !== "Reserved") {
+      setSearchTerm(suggestion.name);
+      setShowSuggestions(false);
+    }
 
     // Navigate based on status
     switch (suggestion.status) {
       case "Available": {
-        // Remove .voi from the name before navigating
         const baseName = suggestion.name.replace(".voi", "");
         navigate(`/register/${baseName}`);
+        break;
+      }
+      case "Reserved": {
+        setToastMessage(`${suggestion.name} is reserved`);
+        setOpenToast(true);
         break;
       }
       case "Registered":
@@ -144,9 +168,12 @@ const SearchName: React.FC = () => {
         console.log("Navigate to grace period details:", suggestion.name);
         break;
       default:
-        // Do nothing for Not Supported
         break;
     }
+  };
+
+  const handleCloseToast = () => {
+    setOpenToast(false);
   };
 
   return (
@@ -283,6 +310,8 @@ const SearchName: React.FC = () => {
                         secondary={
                           suggestion.status === "Available"
                             ? `${suggestion.price?.toLocaleString()} VOI`
+                            : suggestion.status === "Reserved"
+                            ? formatCompactAddress(suggestion.owner)
                             : suggestion.owner
                         }
                         primaryTypographyProps={{
@@ -337,6 +366,26 @@ const SearchName: React.FC = () => {
           </Box>
         </Stack>
       </Container>
+
+      <Snackbar
+        open={openToast}
+        autoHideDuration={4000}
+        onClose={handleCloseToast}
+        message={toastMessage}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        sx={{
+          '& .MuiSnackbarContent-root': {
+            fontSize: '1.2rem',
+            padding: '16px 24px',
+            minWidth: 'auto',
+            backgroundColor: theme.palette.background.paper,
+            color: theme.palette.text.primary,
+            boxShadow: theme.shadows[3],
+            borderRadius: 2,
+            marginTop: '24px'
+          }
+        }}
+      />
     </Box>
   );
 };
