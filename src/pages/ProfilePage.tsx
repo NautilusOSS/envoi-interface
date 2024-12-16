@@ -9,6 +9,8 @@ import { RegistryService } from "@/services/registry";
 import { useWallet } from "@txnlab/use-wallet-react";
 import { Snackbar, Alert, Avatar } from "@mui/material";
 import { useTheme } from "@/contexts/ThemeContext";
+import { RegistrarService } from "@/services/registrar";
+import { namehash, uint8ArrayToBigInt } from "@/utils/namehash";
 
 type NetworkType = "mainnet" | "testnet";
 
@@ -46,13 +48,19 @@ const ProfilePage: React.FC = () => {
   useEffect(() => {
     if (!activeAccount) return;
     const registry = new RegistryService("mainnet");
+    const registrar = new RegistrarService("mainnet");
     registry.ownerOf(name || "").then((owner) => {
       setOwner(owner);
     });
-    registry.getExpiry(name || "").then((expiryTimestamp) => {
-      if (expiryTimestamp) {
-        setExpiry(new Date(expiryTimestamp * 1000));
-      }
+    namehash(name || "").then((nameHash) => {
+      const tokenId = uint8ArrayToBigInt(nameHash);
+      console.log({ tokenId });
+      registrar.expiration(tokenId).then((expiryTimestamp) => {
+        const expiryTimestampNumber = Number(expiryTimestamp);
+        if (expiryTimestampNumber) {
+          setExpiry(new Date(expiryTimestampNumber * 1000));
+        }
+      });
     });
   }, [name]);
 

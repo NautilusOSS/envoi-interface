@@ -149,12 +149,13 @@ export class RegistryService {
 
   async getExpiry(name: string): Promise<number | null> {
     try {
-      // const nameHash = await namehash(name);
-      // const info = await this.contractInstance.getExpiry(nameHash);
-      // return info.returnValue;
-      return moment().add(1, "years").unix();
+      const nameHash = await namehash(name);
+
+      const info = await this.contractInstance.expiration(nameHash);
+
+      return info.returnValue;
     } catch (error) {
-      console.error("Error getting expiry:", error);
+      console.error("Error getting owner:", error);
       return null;
     }
   }
@@ -163,10 +164,8 @@ export class RegistryService {
   async ownerOf(name: string): Promise<string | null> {
     try {
       const nameHash = await namehash(name);
-      console.log({ nameHash });
 
       const info = await this.contractInstance.ownerOf(nameHash);
-      console.log({ info });
 
       return info.returnValue;
     } catch (error) {
