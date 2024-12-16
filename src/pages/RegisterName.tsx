@@ -36,12 +36,21 @@ import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { namehash, stringToUint8Array } from "@/utils/namehash";
 import { RegistryService } from "@/services/registry";
 import { debounce } from 'lodash';
+import { rsvps } from "@/constants/rsvps";
+import { useNavigate } from "react-router-dom";
 
 const ALGORAND_ZERO_ADDRESS =
   "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5HFKQ";
 
+const formatCompactAddress = (address: string): string => {
+  if (!address) return '';
+  if (address.length <= 12) return address;
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+};
+
 const RegisterName: React.FC = () => {
   const { name: initialName } = useParams<{ name: string }>();
+  const navigate = useNavigate();
   const [name, setName] = useState(
     initialName ? initialName.split(".")[0] : ""
   );
@@ -59,15 +68,32 @@ const RegisterName: React.FC = () => {
   const [isAvailable, setIsAvailable] = React.useState<boolean>(false);
   const [isChecking, setIsChecking] = React.useState<boolean>(false);
 
+  useEffect(() => {
+    if (initialName) {
+      const fullName = `${initialName}.voi`;
+      if (fullName in rsvps) {
+        enqueueSnackbar(`${fullName} is reserved and cannot be registered`, {
+          variant: "error",
+          anchorOrigin: {
+            vertical: "top",
+            horizontal: "center",
+          },
+        });
+        navigate("/");
+        return;
+      }
+    }
+  }, [initialName, navigate, enqueueSnackbar]);
+
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.toLowerCase();
-    const isValid = /^[a-z-]*$/.test(value);
-
+    
+    const isValid = /^[a-z0-9-]*$/.test(value);
     if (isValid) {
       setName(value);
       setNameError("");
     } else {
-      setNameError("Only lowercase letters and hyphens are allowed");
+      setNameError("Only lowercase letters, numbers, and hyphens are allowed");
     }
   };
 
@@ -129,6 +155,22 @@ const RegisterName: React.FC = () => {
       });
       return;
     }
+
+    const fullName = `${name}.voi`;
+    const reservedOwner = rsvps[fullName];
+    
+    // Check if name is reserved and prevent registration if not the reserved owner
+    if (reservedOwner && reservedOwner !== activeAccount.address) {
+      enqueueSnackbar(`${fullName} is reserved and cannot be registered`, {
+        variant: "error",
+        anchorOrigin: {
+          vertical: "top",
+          horizontal: "center",
+        },
+      });
+      return;
+    }
+
     try {
       console.log({
         name,
@@ -324,6 +366,10 @@ const RegisterName: React.FC = () => {
     </Dialog>
   );
 
+  const isReserved = `${name}.voi` in rsvps;
+  const reservedOwner = isReserved ? rsvps[`${name}.voi`] : null;
+  const isReservedOwner = activeAccount?.address === reservedOwner;
+
   return (
     <>
       <Container
@@ -344,6 +390,27 @@ const RegisterName: React.FC = () => {
           {!activeAccount && (
             <Alert severity="warning" sx={{ mb: 2 }}>
               Please connect your wallet to register a name
+            </Alert>
+          )}
+
+          {isReserved && !isReservedOwner && (
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 2,
+                '& .MuiAlert-message': {
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 1
+                }
+              }}
+            >
+              <Typography variant="body1" fontWeight={500}>
+                This name is reserved
+              </Typography>
+              <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                Owner: {formatCompactAddress(reservedOwner || '')}
+              </Typography>
             </Alert>
           )}
 
@@ -449,16 +516,24 @@ const RegisterName: React.FC = () => {
                 >
                   Register
                 </Button>
-              ) : !isAvailable ? (
-                <Typography color="error">
-                  This name is already registered
+              ) : !isAvailable && !isReservedOwner ? (
+                <Typography 
+                  color="error" 
+                  sx={{ 
+                    textAlign: 'center',
+                    fontWeight: 500 
+                  }}
+                >
+                  {isReserved 
+                    ? "This name is reserved and cannot be registered" 
+                    : "This name is already registered"}
                 </Typography>
               ) : (
                 <Button
                   variant="contained"
                   size="large"
                   onClick={() => setShowConfirmation(true)}
-                  disabled={loading || !activeAccount || !!nameError}
+                  disabled={loading || !name || !activeAccount || !!nameError || (isReserved && !isReservedOwner)}
                   sx={{
                     bgcolor: "#8B5CF6",
                     "&:hover": {
@@ -466,6 +541,10 @@ const RegisterName: React.FC = () => {
                     },
                     height: "48px",
                     borderRadius: "24px",
+                    "&.Mui-disabled": {
+                      bgcolor: "#E5E7EB",
+                      color: "#9CA3AF",
+                    },
                   }}
                 >
                   {loading ? (
