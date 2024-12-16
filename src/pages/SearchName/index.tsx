@@ -17,6 +17,8 @@ import {
   Fade,
   Stack,
   Snackbar,
+  CircularProgress,
+  Alert,
 } from "@mui/material";
 import { useWallet } from "@txnlab/use-wallet-react";
 import ClearIcon from "@mui/icons-material/Clear";
@@ -25,6 +27,8 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { useNavigate } from "react-router-dom";
 import { getNamePrice } from "../../utils/price";
 import { rsvps } from "../../constants/rsvps";
+import { RegistryService } from "@/services/registry";
+import { debounce } from 'lodash';
 
 type NameStatus = "Registered" | "Available" | "Grace Period" | "Reserved";
 
@@ -69,7 +73,7 @@ const StatusChip: React.FC<{ status: NameStatus }> = ({ status }) => {
 
 const formatCompactAddress = (address: string | undefined): string => {
   if (!address) return '';
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  return `${address.slice(0, 4)}...${address.slice(-4)}`;
 };
 
 const SearchName: React.FC = () => {
@@ -82,6 +86,88 @@ const SearchName: React.FC = () => {
   const navigate = useNavigate();
   const [openToast, setOpenToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+  const [isChecking, setIsChecking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (searchTerm.length > 0) {
+      const searchTermWithVoi = searchTerm.endsWith('.voi') 
+        ? searchTerm 
+        : `${searchTerm}.voi`;
+      
+      const checkNameAvailability = async () => {
+        setIsChecking(true);
+        setShowSuggestions(false);
+
+        try {
+          // First check if name is reserved
+          const isReserved = searchTermWithVoi in rsvps;
+          const ownerAddress = isReserved ? rsvps[searchTermWithVoi] : null;
+
+          if (isReserved) {
+            const suggestions: NameSuggestion[] = [
+              {
+                name: searchTermWithVoi,
+                status: "Reserved",
+                owner: ownerAddress
+              },
+              {
+                name: `my${searchTerm}.voi`,
+                status: "Available",
+                price: getNamePrice(`my${searchTerm}`),
+              },
+              {
+                name: `${searchTerm}123.voi`,
+                status: "Available",
+                price: getNamePrice(`${searchTerm}123`),
+              },
+            ];
+            setSuggestions(suggestions);
+            setShowSuggestions(true);
+            return;
+          }
+
+          // If not reserved, check registration status
+          const registry = new RegistryService("mainnet");
+          const owner = await registry.ownerOf(searchTermWithVoi);
+          const isRegistered = owner && owner !== "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5HFKQ";
+
+          const suggestions: NameSuggestion[] = [
+            {
+              name: searchTermWithVoi,
+              status: isRegistered ? "Registered" : "Available",
+              price: isRegistered ? undefined : getNamePrice(searchTerm),
+              owner: isRegistered ? owner : undefined
+            },
+            {
+              name: `my${searchTerm}.voi`,
+              status: "Available",
+              price: getNamePrice(`my${searchTerm}`),
+            },
+            {
+              name: `${searchTerm}123.voi`,
+              status: "Available",
+              price: getNamePrice(`${searchTerm}123`),
+            },
+          ];
+          setSuggestions(suggestions);
+          setShowSuggestions(true);
+        } catch (error) {
+          console.error('Error checking name availability:', error);
+          setError('Failed to check name availability');
+        } finally {
+          setIsChecking(false);
+        }
+      };
+
+      // Debounce the availability check
+      const timeoutId = setTimeout(checkNameAvailability, 500);
+      return () => clearTimeout(timeoutId);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }, [searchTerm]);
 
   const renderTitle = () => {
     if (isMobile) {
@@ -98,43 +184,6 @@ const SearchName: React.FC = () => {
     );
   };
 
-  useEffect(() => {
-    if (searchTerm.length > 0) {
-      const searchTermWithVoi = searchTerm.endsWith('.voi') 
-        ? searchTerm 
-        : `${searchTerm}.voi`;
-      
-      // Check if name is reserved by looking it up directly in rsvps
-      const isReserved = searchTermWithVoi in rsvps;
-      const ownerAddress = isReserved ? rsvps[searchTermWithVoi] : null;
-
-      // Create suggestions based on the search term
-      const mockSuggestions: NameSuggestion[] = [
-        {
-          name: searchTermWithVoi,
-          status: isReserved ? "Reserved" : "Available",
-          price: isReserved ? undefined : getNamePrice(searchTerm),
-          owner: ownerAddress // Include the owner address if it's reserved
-        },
-        {
-          name: `my${searchTerm}.voi`,
-          status: "Available",
-          price: getNamePrice(`my${searchTerm}`),
-        },
-        {
-          name: `${searchTerm}123.voi`,
-          status: "Available",
-          price: getNamePrice(`${searchTerm}123`),
-        },
-      ];
-      setSuggestions(mockSuggestions);
-      setShowSuggestions(true);
-    } else {
-      setSuggestions([]);
-      setShowSuggestions(false);
-    }
-  }, [searchTerm]);
-
   const handleClear = () => {
     setSearchTerm("");
     setSuggestions([]);
@@ -142,33 +191,24 @@ const SearchName: React.FC = () => {
   };
 
   const handleSuggestionClick = (suggestion: NameSuggestion) => {
-    if (suggestion.status !== "Reserved") {
-      setSearchTerm(suggestion.name);
-      setShowSuggestions(false);
+    if (suggestion.status === "Registered") {
+      setToastMessage(`${suggestion.name} is already registered`);
+      setOpenToast(true);
+      return; // Don't close dropdown
     }
 
-    // Navigate based on status
-    switch (suggestion.status) {
-      case "Available": {
-        const baseName = suggestion.name.replace(".voi", "");
-        navigate(`/register/${baseName}`);
-        break;
-      }
-      case "Reserved": {
-        setToastMessage(`${suggestion.name} is reserved`);
-        setOpenToast(true);
-        break;
-      }
-      case "Registered":
-        // TODO: Navigate to name details/resolver page
-        console.log("Navigate to details:", suggestion.name);
-        break;
-      case "Grace Period":
-        // TODO: Navigate to name details with grace period warning
-        console.log("Navigate to grace period details:", suggestion.name);
-        break;
-      default:
-        break;
+    if (suggestion.status === "Reserved") {
+      setToastMessage(`${suggestion.name} is reserved`);
+      setOpenToast(true);
+      return; // Don't close dropdown
+    }
+
+    // Only close dropdown and navigate for available names
+    if (suggestion.status === "Available") {
+      setSearchTerm(suggestion.name);
+      setShowSuggestions(false);
+      const baseName = suggestion.name.replace(".voi", "");
+      navigate(`/register/${baseName}`);
     }
   };
 
@@ -285,64 +325,92 @@ const SearchName: React.FC = () => {
                 }}
               >
                 <List>
-                  {suggestions.map((suggestion, index) => (
-                    <ListItem
-                      key={index}
-                      button
-                      onClick={() => handleSuggestionClick(suggestion)}
-                      sx={{
-                        "&:hover": {
-                          backgroundColor: "rgba(139, 92, 246, 0.08)",
-                        },
-                        transition: "background-color 0.2s",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                      }}
-                    >
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: "rgba(139, 92, 246, 0.1)" }}>
-                          <AccountCircleIcon sx={{ color: "#8B5CF6" }} />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={suggestion.name}
-                        secondary={
-                          suggestion.status === "Available"
-                            ? `${suggestion.price?.toLocaleString()} VOI`
-                            : suggestion.status === "Reserved"
-                            ? formatCompactAddress(suggestion.owner)
-                            : suggestion.owner
+                  {isChecking ? (
+                    <ListItem>
+                      <ListItemText 
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <CircularProgress size={20} />
+                            <Typography>Checking availability...</Typography>
+                          </Box>
                         }
-                        primaryTypographyProps={{
-                          sx: {
-                            color: theme.palette.text.primary,
-                            fontWeight: 500,
-                          },
-                        }}
                       />
-                      <Box
+                    </ListItem>
+                  ) : error ? (
+                    <ListItem>
+                      <ListItemText 
+                        primary={error}
+                        sx={{ color: 'error.main' }}
+                      />
+                    </ListItem>
+                  ) : (
+                    suggestions.map((suggestion, index) => (
+                      <ListItem
+                        key={index}
+                        button
+                        onClick={() => handleSuggestionClick(suggestion)}
                         sx={{
+                          "&:hover": {
+                            backgroundColor: "rgba(139, 92, 246, 0.08)",
+                          },
+                          transition: "background-color 0.2s",
                           display: "flex",
                           alignItems: "center",
-                          gap: 2,
-                          ml: "auto",
+                          gap: 1,
                         }}
                       >
-                        <StatusChip status={suggestion.status} />
-                        <ChevronRightIcon
-                          sx={{
-                            color:
-                              suggestion.status === "Available"
-                                ? "#8B5CF6"
-                                : "text.secondary",
-                            opacity:
-                              suggestion.status === "Not Supported" ? 0 : 1,
+                        <ListItemAvatar>
+                          <Avatar sx={{ bgcolor: "rgba(139, 92, 246, 0.1)" }}>
+                            <AccountCircleIcon sx={{ color: "#8B5CF6" }} />
+                          </Avatar>
+                        </ListItemAvatar>
+                        <ListItemText
+                          primary={suggestion.name}
+                          secondary={
+                            suggestion.status === "Available"
+                              ? `${suggestion.price?.toLocaleString()} VOI`
+                              : suggestion.status === "Registered"
+                              ? formatCompactAddress(suggestion.owner)
+                              : suggestion.status === "Reserved"
+                              ? formatCompactAddress(suggestion.owner)
+                              : null
+                          }
+                          primaryTypographyProps={{
+                            sx: {
+                              color: theme.palette.text.primary,
+                              fontWeight: 500,
+                            },
+                          }}
+                          secondaryTypographyProps={{
+                            sx: {
+                              color: theme.palette.text.secondary,
+                              fontFamily: 'monospace',
+                            },
                           }}
                         />
-                      </Box>
-                    </ListItem>
-                  ))}
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 2,
+                            ml: "auto",
+                          }}
+                        >
+                          <StatusChip status={suggestion.status} />
+                          <ChevronRightIcon
+                            sx={{
+                              color:
+                                suggestion.status === "Available"
+                                  ? "#8B5CF6"
+                                  : "text.secondary",
+                              opacity:
+                                suggestion.status === "Not Supported" ? 0 : 1,
+                            }}
+                          />
+                        </Box>
+                      </ListItem>
+                    ))
+                  )}
                 </List>
               </Paper>
             </Fade>
@@ -371,21 +439,33 @@ const SearchName: React.FC = () => {
         open={openToast}
         autoHideDuration={4000}
         onClose={handleCloseToast}
-        message={toastMessage}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-        sx={{
-          '& .MuiSnackbarContent-root': {
-            fontSize: '1.2rem',
-            padding: '16px 24px',
+      >
+        <Alert
+          onClose={handleCloseToast}
+          severity="error"
+          variant="filled"
+          sx={{
+            width: '100%',
+            fontSize: '1.1rem',
+            padding: '12px 24px',
             minWidth: 'auto',
-            backgroundColor: theme.palette.background.paper,
-            color: theme.palette.text.primary,
+            backgroundColor: theme.palette.error.main,
+            color: '#fff',
             boxShadow: theme.shadows[3],
             borderRadius: 2,
-            marginTop: '24px'
-          }
-        }}
-      />
+            marginTop: '24px',
+            '& .MuiAlert-message': {
+              padding: '8px 0',
+            },
+            '& .MuiAlert-icon': {
+              fontSize: '24px',
+            },
+          }}
+        >
+          {toastMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
