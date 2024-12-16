@@ -34,6 +34,11 @@ import { useParams } from "react-router-dom";
 import { useSnackbar } from "notistack";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { namehash, stringToUint8Array } from "@/utils/namehash";
+import { RegistryService } from "@/services/registry";
+import { debounce } from 'lodash';
+
+const ALGORAND_ZERO_ADDRESS =
+  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5HFKQ";
 
 const RegisterName: React.FC = () => {
   const { name: initialName } = useParams<{ name: string }>();
@@ -41,7 +46,7 @@ const RegisterName: React.FC = () => {
     initialName ? initialName.split(".")[0] : ""
   );
   const [nameError, setNameError] = useState("");
-  const [duration, setDuration] = useState("1");
+  const [duration, setDuration] = useState(1);
   const [loading, setLoading] = useState(false);
   const [price, setPrice] = useState(0);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -51,6 +56,8 @@ const RegisterName: React.FC = () => {
   const { activeAccount, signTransactions } = useWallet();
   const { enqueueSnackbar } = useSnackbar();
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [isAvailable, setIsAvailable] = React.useState<boolean>(false);
+  const [isChecking, setIsChecking] = React.useState<boolean>(false);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.toLowerCase();
@@ -69,6 +76,39 @@ const RegisterName: React.FC = () => {
     const totalPrice = basePrice * parseInt(duration);
     setPrice(totalPrice);
   }, [name, duration]);
+
+  const debouncedCheckAvailability = React.useMemo(
+    () =>
+      debounce(async (name: string) => {
+        if (!name) return;
+
+        try {
+          setIsChecking(true);
+          const registry = new RegistryService("mainnet");
+          const owner = await registry.ownerOf(`${name}.voi`);
+          console.log({ owner });
+
+          // Name is available if it's owned by zero address or has no owner
+          setIsAvailable(owner === ALGORAND_ZERO_ADDRESS || owner === null);
+        } catch (error) {
+          console.error("Error checking name availability:", error);
+          setIsAvailable(false);
+        } finally {
+          setIsChecking(false);
+        }
+      }, 500),
+    []
+  );
+
+  React.useEffect(() => {
+    return () => {
+      debouncedCheckAvailability.cancel();
+    };
+  }, [debouncedCheckAvailability]);
+
+  useEffect(() => {
+    debouncedCheckAvailability(name);
+  }, [name, debouncedCheckAvailability]);
 
   const getPriceBreakdown = () => {
     const basePrice = getNamePrice(name);
@@ -389,26 +429,52 @@ const RegisterName: React.FC = () => {
                 </Alert>
               )}
 
-              <Button
-                variant="contained"
-                size="large"
-                onClick={() => setShowConfirmation(true)}
-                disabled={loading || !name || !activeAccount || !!nameError}
-                sx={{
-                  bgcolor: "#8B5CF6",
-                  "&:hover": {
-                    bgcolor: "#7C3AED",
-                  },
-                  height: "48px",
-                  borderRadius: "24px",
-                }}
-              >
-                {loading ? (
-                  <CircularProgress size={24} sx={{ color: "white" }} />
-                ) : (
-                  "Register"
-                )}
-              </Button>
+              {isChecking ? (
+                <CircularProgress size={20} />
+              ) : !name ? (
+                <Button
+                  variant="contained"
+                  size="large"
+                  disabled
+                  sx={{
+                    bgcolor: "#E5E7EB",
+                    color: "#9CA3AF",
+                    height: "48px",
+                    borderRadius: "24px",
+                    "&.Mui-disabled": {
+                      bgcolor: "#E5E7EB",
+                      color: "#9CA3AF",
+                    },
+                  }}
+                >
+                  Register
+                </Button>
+              ) : !isAvailable ? (
+                <Typography color="error">
+                  This name is already registered
+                </Typography>
+              ) : (
+                <Button
+                  variant="contained"
+                  size="large"
+                  onClick={() => setShowConfirmation(true)}
+                  disabled={loading || !activeAccount || !!nameError}
+                  sx={{
+                    bgcolor: "#8B5CF6",
+                    "&:hover": {
+                      bgcolor: "#7C3AED",
+                    },
+                    height: "48px",
+                    borderRadius: "24px",
+                  }}
+                >
+                  {loading ? (
+                    <CircularProgress size={24} sx={{ color: "white" }} />
+                  ) : (
+                    "Register"
+                  )}
+                </Button>
+              )}
             </Stack>
           </Paper>
         </Box>
