@@ -18,6 +18,7 @@ interface UseNameResult {
   error: string | null;
   isFormattedAddress: boolean;
   formatAddress: (address: string) => string;
+  refetch: () => Promise<void>;
 }
 
 export const useName = (address?: string): UseNameResult => {
@@ -30,80 +31,80 @@ export const useName = (address?: string): UseNameResult => {
   const formatAddress = (addr: string): string =>
     `${addr.slice(0, 4)}...${addr.slice(-4)}`;
 
-  useEffect(() => {
-    const fetchName = async () => {
-      if (!targetAddress) {
-        setDisplayName("");
-        setIsLoading(false);
+  const fetchName = async () => {
+    if (!targetAddress) {
+      setDisplayName("");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const { algodClient, indexerClient } = getAlgorandClients();
+
+      const ci = {
+        registry: new CONTRACT(
+          797607,
+          algodClient,
+          indexerClient,
+          {
+            name: "registry",
+            description: "Registry",
+            methods: RegistrySpec.contract.methods,
+            events: [],
+          },
+          {
+            addr: targetAddress,
+            sk: new Uint8Array(),
+          }
+        ),
+        resolver: new CONTRACT(
+          797608,
+          algodClient,
+          indexerClient,
+          {
+            name: "resolver",
+            description: "Resolver",
+            methods: ResolverSpec.contract.methods,
+            events: [],
+          },
+          {
+            addr: targetAddress,
+            sk: new Uint8Array(),
+          }
+        ),
+      };
+
+      const label = `${targetAddress}.addr.reverse`;
+      const node = await namehash(label);
+      const ownerOfR = await ci.registry.ownerOf(node);
+      if (!ownerOfR.success) {
+        throw new Error("Failed to get owner of node");
+      }
+      const ownerOf = ownerOfR.returnValue;
+      if (ownerOf !== targetAddress) {
+        setDisplayName(formatAddress(targetAddress));
         return;
       }
 
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const { algodClient, indexerClient } = getAlgorandClients();
-
-        const ci = {
-          registry: new CONTRACT(
-            797607,
-            algodClient,
-            indexerClient,
-            {
-              name: "registry",
-              description: "Registry",
-              methods: RegistrySpec.contract.methods,
-              events: [],
-            },
-            {
-              addr: targetAddress,
-              sk: new Uint8Array(),
-            }
-          ),
-          resolver: new CONTRACT(
-            797608,
-            algodClient,
-            indexerClient,
-            {
-              name: "resolver",
-              description: "Resolver",
-              methods: ResolverSpec.contract.methods,
-              events: [],
-            },
-            {
-              addr: targetAddress,
-              sk: new Uint8Array(),
-            }
-          ),
-        };
-
-        const label = `${targetAddress}.addr.reverse`;
-        const node = await namehash(label);
-        const ownerOfR = await ci.registry.ownerOf(node);
-        if (!ownerOfR.success) {
-          throw new Error("Failed to get owner of node");
-        }
-        const ownerOf = ownerOfR.returnValue;
-        if (ownerOf !== targetAddress) {
-          setDisplayName(formatAddress(targetAddress));
-          return;
-        }
-
-        const nameR = await ci.resolver.name(node);
-        if (!nameR.success) {
-          throw new Error("Failed to get name");
-        }
-        const name = stripTrailingZeroBytes(nameR.returnValue);
-        setDisplayName(name);
-      } catch (err) {
-        console.error("Error fetching name:", err);
-        setError(err instanceof Error ? err.message : "Unknown error occurred");
-        setDisplayName(formatAddress(targetAddress));
-      } finally {
-        setIsLoading(false);
+      const nameR = await ci.resolver.name(node);
+      if (!nameR.success) {
+        throw new Error("Failed to get name");
       }
-    };
+      const name = stripTrailingZeroBytes(nameR.returnValue);
+      setDisplayName(name);
+    } catch (err) {
+      console.error("Error fetching name:", err);
+      setError(err instanceof Error ? err.message : "Unknown error occurred");
+      setDisplayName(formatAddress(targetAddress));
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchName();
   }, [targetAddress]);
 
@@ -113,5 +114,6 @@ export const useName = (address?: string): UseNameResult => {
     error,
     isFormattedAddress: displayName.includes("..."),
     formatAddress,
+    refetch: fetchName,
   };
 };

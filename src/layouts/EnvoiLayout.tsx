@@ -20,6 +20,8 @@ import {
   TextField,
   Dialog,
   DialogContent,
+  Alert,
+  Select,
 } from "@mui/material";
 import { useWallet } from "@txnlab/use-wallet-react";
 import { Link, useLocation } from "react-router-dom";
@@ -49,9 +51,12 @@ import {
   uint8ArrayToBigInt,
 } from "@/utils/namehash";
 import { useName } from "@/hooks/useName";
-import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
-import ReservationsModal from '@/components/ReservationsModal';
-import { rsvps } from '@/constants/rsvps';
+import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
+import ReservationsModal from "@/components/ReservationsModal";
+import { rsvps } from "@/constants/rsvps";
+import DomainIcon from "@mui/icons-material/Domain";
+import MyNamesModal from "@/components/MyNamesModal";
+import { RegistryService } from "@/services/registry";
 
 interface NavLinkProps {
   to: string;
@@ -144,63 +149,6 @@ const NETWORK_CONFIG = {
   },
 } as const;
 
-interface SetNameModalProps {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (name: string) => Promise<void>;
-}
-
-const SetNameModal: React.FC<SetNameModalProps> = ({
-  open,
-  onClose,
-  onSubmit,
-}) => {
-  const [name, setName] = useState("");
-
-  const handleSubmit = async () => {
-    await onSubmit(name);
-    setName("");
-    onClose();
-  };
-
-  return (
-    <Modal open={open} onClose={onClose} aria-labelledby="set-name-modal">
-      <Box
-        sx={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: 400,
-          bgcolor: "background.paper",
-          borderRadius: 2,
-          boxShadow: 24,
-          p: 4,
-        }}
-      >
-        <Typography variant="h6" component="h2" gutterBottom>
-          Set Primary Name
-        </Typography>
-        <TextField
-          fullWidth
-          label="Enter your .voi name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          sx={{ mb: 3 }}
-        />
-        <Stack direction="row" spacing={2} justifyContent="flex-end">
-          <Button onClick={onClose} variant="outlined">
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} variant="contained" disabled={!name}>
-            Update
-          </Button>
-        </Stack>
-      </Box>
-    </Modal>
-  );
-};
-
 interface TransactionPendingModalProps {
   open: boolean;
 }
@@ -245,60 +193,13 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
   const [isPending, setIsPending] = useState(false);
   const [reservationsModalOpen, setReservationsModalOpen] = useState(false);
   const [hasReservations, setHasReservations] = React.useState(false);
+  const [myNamesModalOpen, setMyNamesModalOpen] = useState(false);
+  const [namesModalMode, setNamesModalMode] = useState<"view" | "setPrimary">(
+    "view"
+  );
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const { balance, loading } = useVoiBalance(activeAddress, selectedNetwork);
-
-  // useEffect(() => {
-  //   const fetchName = async () => {
-  //     if (!activeAccount) {
-  //       setDisplayName("");
-  //       return;
-  //     }
-
-  //     try {
-  //       const rsvpService = createRSVPService(
-  //         RSVP_CONTRACT_ID,
-  //         activeAccount.address
-  //       );
-
-  //       // Get account node
-  //       const node = await rsvpService.accountNode(activeAccount.address);
-  //       const nodeHex = Buffer.from(node).toString("hex");
-
-  //       console.log({ nodeHex });
-
-  //       if (nodeHex === EMPTY_NODE) {
-  //         setDisplayName(
-  //           `${activeAddress?.slice(0, 4)}...${activeAddress?.slice(-4)}`
-  //         );
-  //         return;
-  //       }
-
-  //       // Get reservation name
-  //       const nodeNameBytes = await rsvpService.reservationName(node);
-  //       const decoder = new TextDecoder();
-  //       const nameWithNulls = decoder.decode(Buffer.from(nodeNameBytes));
-  //       const name = nameWithNulls.replace(/\0/g, "");
-
-  //       console.log({ name });
-
-  //       if (name) {
-  //         setDisplayName(name);
-  //       } else {
-  //         setDisplayName(
-  //           `${activeAddress?.slice(0, 4)}...${activeAddress?.slice(-4)}`
-  //         );
-  //       }
-  //     } catch (err) {
-  //       console.error(err);
-  //       setDisplayName(
-  //         `${activeAddress?.slice(0, 4)}...${activeAddress?.slice(-4)}`
-  //       );
-  //     }
-  //   };
-
-  //   fetchName();
-  // }, [activeAccount, activeAddress]);
 
   useEffect(() => {
     const fetchBalance = async () => {
@@ -352,7 +253,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
     }
 
     const userReservations = Object.values(rsvps).some(
-      address => address === activeAccount.address
+      (address) => address === activeAccount.address
     );
     setHasReservations(userReservations);
   }, [activeAccount]);
@@ -592,6 +493,21 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
     }
   };
 
+  const handleEditClick = () => {
+    setNamesModalMode("setPrimary");
+    setMyNamesModalOpen(true);
+  };
+
+  const handleMyNamesClick = () => {
+    setNamesModalMode("view");
+    setMyNamesModalOpen(true);
+    handleDrawerClose(); // Close the drawer when opening modal
+  };
+
+  const refreshName = () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
   return (
     <Box
       sx={{
@@ -714,7 +630,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
                       </Typography>
                       <IconButton
                         size="small"
-                        onClick={() => setSetNameModalOpen(true)}
+                        onClick={handleEditClick}
                         sx={{
                           color: "#8B5CF6",
                           "&:hover": {
@@ -793,6 +709,41 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
                     }}
                   >
                     View Profile
+                  </Typography>
+                </ListItem>
+
+                <ListItem
+                  onClick={handleMyNamesClick}
+                  sx={{
+                    cursor: "pointer",
+                    "&:hover": {
+                      backgroundColor:
+                        mode === "light"
+                          ? "rgba(139, 92, 246, 0.04)"
+                          : "rgba(139, 92, 246, 0.08)",
+                    },
+                    borderRadius: "8px",
+                    mb: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    textDecoration: "none",
+                  }}
+                >
+                  <DomainIcon
+                    sx={{
+                      color: "#8B5CF6",
+                      mr: 2,
+                      fontSize: 20,
+                    }}
+                  />
+                  <Typography
+                    sx={{
+                      color: "text.primary",
+                      fontSize: "0.875rem",
+                      fontWeight: 500,
+                    }}
+                  >
+                    My Names
                   </Typography>
                 </ListItem>
 
@@ -1089,17 +1040,19 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
         selectedNetwork={selectedNetwork}
       />
 
-      <SetNameModal
-        open={setNameModalOpen}
-        onClose={() => setSetNameModalOpen(false)}
-        onSubmit={handleSetName}
-      />
-
       <TransactionPendingModal open={isPending} />
 
-      <ReservationsModal 
+      <ReservationsModal
         open={reservationsModalOpen}
         onClose={() => setReservationsModalOpen(false)}
+      />
+
+      <MyNamesModal
+        open={myNamesModalOpen}
+        onClose={() => setMyNamesModalOpen(false)}
+        mode={namesModalMode}
+        setName={handleSetName}
+        onNameSet={refreshName}
       />
 
       <Box
