@@ -22,7 +22,7 @@ export const useVoiBalance = (address: string | undefined, network: string) => {
           Number(amount) - Number(minBalance),
           0
         );
-        setBalance(availableBalance);
+        setBalance(availableBalance / 1e6);
       } catch (error) {
         console.error("Error fetching balance:", error);
         setBalance(null);
