@@ -349,6 +349,10 @@ const MyNamesModal: React.FC<MyNamesModalProps> = ({
               This will be displayed as your primary identifier across the
               platform.
             </Typography>
+            <Typography variant="body2" color="text.secondary">
+              There is a one-time fee of 1000 VOI to set your primary name.
+              Payments are non-refundable.
+            </Typography>
           </DialogContent>
           <DialogActions sx={{ p: 2, pt: 0 }}>
             <Button
