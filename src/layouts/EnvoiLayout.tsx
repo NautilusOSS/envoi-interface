@@ -56,7 +56,8 @@ import ReservationsModal from "@/components/ReservationsModal";
 import { rsvps } from "@/constants/rsvps";
 import DomainIcon from "@mui/icons-material/Domain";
 import MyNamesModal from "@/components/MyNamesModal";
-import { RegistryService } from "@/services/registry";
+
+const paymentAssetSymbol = "VOI";
 
 interface NavLinkProps {
   to: string;
@@ -340,17 +341,36 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
       if (!activeAccount) {
         return;
       }
-      const aUSDC = {
-        asaAssetId: 302190,
-        tokenId: 395614,
+
+      const vns = {
+        register: 797607,
+        resolver: 797608,
+        registrar: 797609,
+        reverseRegistrar: 797610,
       };
+
+      const wVOI = {
+        tokenId: 828295, // en Voi
+      };
+
+      // const aUSDC = {
+      //   asaAssetId: 302190,
+      //   tokenId: 395614,
+      // };
+
       const { algodClient, indexerClient } = getAlgorandClients();
-      const ci = new CONTRACT(797609, algodClient, indexerClient, abi.custom, {
-        addr: activeAccount.address,
-        sk: new Uint8Array(),
-      });
+      const ci = new CONTRACT(
+        vns.reverseRegistrar,
+        algodClient,
+        indexerClient,
+        abi.custom,
+        {
+          addr: activeAccount.address,
+          sk: new Uint8Array(),
+        }
+      );
       const ciRegistry = new CONTRACT(
-        797607,
+        vns.register,
         algodClient,
         indexerClient,
         {
@@ -366,7 +386,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
       );
       const builder = {
         arc200: new CONTRACT(
-          aUSDC.tokenId,
+          wVOI.tokenId,
           algodClient,
           indexerClient,
           abi.nt200,
@@ -379,7 +399,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
           true
         ),
         registrar: new CONTRACT(
-          797610,
+          vns.reverseRegistrar,
           algodClient,
           indexerClient,
           {
@@ -397,7 +417,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
           true
         ),
         resolver: new CONTRACT(
-          797608,
+          vns.resolver,
           algodClient,
           indexerClient,
           {
@@ -423,86 +443,110 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
       }
       const ownerOf = ownerOfR.returnValue;
       const doRegister = ownerOf !== activeAccount.address;
+
       const buildN = [];
-      if (doRegister) {
-        // Deposit USDC (ASA -> ARC200)
-        {
-          const txnO = (await builder.arc200.deposit(1e6))?.obj;
-          const assetTransfer = {
-            xaid: aUSDC.asaAssetId,
-            aamt: 1e6,
-            payment: 28500,
-          };
-          buildN.push({
-            ...txnO,
-            ...assetTransfer,
-          });
+      let customR;
+      for (const p0 of [0, 28500]) {
+        if (doRegister) {
+          // Deposit USDC (ASA -> ARC200)
+          // {
+          //   const txnO = (await builder.arc200.deposit(1e6))?.obj;
+          //   const assetTransfer = {
+          //     xaid: aUSDC.asaAssetId,
+          //     aamt: 1e6,
+          //     payment: 28500,
+          //   };
+          //   buildN.push({
+          //     ...txnO,
+          //     ...assetTransfer,
+          //   });
+          // }
+          // Create wVOI Balance for user
+          if (p0 > 0) {
+            const txnO = (
+              await builder.arc200.createBalanceBox(activeAccount.address)
+            )?.obj;
+            buildN.push({
+              ...txnO,
+              payment: p0,
+              note: new TextEncoder().encode(
+                `envoi createBalanceBox 1000 ${paymentAssetSymbol} for reverse-registrar payment`
+              ),
+            });
+          }
+
+          // approve spending for register
+          {
+            const txnO = (
+              await builder.arc200.arc200_approve(
+                algosdk.getApplicationAddress(vns.reverseRegistrar),
+                1000 * 1e6
+              )
+            )?.obj;
+            buildN.push({
+              ...txnO,
+              payment: 28501,
+              note: new TextEncoder().encode(
+                `arc200 approve ${algosdk.getApplicationAddress(
+                  vns.reverseRegistrar
+                )} ${1000}`
+              ),
+            });
+          }
+          // register with reverse registrar
+          {
+            const txnO = (
+              await builder.registrar.register(
+                algosdk.decodeAddress(activeAccount.address).publicKey,
+                activeAccount.address,
+                0
+              )
+            )?.obj;
+            buildN.push({
+              ...txnO,
+              payment: 336700,
+              note: new TextEncoder().encode(
+                `reverse-registrar register ${activeAddress}.addr.reverse`
+              ),
+            });
+          }
         }
-        // approve spending for register
+        // set name with resolver
         {
           const txnO = (
-            await builder.arc200.arc200_approve(
-              algosdk.getApplicationAddress(797610),
-              1e6
-            )
-          )?.obj;
-          buildN.push({
-            ...txnO,
-            payment: 28501,
-            note: new TextEncoder().encode(
-              `arc200 approve ${algosdk.getApplicationAddress(797610)} ${1e6}`
-            ),
-          });
-        }
-        // register with reverse registrar
-        {
-          const txnO = (
-            await builder.registrar.register(
-              algosdk.decodeAddress(activeAccount.address).publicKey,
-              activeAccount.address,
-              0
+            await builder.resolver.setName(
+              await namehash(`${activeAddress}.addr.reverse`),
+              stringToUint8Array(name)
             )
           )?.obj;
           buildN.push({
             ...txnO,
             payment: 336700,
             note: new TextEncoder().encode(
-              `reverse-registrar register ${activeAddress}.addr.reverse`
+              `resolver setName ${activeAddress}.addr.reverse ${name}`
             ),
           });
         }
+        ci.setFee(15000);
+        ci.setEnableGroupResourceSharing(true);
+        ci.setExtraTxns(buildN);
+        customR = await ci.custom();
+        if (customR.success) {
+          break;
+        }
       }
-      // set name with resolver
-      {
-        const txnO = (
-          await builder.resolver.setName(
-            await namehash(`${activeAddress}.addr.reverse`),
-            stringToUint8Array(name)
-          )
-        )?.obj;
-        buildN.push({
-          ...txnO,
-          payment: 336700,
-          note: new TextEncoder().encode(
-            `resolver setName ${activeAddress}.addr.reverse ${name}`
-          ),
-        });
+      if (!customR.success) {
+        throw new Error("Failed to register name");
       }
-      ci.setFee(15000);
-      ci.setEnableGroupResourceSharing(true);
-      ci.setExtraTxns(buildN);
-      const customR = await ci.custom();
-      if (customR.success) {
-        const stxns = await signTransactions(
-          customR.txns.map((t: string) => {
-            return new Uint8Array(Buffer.from(t, "base64"));
-          })
-        );
-        const res = await algodClient
-          .sendRawTransaction(stxns as Uint8Array[])
-          .do();
-        console.log({ res });
-      }
+      const stxns = await signTransactions(
+        customR.txns.map((t: string) => {
+          return new Uint8Array(Buffer.from(t, "base64"));
+        })
+      );
+      const res = await algodClient
+        .sendRawTransaction(stxns as Uint8Array[])
+        .do();
+      console.log({ res });
     } catch (err) {
       console.error(err);
     } finally {

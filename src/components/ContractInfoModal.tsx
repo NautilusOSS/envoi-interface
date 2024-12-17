@@ -34,14 +34,14 @@ const ContractInfoModal: React.FC<ContractInfoModalProps> = ({
       vnsRegistrar: 797609,
       vnsReverseRegistrar: 797610,
       //usdc: 395614,
-      usdc: 780596,
+      //usdc: 780596,
     },
     testnet: {
       vnsRegistry: 30000,
       vnsResolver: 30001,
       vnsRegistrar: 30002,
       vnsReverseRegistrar: 30003,
-      usdc: 20438,
+      //usdc: 20438,
     },
   };
 
@@ -193,7 +193,7 @@ const ContractInfoModal: React.FC<ContractInfoModalProps> = ({
               </Link>
             </Typography>
           </ListItem>
-          <ListItem
+          {/*<ListItem
             sx={{
               display: "flex",
               flexDirection: "column",
@@ -212,7 +212,7 @@ const ContractInfoModal: React.FC<ContractInfoModalProps> = ({
                 {currentContracts.usdc}
               </Link>
             </Typography>
-          </ListItem>
+          </ListItem>*/}
         </List>
 
         <Typography variant="body2" sx={{ mt: 2, color: "text.secondary" }}>

@@ -42,6 +42,16 @@ import { useNavigate } from "react-router-dom";
 const ALGORAND_ZERO_ADDRESS =
   "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5HFKQ";
 
+const paymentAssetSymbol = "VOI";
+
+const TRANSACTION_FEES = {
+  createBalanceBox: 28500,
+  deposit: 0,
+  approve: 28501,
+  register: 336700,
+  setName: 336701,
+};
+
 const formatCompactAddress = (address: string): string => {
   if (!address) return "";
   if (address.length <= 12) return address;
@@ -141,9 +151,13 @@ const RegisterName: React.FC = () => {
     return (
       <Box>
         <Typography variant="body2">Cost Breakdown:</Typography>
-        <Typography variant="body2">Base Price: {basePrice} USDC</Typography>
+        <Typography variant="body2">
+          Base Price: {basePrice} {paymentAssetSymbol}
+        </Typography>
         <Typography variant="body2">Duration: {duration} year(s)</Typography>
-        <Typography variant="body2">Total: {price} USDC</Typography>
+        <Typography variant="body2">
+          Total: {price} {paymentAssetSymbol}
+        </Typography>
       </Box>
     );
   };
@@ -187,14 +201,24 @@ const RegisterName: React.FC = () => {
         sk: new Uint8Array(),
       });
 
-      const aUSDC = {
-        asaAssetId: 302190,
-        tokenId: 395614,
+      // const aUSDC = {
+      //   asaAssetId: 302190,
+      //   tokenId: 395614,
+      // };
+
+      const vns = {
+        registrar: 797609,
+        resolver: 797608,
+      };
+
+      const wVOI = {
+        tokenId: 828295, // en Voi
       };
 
       const builder = {
         arc200: new CONTRACT(
-          aUSDC.tokenId,
+          //aUSDC.tokenId,
+          wVOI.tokenId,
           algodClient,
           indexerClient,
           abi.nt200,
@@ -207,7 +231,7 @@ const RegisterName: React.FC = () => {
           true
         ),
         registrar: new CONTRACT(
-          797609,
+          vns.registrar,
           algodClient,
           indexerClient,
           {
@@ -225,7 +249,7 @@ const RegisterName: React.FC = () => {
           true
         ),
         resolver: new CONTRACT(
-          797608,
+          vns.resolver,
           algodClient,
           indexerClient,
           {
@@ -244,92 +268,144 @@ const RegisterName: React.FC = () => {
         ),
       };
 
-      const buildN = [];
+      let customR;
+      for (const p0 of [0, 28500]) {
+        const buildN = [];
 
-      // Deposit USDC (ASA -> ARC200)
-      {
-        const txnO = (await builder.arc200.deposit(price * 1e6))?.obj;
-        const assetTransfer = {
-          xaid: aUSDC.asaAssetId,
-          aamt: price * 1e6,
-          payment: 28500,
-        };
-        buildN.push({
-          ...txnO,
-          ...assetTransfer,
-        });
+        // Deposit USDC (ASA -> ARC200)
+        // {
+        //   const txnO = (await builder.arc200.deposit(price * 1e6))?.obj;
+        //   const assetTransfer = {
+        //     xaid: aUSDC.asaAssetId,
+        //     aamt: price * 1e6,
+        //     payment: 28500,
+        //   };
+        //   buildN.push({
+        //     ...txnO,
+        //     ...assetTransfer,
+        //   });
+        // }
+
+        // Create wVOI Balance for user
+        if (p0 > 0) {
+          const txnO = (
+            await builder.arc200.createBalanceBox(activeAccount.address)
+          )?.obj;
+          buildN.push({
+            ...txnO,
+            payment: p0,
+            note: new TextEncoder().encode(
+              `envoi createBalanceBox ${price} ${paymentAssetSymbol} for ${name}.voi payment`
+            ),
+          });
+        }
+        // Create wVOI balance for treasury (once)
+        // {
+        //   const txnO = (
+        //     await builder.arc200.createBalanceBox(
+        //       "BRB3JP4LIW5Q755FJCGVAOA4W3THJ7BR3K6F26EVCGMETLEAZOQRHHJNLQ"
+        //     )
+        //   )?.obj;
+        //   buildN.push({
+        //     ...txnO,
+        //     payment: 28501,
+        //   });
+        // }
+
+        // Deposit VOI (NET -> ARC200)
+        {
+          const txnO = (await builder.arc200.deposit(price * 1e6))?.obj;
+          buildN.push({
+            ...txnO,
+            payment: price * 1e6,
+            note: new TextEncoder().encode(
+              `envoi deposit ${price} ${paymentAssetSymbol} for ${name}.voi payment`
+            ),
+          });
+        }
+
+        // Approve spending
+        {
+          const paramSpender = algosdk.getApplicationAddress(vns.registrar);
+          const paramAmount = price * 1e6;
+          const txnO = (
+            await builder.arc200.arc200_approve(paramSpender, paramAmount)
+          )?.obj;
+          buildN.push({
+            ...txnO,
+            payment: 28501,
+            note: new TextEncoder().encode(
+              `envoi arc200_approve ${price} ${paymentAssetSymbol} spending for ${name}.voi payment`
+            ),
+          });
+        }
+
+        // Register name
+        {
+          const paramName = stringToUint8Array(name, 32);
+          const paramOwner = activeAccount.address;
+          const paramDuration = Number(duration) * 365 * 24 * 60 * 60; // Convert years to seconds
+          const txnO = (
+            await builder.registrar.register(
+              paramName,
+              paramOwner,
+              paramDuration
+            )
+          )?.obj;
+          buildN.push({
+            ...txnO,
+            payment: 336700,
+            note: new TextEncoder().encode(
+              `envoi registrar register ${name}.voi for ${duration} years`
+            ),
+          });
+        }
+
+        // ----------------------------------------------------------------
+        // TODO if first name for user setup reverse registrar as well
+        // ----------------------------------------------------------------
+
+        // set record name in resolver
+        {
+          const paramNode = await namehash(`${name}.voi`);
+          const paramName = stringToUint8Array(`${name}.voi`, 256);
+          const txnO = (await builder.resolver.setName(paramNode, paramName))
+            ?.obj;
+          buildN.push({
+            ...txnO,
+            payment: 336701,
+            note: new TextEncoder().encode(
+              `envoi resolver setName ${name}.voi`
+            ),
+          });
+        }
+
+        ci.setFee(15000);
+        ci.setEnableGroupResourceSharing(true);
+        ci.setExtraTxns(buildN);
+
+        customR = await ci.custom();
+        if (customR.success) {
+          break;
+        }
       }
 
-      // Approve spending
-      {
-        const paramSpender = algosdk.getApplicationAddress(797609);
-        const paramAmount = price * 1e6;
-        const txnO = (
-          await builder.arc200.arc200_approve(paramSpender, paramAmount)
-        )?.obj;
-        buildN.push({
-          ...txnO,
-          payment: 28100,
-        });
+      if (!customR.success) {
+        throw new Error("Failed to register name");
       }
 
-      // Register name
-      {
-        const paramName = stringToUint8Array(name, 32);
-        const paramOwner = activeAccount.address;
-        const paramDuration = Number(duration) * 365 * 24 * 60 * 60; // Convert years to seconds
-        const txnO = (
-          await builder.registrar.register(paramName, paramOwner, paramDuration)
-        )?.obj;
-        buildN.push({
-          ...txnO,
-          payment: 336700,
-        });
-      }
+      const stxns = await signTransactions(
+        customR.txns.map(
+          (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+        )
+      );
 
-      // ----------------------------------------------------------------
-      // TODO if first name for user setup reverse registrar as well
-      // ----------------------------------------------------------------
-
-      // set record name in resolver
-      {
-        const paramNode = await namehash(`${name}.voi`);
-        const paramName = stringToUint8Array(`${name}.voi`, 256);
-        console.log({
-          paramNode,
-          paramName,
-        });
-        const txnO = (await builder.resolver.setName(paramNode, paramName))
-          ?.obj;
-        buildN.push({
-          ...txnO,
-        });
-      }
-
-      ci.setFee(15000);
-      ci.setEnableGroupResourceSharing(true);
-      ci.setExtraTxns(buildN);
-
-      const customR = await ci.custom();
-
-      console.log({
-        customR,
+      await algodClient.sendRawTransaction(stxns as Uint8Array[]).do();
+      setSuccess(true);
+      enqueueSnackbar("Name registered successfully!", {
+        variant: "success",
       });
-
-      if (customR.success) {
-        const stxns = await signTransactions(
-          customR.txns.map(
-            (t: string) => new Uint8Array(Buffer.from(t, "base64"))
-          )
-        );
-
-        await algodClient.sendRawTransaction(stxns as Uint8Array[]).do();
-        setSuccess(true);
-        enqueueSnackbar("Name registered successfully!", {
-          variant: "success",
-        });
-        setShowConfirmation(false);
-      }
+      setShowConfirmation(false);
     } catch (err) {
       console.error("Error registering name:", err);
       setError(err instanceof Error ? err.message : "Failed to register name");
@@ -360,10 +436,10 @@ const RegisterName: React.FC = () => {
         </Typography>
         <Typography variant="body2" paragraph>
           • Names are registered on a first-come, first-served basis •
-          Registration fees are non-refundable • Reserved names that are registered 
-          through means other than this official interface will be reclaimed and 
-          refunded • We reserve the right to reclaim and refund any reserved names 
-          that were registered through unofficial means
+          Registration fees are non-refundable • Reserved names that are
+          registered through means other than this official interface will be
+          reclaimed and refunded • We reserve the right to reclaim and refund
+          any reserved names that were registered through unofficial means
         </Typography>
 
         <Typography variant="body1" paragraph>
@@ -393,6 +469,28 @@ const RegisterName: React.FC = () => {
   const isReserved = `${name}.voi` in rsvps;
   const reservedOwner = isReserved ? rsvps[`${name}.voi`] : null;
   const isReservedOwner = activeAccount?.address === reservedOwner;
+
+  const calculateTotalCost = () => {
+    const namePrice = price * 1e6;
+    const totalFees =
+      TRANSACTION_FEES.deposit +
+      TRANSACTION_FEES.approve +
+      TRANSACTION_FEES.register +
+      TRANSACTION_FEES.setName;
+
+    // Add createBalanceBox fee if needed (first-time users)
+    // This is a simplified check - you might want to actually verify if the user needs this
+    const mayNeedBalanceBox = true; // Replace with actual check
+    const balanceBoxFee = mayNeedBalanceBox
+      ? TRANSACTION_FEES.createBalanceBox
+      : 0;
+
+    return {
+      namePrice: price,
+      fees: (totalFees + balanceBoxFee) / 1e6,
+      total: price + (totalFees + balanceBoxFee) / 1e6,
+    };
+  };
 
   return (
     <>
@@ -504,7 +602,7 @@ const RegisterName: React.FC = () => {
                   </Tooltip>
                 </Box>
                 <Typography variant="h4" color="primary" gutterBottom>
-                  {price.toLocaleString()} USDC
+                  {price.toLocaleString()} {paymentAssetSymbol}
                 </Typography>
               </Box>
 
@@ -634,7 +732,19 @@ const RegisterName: React.FC = () => {
               Duration: {duration} year(s)
             </Typography>
             <Typography variant="body1" gutterBottom>
-              Total Cost: {price.toLocaleString()} USDC
+              Name Cost: {price.toLocaleString()} {paymentAssetSymbol}
+            </Typography>
+            <Typography variant="body1" gutterBottom>
+              Transaction Fees: {calculateTotalCost().fees.toLocaleString()}{" "}
+              {paymentAssetSymbol}
+            </Typography>
+            <Typography
+              variant="body1"
+              gutterBottom
+              sx={{ fontWeight: "bold" }}
+            >
+              Total Cost: {calculateTotalCost().total.toLocaleString()}{" "}
+              {paymentAssetSymbol}
             </Typography>
 
             <Box sx={{ mt: 3 }}>
