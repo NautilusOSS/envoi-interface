@@ -27,21 +27,30 @@ const ContractInfoModal: React.FC<ContractInfoModalProps> = ({
       ? "https://block.voi.network/explorer"
       : "https://testnet.block.voi.network/explorer";
 
+  const tokenExplorerBaseUrl =
+    selectedNetwork === "mainnet"
+      ? "https://voiager.xyz/token"
+      : "https://testnet.voiager.xyz/token";
+
   const contracts = {
     mainnet: {
       vnsRegistry: 797607,
       vnsResolver: 797608,
       vnsRegistrar: 797609,
       vnsReverseRegistrar: 797610,
-      //usdc: 395614,
-      //usdc: 780596,
+      ausdc: {
+        asaId: 302190,
+        tokenId: 395614,
+      },
+      wvoi: 828295,
     },
     testnet: {
       vnsRegistry: 30000,
       vnsResolver: 30001,
       vnsRegistrar: 30002,
       vnsReverseRegistrar: 30003,
-      //usdc: 20438,
+      ausdc: 20438,
+      wvoi: 0,
     },
   };
 
@@ -50,6 +59,9 @@ const ContractInfoModal: React.FC<ContractInfoModalProps> = ({
 
   const getExplorerLink = (appId: string | number) =>
     `${explorerBaseUrl}/application/${appId}/global-state`;
+
+  const getTokenExplorerLink = (tokenId: string | number) =>
+    `${tokenExplorerBaseUrl}/${tokenId}`;
 
   return (
     <Modal
@@ -193,7 +205,7 @@ const ContractInfoModal: React.FC<ContractInfoModalProps> = ({
               </Link>
             </Typography>
           </ListItem>
-          {/*<ListItem
+          <ListItem
             sx={{
               display: "flex",
               flexDirection: "column",
@@ -202,17 +214,46 @@ const ContractInfoModal: React.FC<ContractInfoModalProps> = ({
             }}
           >
             <Typography variant="body2" sx={{ fontWeight: 500 }}>
-              USDC:{" "}
+              Aramid USDC (aUSDC):{" "}
               <Link
-                href={getExplorerLink(currentContracts.usdc)}
+                href={`https://block.voi.network/explorer/asset/${currentContracts.ausdc}/transactions`}
                 target="_blank"
                 rel="noopener noreferrer"
                 sx={{ color: "#8B5CF6" }}
               >
-                {currentContracts.usdc}
+                {currentContracts.ausdc.asaId}
+              </Link>
+              {`, `}
+              <Link
+                href={`https://voiager.xyz/token/${currentContracts.ausdc.tokenId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{ color: "#8B5CF6" }}
+              >
+                {currentContracts.ausdc.tokenId}
               </Link>
             </Typography>
-          </ListItem>*/}
+          </ListItem>
+          <ListItem
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
+              py: 0.5,
+            }}
+          >
+            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+              Wrapped VOI (en VOI):{" "}
+              <Link
+                href={`https://voiager.xyz/token/${currentContracts.wvoi}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{ color: "#8B5CF6" }}
+              >
+                {currentContracts.wvoi}
+              </Link>
+            </Typography>
+          </ListItem>
         </List>
 
         <Typography variant="body2" sx={{ mt: 2, color: "text.secondary" }}>
