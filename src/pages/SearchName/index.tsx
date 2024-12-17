@@ -368,7 +368,7 @@ const SearchName: React.FC = () => {
                           primary={suggestion.name}
                           secondary={
                             suggestion.status === "Available"
-                              ? `${suggestion.price?.toLocaleString()} VOI`
+                              ? "\u00A0"
                               : suggestion.status === "Registered"
                               ? formatCompactAddress(suggestion.owner)
                               : suggestion.status === "Reserved"

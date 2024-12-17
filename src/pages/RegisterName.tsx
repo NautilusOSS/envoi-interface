@@ -35,7 +35,7 @@ import { useSnackbar } from "notistack";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { namehash, stringToUint8Array } from "@/utils/namehash";
 import { RegistryService } from "@/services/registry";
-import { debounce } from 'lodash';
+import { debounce } from "lodash";
 import { rsvps } from "@/constants/rsvps";
 import { useNavigate } from "react-router-dom";
 
@@ -43,7 +43,7 @@ const ALGORAND_ZERO_ADDRESS =
   "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5HFKQ";
 
 const formatCompactAddress = (address: string): string => {
-  if (!address) return '';
+  if (!address) return "";
   if (address.length <= 12) return address;
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 };
@@ -87,7 +87,7 @@ const RegisterName: React.FC = () => {
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.toLowerCase();
-    
+
     const isValid = /^[a-z0-9-]*$/.test(value);
     if (isValid) {
       setName(value);
@@ -158,7 +158,7 @@ const RegisterName: React.FC = () => {
 
     const fullName = `${name}.voi`;
     const reservedOwner = rsvps[fullName];
-    
+
     // Check if name is reserved and prevent registration if not the reserved owner
     if (reservedOwner && reservedOwner !== activeAccount.address) {
       enqueueSnackbar(`${fullName} is reserved and cannot be registered`, {
@@ -187,9 +187,14 @@ const RegisterName: React.FC = () => {
         sk: new Uint8Array(),
       });
 
+      const aUSDC = {
+        asaAssetId: 302190,
+        tokenId: 395614,
+      };
+
       const builder = {
         arc200: new CONTRACT(
-          780596,
+          aUSDC.tokenId,
           algodClient,
           indexerClient,
           abi.nt200,
@@ -241,6 +246,20 @@ const RegisterName: React.FC = () => {
 
       const buildN = [];
 
+      // Deposit USDC (ASA -> ARC200)
+      {
+        const txnO = (await builder.arc200.deposit(price * 1e6))?.obj;
+        const assetTransfer = {
+          xaid: aUSDC.asaAssetId,
+          aamt: price * 1e6,
+          payment: 28500,
+        };
+        buildN.push({
+          ...txnO,
+          ...assetTransfer,
+        });
+      }
+
       // Approve spending
       {
         const paramSpender = algosdk.getApplicationAddress(797609);
@@ -250,7 +269,7 @@ const RegisterName: React.FC = () => {
         )?.obj;
         buildN.push({
           ...txnO,
-          payment: 28500,
+          payment: 28100,
         });
       }
 
@@ -267,9 +286,11 @@ const RegisterName: React.FC = () => {
           payment: 336700,
         });
       }
+
       // ----------------------------------------------------------------
       // TODO if first name for user setup reverse registrar as well
       // ----------------------------------------------------------------
+
       // set record name in resolver
       {
         const paramNode = await namehash(`${name}.voi`);
@@ -339,7 +360,10 @@ const RegisterName: React.FC = () => {
         </Typography>
         <Typography variant="body2" paragraph>
           • Names are registered on a first-come, first-served basis •
-          Registration fees are non-refundable
+          Registration fees are non-refundable • Reserved names that are registered 
+          through means other than this official interface will be reclaimed and 
+          refunded • We reserve the right to reclaim and refund any reserved names 
+          that were registered through unofficial means
         </Typography>
 
         <Typography variant="body1" paragraph>
@@ -394,22 +418,22 @@ const RegisterName: React.FC = () => {
           )}
 
           {isReserved && !isReservedOwner && (
-            <Alert 
-              severity="error" 
-              sx={{ 
+            <Alert
+              severity="error"
+              sx={{
                 mb: 2,
-                '& .MuiAlert-message': {
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 1
-                }
+                "& .MuiAlert-message": {
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 1,
+                },
               }}
             >
               <Typography variant="body1" fontWeight={500}>
                 This name is reserved
               </Typography>
               <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                Owner: {formatCompactAddress(reservedOwner || '')}
+                Owner: {formatCompactAddress(reservedOwner || "")}
               </Typography>
             </Alert>
           )}
@@ -517,15 +541,15 @@ const RegisterName: React.FC = () => {
                   Register
                 </Button>
               ) : !isAvailable && !isReservedOwner ? (
-                <Typography 
-                  color="error" 
-                  sx={{ 
-                    textAlign: 'center',
-                    fontWeight: 500 
+                <Typography
+                  color="error"
+                  sx={{
+                    textAlign: "center",
+                    fontWeight: 500,
                   }}
                 >
-                  {isReserved 
-                    ? "This name is reserved and cannot be registered" 
+                  {isReserved
+                    ? "This name is reserved and cannot be registered"
                     : "This name is already registered"}
                 </Typography>
               ) : (
@@ -533,7 +557,13 @@ const RegisterName: React.FC = () => {
                   variant="contained"
                   size="large"
                   onClick={() => setShowConfirmation(true)}
-                  disabled={loading || !name || !activeAccount || !!nameError || (isReserved && !isReservedOwner)}
+                  disabled={
+                    loading ||
+                    !name ||
+                    !activeAccount ||
+                    !!nameError ||
+                    (isReserved && !isReservedOwner)
+                  }
                   sx={{
                     bgcolor: "#8B5CF6",
                     "&:hover": {

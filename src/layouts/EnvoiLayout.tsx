@@ -340,6 +340,10 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
       if (!activeAccount) {
         return;
       }
+      const aUSDC = {
+        asaAssetId: 302190,
+        tokenId: 395614,
+      };
       const { algodClient, indexerClient } = getAlgorandClients();
       const ci = new CONTRACT(797609, algodClient, indexerClient, abi.custom, {
         addr: activeAccount.address,
@@ -362,7 +366,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
       );
       const builder = {
         arc200: new CONTRACT(
-          780596,
+          aUSDC.tokenId,
           algodClient,
           indexerClient,
           abi.nt200,
@@ -421,6 +425,19 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
       const doRegister = ownerOf !== activeAccount.address;
       const buildN = [];
       if (doRegister) {
+        // Deposit USDC (ASA -> ARC200)
+        {
+          const txnO = (await builder.arc200.deposit(1e6))?.obj;
+          const assetTransfer = {
+            xaid: aUSDC.asaAssetId,
+            aamt: 1e6,
+            payment: 28500,
+          };
+          buildN.push({
+            ...txnO,
+            ...assetTransfer,
+          });
+        }
         // approve spending for register
         {
           const txnO = (
@@ -431,7 +448,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
           )?.obj;
           buildN.push({
             ...txnO,
-            payment: 28500,
+            payment: 28501,
             note: new TextEncoder().encode(
               `arc200 approve ${algosdk.getApplicationAddress(797610)} ${1e6}`
             ),
