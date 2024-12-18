@@ -474,7 +474,17 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
               ),
             });
           }
-
+          // deposit wVOI (NET -> ARC200)
+          {
+            const txnO = (await builder.arc200.deposit(1000 * 1e6))?.obj;
+            buildN.push({
+              ...txnO,
+              payment: 1000 * 1e6,
+              note: new TextEncoder().encode(
+                `envoi deposit 1000 ${paymentAssetSymbol} for reverse-registrar payment`
+              ),
+            });
+          }
           // approve spending for register
           {
             const txnO = (
