@@ -545,6 +545,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
           break;
         }
       }
+      console.log({ customR });
       if (!customR.success) {
         throw new Error("Failed to register name");
       }
