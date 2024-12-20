@@ -11,6 +11,7 @@ import { Snackbar, Alert, Avatar } from "@mui/material";
 import { useTheme } from "@/contexts/ThemeContext";
 import { RegistrarService } from "@/services/registrar";
 import { namehash, uint8ArrayToBigInt } from "@/utils/namehash";
+import { ResolverService } from "@/services/resolver";
 
 type NetworkType = "mainnet" | "testnet";
 
@@ -29,6 +30,7 @@ const ProfilePage: React.FC = () => {
   const [openNotification, setOpenNotification] = React.useState(false);
   const [owner, setOwner] = React.useState<string | null>(null);
   const [expiry, setExpiry] = React.useState<Date | null>(null);
+  const [avatarText, setAvatarText] = React.useState<string | null>(null);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -49,18 +51,21 @@ const ProfilePage: React.FC = () => {
     if (!activeAccount) return;
     const registry = new RegistryService("mainnet");
     const registrar = new RegistrarService("mainnet");
+    const resolver = new ResolverService("mainnet");
     registry.ownerOf(name || "").then((owner) => {
       setOwner(owner);
     });
     namehash(name || "").then((nameHash) => {
       const tokenId = uint8ArrayToBigInt(nameHash);
-      console.log({ tokenId });
       registrar.expiration(tokenId).then((expiryTimestamp) => {
         const expiryTimestampNumber = Number(expiryTimestamp);
         if (expiryTimestampNumber) {
           setExpiry(new Date(expiryTimestampNumber * 1000));
         }
       });
+    });
+    resolver.text(name || "", "avatar").then((avatar: string | null) => {
+      setAvatarText(avatar);
     });
   }, [name]);
 
@@ -89,6 +94,7 @@ const ProfilePage: React.FC = () => {
           <Avatar
             sx={{ width: 120, height: 120, bgcolor: "#3B82F6" }}
             className="profile-avatar"
+            src={avatarText || undefined}
           >
             {name?.charAt(0).toUpperCase()}
           </Avatar>
