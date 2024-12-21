@@ -210,7 +210,6 @@ const ProfilePage: React.FC = () => {
   }, [isNftModalOpen, owner]);
 
   useEffect(() => {
-    if (!activeAccount) return;
     const registry = new RegistryService("mainnet");
     const registrar = new RegistrarService("mainnet");
     const resolver = new ResolverService("mainnet");
