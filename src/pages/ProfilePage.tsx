@@ -14,6 +14,7 @@ import { namehash, uint8ArrayToBigInt } from "@/utils/namehash";
 import { ResolverService } from "@/services/resolver";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import { CONTRACT, abi } from "ulujs";
+import CircularProgress from "@mui/material/CircularProgress";
 
 type NetworkType = "mainnet" | "testnet";
 
@@ -59,7 +60,7 @@ const ProfilePage: React.FC = () => {
   const { theme } = useTheme();
 
   const selectedNetwork: NetworkType =
-    (localStorage.getItem("selectedNetwork") as NetworkType) || "testnet";
+    (localStorage.getItem("selectedNetwork") as NetworkType) || "mainnet";
   const explorerBaseUrl =
     selectedNetwork === "mainnet"
       ? "https://block.voi.network/explorer"
@@ -78,6 +79,7 @@ const ProfilePage: React.FC = () => {
   const [selectedNftId, setSelectedNftId] = useState<string | null>(null);
   const [showNftModal, setShowNftModal] = useState<boolean>(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [isPendingTx, setIsPendingTx] = useState(false);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -210,9 +212,7 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleSave = async () => {
-    console.log("name", name);
-    console.log("profileImage", profileImage);
-    console.log("avatarText", avatarText);
+    setIsPendingTx(true);
     try {
       if (!activeAccount) return;
       const resolver = new ResolverService("mainnet", activeAccount.address);
@@ -245,8 +245,6 @@ const ProfilePage: React.FC = () => {
         throw new Error("Failed to set profile");
       }
 
-      console.log(customR);
-
       const stxns = await signTransactions(
         customR.txns.map(
           (t: string) => new Uint8Array(Buffer.from(t, "base64"))
@@ -258,11 +256,23 @@ const ProfilePage: React.FC = () => {
         .sendRawTransaction(stxns as Uint8Array[])
         .do();
 
-      console.log(res);
+      // After successful transaction, refresh the avatar
 
+      let newAvatarText = await resolver.text(name || "", "avatar");
+      do {
+        if (newAvatarText !== avatarText) {
+          break;
+        }
+        newAvatarText = await resolver.text(name || "", "avatar");
+      } while (1);
+
+      setAvatarText(newAvatarText);
+
+      setIsPendingTx(false);
       setIsEditModalOpen(false);
     } catch (e) {
       console.error("Error saving profile:", e);
+      setIsPendingTx(false);
     }
   };
 
@@ -437,17 +447,13 @@ const ProfilePage: React.FC = () => {
         </Box>
       </Modal>
 
-      {/*showNftModal && (
-        <SelectNFTModal
-          nfts={nfts}
-          isLoading={loading}
-          onClose={() => setShowNftModal(false)}
-          selectedNftId={selectedNftId}
-          setSelectedNftId={setSelectedNftId}
-          onSelect={handleNftSelect}
-          isOpen={showNftModal}
-        />
-      )*/}
+      <Modal open={isPendingTx} aria-labelledby="pending-transaction-modal">
+        <Box className="edit-modal" sx={{ textAlign: "center", p: 4 }}>
+          <CircularProgress sx={{ mb: 2 }} />
+          <h2>Transaction Pending</h2>
+          <p>Please wait while your transaction is being processed...</p>
+        </Box>
+      </Modal>
 
       <Snackbar
         open={openNotification}
