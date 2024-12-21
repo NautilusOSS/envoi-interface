@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import LaunchIcon from "@mui/icons-material/Launch";
@@ -7,21 +7,60 @@ import TimerIcon from "@mui/icons-material/Timer";
 import "./ProfilePage.scss";
 import { RegistryService } from "@/services/registry";
 import { useWallet } from "@txnlab/use-wallet-react";
-import { Snackbar, Alert, Avatar } from "@mui/material";
+import { Snackbar, Alert, Avatar, Modal, Box, Button } from "@mui/material";
 import { useTheme } from "@/contexts/ThemeContext";
 import { RegistrarService } from "@/services/registrar";
 import { namehash, uint8ArrayToBigInt } from "@/utils/namehash";
 import { ResolverService } from "@/services/resolver";
+import CameraAltIcon from "@mui/icons-material/CameraAlt";
+import { CONTRACT, abi } from "ulujs";
+import CircularProgress from "@mui/material/CircularProgress";
 
 type NetworkType = "mainnet" | "testnet";
 
+interface NFTMetadata {
+  name: string;
+  description: string;
+  image: string;
+  properties: Record<string, string>;
+}
+
+interface NFTToken {
+  contractId: number;
+  tokenId: string;
+  metadata: string;
+  collectionName: string;
+}
+
+interface SelectNFTModalProps {
+  onClose: () => void;
+  // ... other props ...
+}
+
+const SelectNFTModal: React.FC<SelectNFTModalProps> = ({
+  onClose,
+  ...props
+}) => {
+  // ... modal code ...
+
+  <Button
+    onClick={() => {
+      onClose();
+      setSelectedNftId(null);
+    }}
+    variant="outlined"
+  >
+    Cancel
+  </Button>;
+};
+
 const ProfilePage: React.FC = () => {
-  const { activeAccount } = useWallet();
+  const { activeAccount, signTransactions } = useWallet();
   const { name } = useParams<{ name: string }>();
   const { theme } = useTheme();
 
   const selectedNetwork: NetworkType =
-    (localStorage.getItem("selectedNetwork") as NetworkType) || "testnet";
+    (localStorage.getItem("selectedNetwork") as NetworkType) || "mainnet";
   const explorerBaseUrl =
     selectedNetwork === "mainnet"
       ? "https://block.voi.network/explorer"
@@ -31,6 +70,16 @@ const ProfilePage: React.FC = () => {
   const [owner, setOwner] = React.useState<string | null>(null);
   const [expiry, setExpiry] = React.useState<Date | null>(null);
   const [avatarText, setAvatarText] = React.useState<string | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+  const [showAvatarMenu, setShowAvatarMenu] = React.useState(false);
+  const [isNftModalOpen, setIsNftModalOpen] = React.useState(false);
+  const [nfts, setNfts] = React.useState<NFTToken[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [selectedNftId, setSelectedNftId] = useState<string | null>(null);
+  const [showNftModal, setShowNftModal] = useState<boolean>(false);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [isPendingTx, setIsPendingTx] = useState(false);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -46,6 +95,44 @@ const ProfilePage: React.FC = () => {
     }
     setOpenNotification(false);
   };
+
+  const handleOpenEditModal = () => setIsEditModalOpen(true);
+  const handleCloseEditModal = () => setIsEditModalOpen(false);
+
+  const handleAvatarClick = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    setShowAvatarMenu(!showAvatarMenu);
+  };
+
+  const handleOpenNftModal = () => {
+    setIsNftModalOpen(true);
+    setShowAvatarMenu(false);
+  };
+
+  const handleCloseNftModal = () => setIsNftModalOpen(false);
+
+  const handleSelectNft = () => {
+    // TODO: Add logic to handle the selected NFT
+    handleCloseNftModal();
+  };
+
+  const fetchNFTs = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        "https://mainnet-idx.nautilus.sh/nft-indexer/v1/tokens?owner=G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ&include=all"
+      );
+      const data = await response.json();
+      setNfts(data.tokens);
+    } catch (error) {
+      console.error("Error fetching NFTs:", error);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchNFTs();
+  }, [isNftModalOpen]);
 
   useEffect(() => {
     if (!activeAccount) return;
@@ -84,6 +171,108 @@ const ProfilePage: React.FC = () => {
       return "Expires tomorrow";
     } else {
       return `Expires in ${diffDays} days`;
+    }
+  };
+
+  const filteredNfts = nfts.filter((nft) => {
+    try {
+      const metadata: NFTMetadata = JSON.parse(nft.metadata);
+      return (
+        metadata.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        nft.collectionName.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    } catch (e) {
+      return false;
+    }
+  });
+
+  const handleNftSelect = (nft) => {
+    setSelectedNftId(`nft-${nft.contractId}-${nft.tokenId}`);
+    const metadata: NFTMetadata = JSON.parse(nft.metadata);
+    setProfileImage(metadata.image);
+    setIsNftModalOpen(false);
+  };
+
+  const handleSelectConfirm = () => {
+    if (selectedNftId) {
+      const selectedNft = nfts.find(
+        (nft) => `nft-${nft.contractId}-${nft.tokenId}` === selectedNftId
+      );
+      if (selectedNft) {
+        try {
+          const metadata: NFTMetadata = JSON.parse(selectedNft.metadata);
+          setProfileImage(metadata.image);
+          setSelectedNftId(null); // Reset selection
+        } catch (e) {
+          console.error("Error parsing NFT metadata:", e);
+        }
+      }
+    }
+    setShowNftModal(false);
+  };
+
+  const handleSave = async () => {
+    setIsPendingTx(true);
+    try {
+      if (!activeAccount) return;
+      const resolver = new ResolverService("mainnet", activeAccount.address);
+      resolver.setMode("builder");
+      const buildN = [];
+      if (profileImage !== avatarText) {
+        if (!name || !profileImage) return;
+        const setTextR: any = await resolver.setText(
+          name,
+          "avatar",
+          profileImage
+        );
+        buildN.push(setTextR);
+      }
+
+      const ci = new CONTRACT(
+        resolver.getId(),
+        resolver.getClient(),
+        resolver.getIndexerClient(),
+        abi.custom,
+        { addr: activeAccount.address, sk: new Uint8Array() }
+      );
+
+      ci.setFee(2000);
+      ci.setEnableGroupResourceSharing(true);
+      ci.setExtraTxns(buildN.map((n) => n.obj));
+      const customR = await ci.custom();
+
+      if (!customR.success) {
+        throw new Error("Failed to set profile");
+      }
+
+      const stxns = await signTransactions(
+        customR.txns.map(
+          (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+        )
+      );
+
+      const res = await resolver
+        .getClient()
+        .sendRawTransaction(stxns as Uint8Array[])
+        .do();
+
+      // After successful transaction, refresh the avatar
+
+      let newAvatarText = await resolver.text(name || "", "avatar");
+      do {
+        if (newAvatarText !== avatarText) {
+          break;
+        }
+        newAvatarText = await resolver.text(name || "", "avatar");
+      } while (1);
+
+      setAvatarText(newAvatarText);
+
+      setIsPendingTx(false);
+      setIsEditModalOpen(false);
+    } catch (e) {
+      console.error("Error saving profile:", e);
+      setIsPendingTx(false);
     }
   };
 
@@ -143,8 +332,128 @@ const ProfilePage: React.FC = () => {
               <div className="detail-value">{formatExpiry(expiry)}</div>
             </div>
           </div>
+
+          <div className="detail-divider">
+            {activeAccount?.address === owner && (
+              <button
+                className="edit-profile-button"
+                onClick={handleOpenEditModal}
+              >
+                Edit Profile
+              </button>
+            )}
+          </div>
         </div>
       </div>
+
+      <Modal
+        open={isEditModalOpen}
+        onClose={handleCloseEditModal}
+        aria-labelledby="edit-profile-modal"
+      >
+        <Box className="edit-modal">
+          <h2>Edit your profile</h2>
+
+          <div className="avatar-edit-container" onClick={handleAvatarClick}>
+            <Avatar
+              sx={{ width: 120, height: 120, bgcolor: "#3B82F6" }}
+              src={profileImage || avatarText || undefined}
+            >
+              {name?.charAt(0).toUpperCase()}
+            </Avatar>
+            <div className="avatar-overlay">
+              <CameraAltIcon />
+            </div>
+            {showAvatarMenu && (
+              <div className="avatar-menu">
+                <button className="menu-item" onClick={handleOpenNftModal}>
+                  <span>Select NFT</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="modal-buttons">
+            <button className="cancel-button" onClick={handleCloseEditModal}>
+              Cancel
+            </button>
+            <button className="save-button" onClick={handleSave}>
+              Save
+            </button>
+          </div>
+        </Box>
+      </Modal>
+
+      <Modal
+        open={isNftModalOpen}
+        onClose={handleCloseNftModal}
+        className="nft-modal"
+      >
+        <Box className="edit-modal nft-modal-content">
+          <h2>Select NFT</h2>
+          <input
+            type="text"
+            placeholder="Search NFTs..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="nft-search"
+          />
+          <div className="nft-grid">
+            {loading ? (
+              <div className="nft-loading">Loading NFTs...</div>
+            ) : filteredNfts.length === 0 ? (
+              <div className="nft-empty">
+                {nfts.length === 0 ? "No NFTs found" : "No matching NFTs found"}
+              </div>
+            ) : (
+              filteredNfts.map((nft) => {
+                const metadata: NFTMetadata = JSON.parse(nft.metadata);
+                return (
+                  <div
+                    key={`nft-${nft.contractId}-${nft.tokenId}`}
+                    className={`nft-item ${
+                      selectedNftId === `nft-${nft.contractId}-${nft.tokenId}`
+                        ? "selected"
+                        : ""
+                    }`}
+                    onClick={() => handleNftSelect(nft)}
+                  >
+                    <img src={metadata.image} alt={metadata.name} />
+                    <p>{metadata.name}</p>
+                    <p className="collection-name">{nft.collectionName}</p>
+                  </div>
+                );
+              })
+            )}
+          </div>
+          <div className="modal-buttons">
+            <Button
+              onClick={handleSelectConfirm}
+              disabled={!selectedNftId}
+              variant="contained"
+            >
+              Select
+            </Button>
+            <Button
+              onClick={() => {
+                setShowNftModal(false);
+                setSelectedNftId(null);
+              }}
+              variant="outlined"
+            >
+              Cancel
+            </Button>
+          </div>
+        </Box>
+      </Modal>
+
+      <Modal open={isPendingTx} aria-labelledby="pending-transaction-modal">
+        <Box className="edit-modal" sx={{ textAlign: "center", p: 4 }}>
+          <CircularProgress sx={{ mb: 2 }} />
+          <h2>Transaction Pending</h2>
+          <p>Please wait while your transaction is being processed...</p>
+        </Box>
+      </Modal>
 
       <Snackbar
         open={openNotification}

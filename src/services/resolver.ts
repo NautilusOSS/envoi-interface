@@ -73,11 +73,13 @@ export class ResolverService {
   private client: algosdk.Algodv2;
   private indexerClient: algosdk.Indexer;
   private registryId: number;
+  private mode: "default" | "builder";
   private contractInstance: any;
+  private builder: any;
   constructor(
     network: "mainnet" | "testnet",
-    registryId: number = network === "mainnet" ? 797608 : 0, // Replace 0 with mainnet ID when available
-    address: string = "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ"
+    address: string = "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
+    registryId: number = network === "mainnet" ? 797608 : 0 // Replace 0 with mainnet ID when available
   ) {
     const baseServer =
       network === "mainnet"
@@ -90,6 +92,7 @@ export class ResolverService {
     this.client = new algosdk.Algodv2("", baseServer, "");
     this.indexerClient = new algosdk.Indexer(indexerServer);
     this.registryId = registryId;
+    this.mode = "default";
     this.contractInstance = new CONTRACT(
       this.registryId,
       this.client,
@@ -102,6 +105,37 @@ export class ResolverService {
       },
       { addr: address, sk: new Uint8Array() }
     );
+    this.builder = new CONTRACT(
+      this.registryId,
+      this.client,
+      this.indexerClient,
+      {
+        name: "builder",
+        description: "Builder contract for Voi names",
+        methods: VNSPublicResolverSpec.contract.methods,
+        events: [],
+      },
+      { addr: address, sk: new Uint8Array() },
+      true,
+      false,
+      true
+    );
+  }
+
+  getClient() {
+    return this.client;
+  }
+
+  getIndexerClient() {
+    return this.indexerClient;
+  }
+
+  getId() {
+    return this.registryId;
+  }
+
+  setMode(mode: "default" | "builder") {
+    this.mode = mode;
   }
 
   async text(node: string, key: string): Promise<string | null> {
@@ -112,5 +146,16 @@ export class ResolverService {
       return stripTrailingZeroBytes(info.returnValue);
     }
     return "";
+  }
+
+  async setText(node: string, key: string, value: string): Promise<void> {
+    const nodeBytes = await namehash(node);
+    const keyBytes = stringToUint8Array(key, 22);
+    const valueBytes = stringToUint8Array(value, 256);
+    this.contractInstance.setFee(2000);
+    if (this.mode === "builder") {
+      return await this.builder.setText(nodeBytes, keyBytes, valueBytes);
+    }
+    return await this.contractInstance.setText(nodeBytes, keyBytes, valueBytes);
   }
 }
