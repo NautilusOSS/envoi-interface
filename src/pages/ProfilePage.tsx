@@ -116,11 +116,11 @@ const ProfilePage: React.FC = () => {
     handleCloseNftModal();
   };
 
-  const fetchNFTs = async () => {
+  const fetchNFTs = async (address: string) => {
     setLoading(true);
     try {
       const response = await fetch(
-        "https://mainnet-idx.nautilus.sh/nft-indexer/v1/tokens?owner=G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ&include=all"
+        `https://mainnet-idx.nautilus.sh/nft-indexer/v1/tokens?owner=${address}&include=all`
       );
       const data = await response.json();
       setNfts(data.tokens);
@@ -131,8 +131,10 @@ const ProfilePage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchNFTs();
-  }, [isNftModalOpen]);
+    if (owner) {
+      fetchNFTs(owner);
+    }
+  }, [isNftModalOpen, owner]);
 
   useEffect(() => {
     if (!activeAccount) return;
@@ -177,6 +179,9 @@ const ProfilePage: React.FC = () => {
   const filteredNfts = nfts.filter((nft) => {
     try {
       const metadata: NFTMetadata = JSON.parse(nft.metadata);
+      if (nft.contractId === 797609 || nft.contractId === 797610) {
+        return false;
+      }
       return (
         metadata.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         nft.collectionName.toLowerCase().includes(searchQuery.toLowerCase())
@@ -436,8 +441,7 @@ const ProfilePage: React.FC = () => {
             </Button>
             <Button
               onClick={() => {
-                setShowNftModal(false);
-                setSelectedNftId(null);
+                setIsNftModalOpen(false);
               }}
               variant="outlined"
             >
