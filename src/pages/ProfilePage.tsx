@@ -15,6 +15,19 @@ import { ResolverService } from "@/services/resolver";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import { CONTRACT, abi } from "ulujs";
 import CircularProgress from "@mui/material/CircularProgress";
+import TextField from "@mui/material/TextField";
+import DeleteIcon from "@mui/icons-material/Delete";
+import TwitterIcon from "@mui/icons-material/Twitter";
+import GitHubIcon from "@mui/icons-material/GitHub";
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
+import ListItemText from "@mui/material/ListItemText";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import EmailIcon from "@mui/icons-material/Email";
+import WebIcon from "@mui/icons-material/Web";
+import LocationOnIcon from "@mui/icons-material/LocationOn";
+import SearchIcon from "@mui/icons-material/Search";
+import InputAdornment from "@mui/material/InputAdornment";
 
 type NetworkType = "mainnet" | "testnet";
 
@@ -54,6 +67,48 @@ const SelectNFTModal: React.FC<SelectNFTModalProps> = ({
   </Button>;
 };
 
+interface ProfileField {
+  key: string;
+  label: string;
+  icon: React.ReactNode;
+  placeholder: string;
+}
+
+const AVAILABLE_FIELDS: ProfileField[] = [
+  {
+    key: "com.twitter",
+    label: "Twitter",
+    icon: <TwitterIcon />,
+    placeholder: "Enter your Twitter handle",
+  },
+  {
+    key: "com.github",
+    label: "GitHub",
+    icon: <GitHubIcon />,
+    placeholder: "Enter your GitHub username",
+  },
+  /*
+  {
+    key: "email",
+    label: "Email",
+    icon: <EmailIcon />,
+    placeholder: "Enter your email address",
+  },
+  {
+    key: "url",
+    label: "Website",
+    icon: <WebIcon />,
+    placeholder: "Enter your website URL",
+  },
+  */
+  {
+    key: "location",
+    label: "Location",
+    icon: <LocationOnIcon />,
+    placeholder: "Enter your location",
+  },
+];
+
 const ProfilePage: React.FC = () => {
   const { activeAccount, signTransactions } = useWallet();
   const { name } = useParams<{ name: string }>();
@@ -70,6 +125,12 @@ const ProfilePage: React.FC = () => {
   const [owner, setOwner] = React.useState<string | null>(null);
   const [expiry, setExpiry] = React.useState<Date | null>(null);
   const [avatarText, setAvatarText] = React.useState<string | null>(null);
+  const [twitter, setTwitter] = React.useState<string | null>(null);
+  const [newTwitter, setNewTwitter] = React.useState<string | null>(null);
+  const [github, setGithub] = React.useState<string | null>(null);
+  const [newGithub, setNewGithub] = React.useState<string | null>(null);
+  const [location, setLocation] = React.useState<string | null>(null);
+  const [newLocation, setNewLocation] = React.useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
   const [showAvatarMenu, setShowAvatarMenu] = React.useState(false);
   const [isNftModalOpen, setIsNftModalOpen] = React.useState(false);
@@ -80,6 +141,8 @@ const ProfilePage: React.FC = () => {
   const [showNftModal, setShowNftModal] = useState<boolean>(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [isPendingTx, setIsPendingTx] = useState(false);
+  const [isFieldCatalogOpen, setIsFieldCatalogOpen] = useState(false);
+  const [fieldSearchQuery, setFieldSearchQuery] = useState("");
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -96,8 +159,18 @@ const ProfilePage: React.FC = () => {
     setOpenNotification(false);
   };
 
-  const handleOpenEditModal = () => setIsEditModalOpen(true);
-  const handleCloseEditModal = () => setIsEditModalOpen(false);
+  const handleOpenEditModal = () => {
+    setIsEditModalOpen(true);
+    setNewTwitter(twitter);
+    setNewGithub(github);
+    setNewLocation(location);
+  };
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setNewTwitter(null);
+    setNewGithub(null);
+    setNewLocation(null);
+  };
 
   const handleAvatarClick = (event: React.MouseEvent) => {
     event.stopPropagation();
@@ -155,6 +228,15 @@ const ProfilePage: React.FC = () => {
     });
     resolver.text(name || "", "avatar").then((avatar: string | null) => {
       setAvatarText(avatar);
+    });
+    resolver.text(name || "", "com.twitter").then((twitter: string | null) => {
+      setTwitter(twitter);
+    });
+    resolver.text(name || "", "com.github").then((github: string | null) => {
+      setGithub(github);
+    });
+    resolver.text(name || "", "location").then((location: string | null) => {
+      setLocation(location);
     });
   }, [name]);
 
@@ -218,20 +300,65 @@ const ProfilePage: React.FC = () => {
 
   const handleSave = async () => {
     setIsPendingTx(true);
+    console.log({
+      twitter,
+      newTwitter,
+      github,
+      newGithub,
+      avatarText,
+      profileImage,
+    });
     try {
       if (!activeAccount) return;
       const resolver = new ResolverService("mainnet", activeAccount.address);
       resolver.setMode("builder");
+      console.log("Building txns...");
       const buildN = [];
+      let avatarUpdated = false;
       if (profileImage !== avatarText) {
-        if (!name || !profileImage) return;
+        if (profileImage) {
+          const setTextR: any = await resolver.setText(
+            name,
+            "avatar",
+            profileImage
+          );
+          buildN.push(setTextR);
+          avatarUpdated = true;
+        }
+      }
+      let twitterUpdated = false;
+      if (twitter !== newTwitter) {
         const setTextR: any = await resolver.setText(
           name,
-          "avatar",
-          profileImage
+          "com.twitter",
+          newTwitter || ""
         );
         buildN.push(setTextR);
+        twitterUpdated = true;
       }
+      let githubUpdated = false;
+      if (github !== newGithub) {
+        const setTextR: any = await resolver.setText(
+          name,
+          "com.github",
+          newGithub || ""
+        );
+        buildN.push(setTextR);
+        githubUpdated = true;
+      }
+
+      let locationUpdated = false;
+      if (location !== newLocation) {
+        const setTextR: any = await resolver.setText(
+          name,
+          "location",
+          newLocation || ""
+        );
+        buildN.push(setTextR);
+        locationUpdated = true;
+      }
+
+      console.log({ buildN });
 
       const ci = new CONTRACT(
         resolver.getId(),
@@ -245,6 +372,8 @@ const ProfilePage: React.FC = () => {
       ci.setEnableGroupResourceSharing(true);
       ci.setExtraTxns(buildN.map((n) => n.obj));
       const customR = await ci.custom();
+
+      console.log({ customR });
 
       if (!customR.success) {
         throw new Error("Failed to set profile");
@@ -262,16 +391,49 @@ const ProfilePage: React.FC = () => {
         .do();
 
       // After successful transaction, refresh the avatar
+      if (avatarUpdated) {
+        let newAvatarText = await resolver.text(name || "", "avatar");
+        do {
+          if (newAvatarText !== avatarText) {
+            break;
+          }
+          newAvatarText = await resolver.text(name || "", "avatar");
+        } while (1);
+        setAvatarText(newAvatarText);
+      }
 
-      let newAvatarText = await resolver.text(name || "", "avatar");
-      do {
-        if (newAvatarText !== avatarText) {
-          break;
-        }
-        newAvatarText = await resolver.text(name || "", "avatar");
-      } while (1);
+      if (twitterUpdated) {
+        let newTwitterText = await resolver.text(name || "", "com.twitter");
+        do {
+          if (newTwitterText !== twitter) {
+            break;
+          }
+          newTwitterText = await resolver.text(name || "", "com.twitter");
+        } while (1);
+        setTwitter(newTwitterText);
+      }
 
-      setAvatarText(newAvatarText);
+      if (githubUpdated) {
+        let newGithubText = await resolver.text(name || "", "com.github");
+        do {
+          if (newGithubText !== github) {
+            break;
+          }
+          newGithubText = await resolver.text(name || "", "com.github");
+        } while (1);
+        setGithub(newGithubText);
+      }
+
+      if (locationUpdated) {
+        let newLocationText = await resolver.text(name || "", "location");
+        do {
+          if (newLocationText !== location) {
+            break;
+          }
+          newLocationText = await resolver.text(name || "", "location");
+        } while (1);
+        setLocation(newLocationText);
+      }
 
       setIsPendingTx(false);
       setIsEditModalOpen(false);
@@ -281,8 +443,39 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const handleOpenFieldCatalog = () => {
+    setIsFieldCatalogOpen(true);
+  };
+
+  const handleCloseFieldCatalog = () => {
+    setIsFieldCatalogOpen(false);
+  };
+
+  const handleAddField = (field: ProfileField) => {
+    switch (field.key) {
+      case "com.twitter":
+        if (!newTwitter) setNewTwitter(" ");
+        break;
+      case "com.github":
+        if (!newGithub) setNewGithub(" ");
+        break;
+      case "location":
+        if (!newLocation) setNewLocation(" ");
+        break;
+      // Add more cases for other fields as needed
+    }
+    handleCloseFieldCatalog();
+  };
+
+  const filteredFields = AVAILABLE_FIELDS.filter((field) =>
+    field.label.toLowerCase().includes(fieldSearchQuery.toLowerCase())
+  );
+
   return (
-    <div className="profile-container">
+    <div
+      className="profile-container"
+      style={{ minHeight: "100vh", overflowY: "auto", paddingBottom: "4rem" }}
+    >
       <div className="profile-banner">
         <div className="banner-content">
           <Avatar
@@ -338,6 +531,60 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
 
+          {twitter && (
+            <div className="detail-row">
+              <div className="detail-icon">
+                <TwitterIcon />
+              </div>
+              <div className="detail-content">
+                <label>Twitter</label>
+                <div className="detail-value">
+                  <a
+                    href={`https://twitter.com/${twitter}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="twitter-link"
+                  >
+                    @{twitter}
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {github && (
+            <div className="detail-row">
+              <div className="detail-icon">
+                <GitHubIcon />
+              </div>
+              <div className="detail-content">
+                <label>GitHub</label>
+                <div className="detail-value">
+                  <a
+                    href={`https://github.com/${github}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="github-link"
+                  >
+                    @{github}
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {location && (
+            <div className="detail-row">
+              <div className="detail-icon">
+                <LocationOnIcon />
+              </div>
+              <div className="detail-content">
+                <label>Location</label>
+                <div className="detail-value">{location}</div>
+              </div>
+            </div>
+          )}
+
           <div className="detail-divider">
             {activeAccount?.address === owner && (
               <button
@@ -376,6 +623,181 @@ const ProfilePage: React.FC = () => {
                 </button>
               </div>
             )}
+          </div>
+
+          <div className="text-fields-container">
+            {newTwitter && (
+              <div
+                className="field-wrapper"
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                <TextField
+                  fullWidth
+                  id="twitter"
+                  label="Twitter"
+                  placeholder="Enter your Twitter handle"
+                  variant="outlined"
+                  margin="normal"
+                  value={newTwitter || ""}
+                  onChange={(e) => setNewTwitter(e.target.value)}
+                  InputLabelProps={{
+                    shrink: true,
+                    style: {
+                      color: theme.palette.mode === "dark" ? "#000" : undefined,
+                    },
+                  }}
+                  InputProps={{
+                    style: {
+                      color: theme.palette.mode === "dark" ? "#000" : undefined,
+                    },
+                    sx: {
+                      "& .MuiOutlinedInput-notchedOutline": {
+                        borderColor:
+                          theme.palette.mode === "dark" ? "#000" : undefined,
+                      },
+                      "&:hover .MuiOutlinedInput-notchedOutline": {
+                        borderColor:
+                          theme.palette.mode === "dark" ? "#000" : undefined,
+                      },
+                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                        borderColor:
+                          theme.palette.mode === "dark" ? "#000" : undefined,
+                      },
+                    },
+                  }}
+                />
+                <Button
+                  sx={{ minWidth: "auto", height: "56px" }}
+                  onClick={() => {
+                    setNewTwitter("");
+                  }}
+                >
+                  <DeleteIcon />
+                </Button>
+              </div>
+            )}
+
+            {newGithub && (
+              <div
+                className="field-wrapper"
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                <TextField
+                  fullWidth
+                  id="github"
+                  label="GitHub"
+                  placeholder="Enter your GitHub username"
+                  variant="outlined"
+                  margin="normal"
+                  value={newGithub || ""}
+                  onChange={(e) => setNewGithub(e.target.value)}
+                  InputLabelProps={{
+                    shrink: true,
+                    style: {
+                      color: theme.palette.mode === "dark" ? "#000" : undefined,
+                    },
+                  }}
+                  InputProps={{
+                    style: {
+                      color: theme.palette.mode === "dark" ? "#000" : undefined,
+                    },
+                    sx: {
+                      "& .MuiOutlinedInput-notchedOutline": {
+                        borderColor:
+                          theme.palette.mode === "dark" ? "#000" : undefined,
+                      },
+                      "&:hover .MuiOutlinedInput-notchedOutline": {
+                        borderColor:
+                          theme.palette.mode === "dark" ? "#000" : undefined,
+                      },
+                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                        borderColor:
+                          theme.palette.mode === "dark" ? "#000" : undefined,
+                      },
+                    },
+                  }}
+                />
+                <Button
+                  sx={{ minWidth: "auto", height: "56px" }}
+                  onClick={() => {
+                    setNewGithub("");
+                  }}
+                >
+                  <DeleteIcon />
+                </Button>
+              </div>
+            )}
+
+            {newLocation && (
+              <div
+                className="field-wrapper"
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                <TextField
+                  fullWidth
+                  id="location"
+                  label="Location"
+                  placeholder="Enter your location"
+                  variant="outlined"
+                  margin="normal"
+                  value={newLocation || ""}
+                  onChange={(e) => setNewLocation(e.target.value)}
+                  InputLabelProps={{
+                    shrink: true,
+                    style: {
+                      color: theme.palette.mode === "dark" ? "#000" : undefined,
+                    },
+                  }}
+                  InputProps={{
+                    style: {
+                      color: theme.palette.mode === "dark" ? "#000" : undefined,
+                    },
+                    sx: {
+                      "& .MuiOutlinedInput-notchedOutline": {
+                        borderColor:
+                          theme.palette.mode === "dark" ? "#000" : undefined,
+                      },
+                      "&:hover .MuiOutlinedInput-notchedOutline": {
+                        borderColor:
+                          theme.palette.mode === "dark" ? "#000" : undefined,
+                      },
+                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                        borderColor:
+                          theme.palette.mode === "dark" ? "#000" : undefined,
+                      },
+                    },
+                  }}
+                />
+                <Button
+                  sx={{ minWidth: "auto", height: "56px" }}
+                  onClick={() => {
+                    setNewLocation("");
+                  }}
+                >
+                  <DeleteIcon />
+                </Button>
+              </div>
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                marginTop: "16px",
+              }}
+            >
+              <Button variant="outlined" onClick={handleOpenFieldCatalog}>
+                Add More to Profile
+              </Button>
+            </div>
+
+            <hr
+              style={{
+                margin: "20px 0",
+                border: "0",
+                borderTop: "1px solid #ddd",
+              }}
+            />
           </div>
 
           <div className="modal-buttons">
@@ -456,6 +878,93 @@ const ProfilePage: React.FC = () => {
           <CircularProgress sx={{ mb: 2 }} />
           <h2>Transaction Pending</h2>
           <p>Please wait while your transaction is being processed...</p>
+        </Box>
+      </Modal>
+
+      <Modal
+        open={isFieldCatalogOpen}
+        onClose={handleCloseFieldCatalog}
+        aria-labelledby="field-catalog-modal"
+      >
+        <Box
+          className="edit-modal"
+          sx={{
+            minHeight: "400px",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <h2>Add Profile Fields</h2>
+
+          <TextField
+            fullWidth
+            variant="outlined"
+            placeholder="Search fields..."
+            value={fieldSearchQuery}
+            onChange={(e) => setFieldSearchQuery(e.target.value)}
+            sx={{
+              mb: 2,
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: "background.paper",
+              },
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+
+          <List
+            sx={{
+              flex: 1,
+              overflowY: "auto",
+              minHeight: "250px",
+            }}
+          >
+            {filteredFields.length > 0 ? (
+              filteredFields.map((field) => {
+                const isFieldActive =
+                  (field.key === "com.twitter" && newTwitter) ||
+                  (field.key === "com.github" && newGithub) ||
+                  (field.key === "location" && newLocation);
+
+                return (
+                  <ListItem
+                    key={field.key}
+                    onClick={() => handleAddField(field)}
+                    selected={isFieldActive}
+                  >
+                    <ListItemIcon>{field.icon}</ListItemIcon>
+                    <ListItemText primary={field.label} />
+                  </ListItem>
+                );
+              })
+            ) : (
+              <ListItem>
+                <ListItemText
+                  primary="No fields found"
+                  sx={{ textAlign: "center", color: "text.secondary" }}
+                />
+              </ListItem>
+            )}
+          </List>
+
+          <div className="modal-buttons">
+            <button className="cancel-button" onClick={handleCloseFieldCatalog}>
+              Cancel
+            </button>
+            <button
+              className="save-button"
+              onClick={() => {
+                handleCloseFieldCatalog();
+              }}
+            >
+              Save
+            </button>
+          </div>
         </Box>
       </Modal>
 
