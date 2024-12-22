@@ -1,4 +1,4 @@
-export const getNamePrice = (name: string): number => {
+export const getNamePrice = (name: string, basePrice: number): number => {
   // Get length of name (without .voi)
   const length = name.length;
 
@@ -21,18 +21,18 @@ export const getNamePrice = (name: string): number => {
   // }
   switch (length) {
     case 1:
-      return 64_000;
+      return basePrice * 32;
     case 2:
-      return 32_000;
+      return basePrice * 16;
     case 3:
-      return 16_000;
+      return basePrice * 8;
     case 4:
-      return 8_000;
+      return basePrice * 4;
     case 5:
-      return 4_000;
+      return basePrice * 2;
     case 6:
-      return 2_000;
+      return basePrice;
     default:
-      return 2_000;
+      return basePrice;
   }
 };

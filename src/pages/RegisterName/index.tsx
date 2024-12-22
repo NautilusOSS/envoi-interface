@@ -1,28 +1,59 @@
-import React, { useState } from 'react';
-import { Box, TextField, Button, Typography, Container, Paper, Alert, CircularProgress, Tooltip, IconButton, InputAdornment } from '@mui/material';
-import { useWallet } from '@txnlab/use-wallet-react';
-import { useSnackbar } from 'notistack';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import { useParams } from 'react-router-dom';
+import React, { useState } from "react";
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Container,
+  Paper,
+  Alert,
+  CircularProgress,
+  Tooltip,
+  IconButton,
+  InputAdornment,
+} from "@mui/material";
+import { useWallet } from "@txnlab/use-wallet-react";
+import { useSnackbar } from "notistack";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import { useParams } from "react-router-dom";
+import { useTheme } from "@/contexts/ThemeContext";
+
+// Add payment method constants
+const PAYMENT_RATES = {
+  VOI: 2000, // 1000 VOI per year
+  aUSDC: 5, // 10 USDC per year
+  UNIT: 40, // 1000 UNIT per year
+} as const;
 
 const RegisterName: React.FC = () => {
   const { name: initialName } = useParams<{ name: string }>();
-  const [name, setName] = useState(initialName || '');
-  const [duration, setDuration] = useState('1');
+  const [name, setName] = useState(initialName || "");
+  const [duration, setDuration] = useState("1");
   const [loading, setLoading] = useState(false);
   const { activeAccount } = useWallet();
   const { enqueueSnackbar } = useSnackbar();
+  const { mode } = useTheme();
+  const [paymentMethod] = useState(
+    () => localStorage.getItem("preferredPaymentMethod") || "VOI"
+  );
+
+  const getPaymentAmount = () => {
+    const rate = PAYMENT_RATES[paymentMethod as keyof typeof PAYMENT_RATES];
+    return rate * parseInt(duration);
+  };
 
   const handleRegister = async () => {
     try {
       setLoading(true);
       // TODO: Implement name registration logic using VNS contract
-      console.log('Registering:', name, 'for', duration, 'years');
-      
-      enqueueSnackbar('Name registered successfully!', { variant: 'success' });
+      console.log("Registering:", name, "for", duration, "years");
+
+      enqueueSnackbar("Name registered successfully!", { variant: "success" });
     } catch (error) {
-      console.error('Error registering name:', error);
-      enqueueSnackbar('Failed to register name. Please try again.', { variant: 'error' });
+      console.error("Error registering name:", error);
+      enqueueSnackbar("Failed to register name. Please try again.", {
+        variant: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -40,15 +71,15 @@ const RegisterName: React.FC = () => {
             Please connect your wallet to register a name
           </Alert>
         )}
-        
-        <Paper 
-          sx={{ 
+
+        <Paper
+          sx={{
             p: 4,
-            display: 'flex',
-            flexDirection: 'column',
+            display: "flex",
+            flexDirection: "column",
             gap: 3,
-            maxWidth: 'sm',
-            mx: 'auto'
+            maxWidth: "sm",
+            mx: "auto",
           }}
         >
           <TextField
@@ -59,11 +90,13 @@ const RegisterName: React.FC = () => {
             placeholder="Enter name to register"
             fullWidth
             InputProps={{
-              endAdornment: <InputAdornment position="end">.voi</InputAdornment>,
+              endAdornment: (
+                <InputAdornment position="end">.voi</InputAdornment>
+              ),
             }}
           />
-          
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <TextField
               label="Duration (years)"
               type="number"
@@ -80,17 +113,43 @@ const RegisterName: React.FC = () => {
             </Tooltip>
           </Box>
 
-          <Button 
-            variant="contained" 
+          <Box
+            sx={{
+              p: 2,
+              bgcolor: mode === "light" ? "#F9FAFB" : "#1F2937",
+              borderRadius: 1,
+              border: "1px solid",
+              borderColor: mode === "light" ? "#E5E7EB" : "#374151",
+            }}
+          >
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Registration Cost
+            </Typography>
+            <Typography variant="h6" color="text.primary">
+              {getPaymentAmount()} {paymentMethod}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {PAYMENT_RATES[paymentMethod as keyof typeof PAYMENT_RATES]}{" "}
+              {paymentMethod} per year
+            </Typography>
+          </Box>
+
+          <Button
+            variant="contained"
             onClick={handleRegister}
             disabled={!activeAccount || loading}
             fullWidth
-            sx={{ mt: 2 }}
+            sx={{
+              bgcolor: "#8B5CF6",
+              "&:hover": {
+                bgcolor: "#7C3AED",
+              },
+            }}
           >
             {loading ? (
               <CircularProgress size={24} color="inherit" />
             ) : (
-              'Register'
+              `Register for ${getPaymentAmount()} ${paymentMethod}`
             )}
           </Button>
         </Paper>
@@ -99,4 +158,4 @@ const RegisterName: React.FC = () => {
   );
 };
 
-export default RegisterName; 
+export default RegisterName;

@@ -22,6 +22,7 @@ import {
   DialogContent,
   Alert,
   Select,
+  SelectChangeEvent,
 } from "@mui/material";
 import { useWallet } from "@txnlab/use-wallet-react";
 import { Link, useLocation } from "react-router-dom";
@@ -56,8 +57,9 @@ import ReservationsModal from "@/components/ReservationsModal";
 import { rsvps } from "@/constants/rsvps";
 import DomainIcon from "@mui/icons-material/Domain";
 import MyNamesModal from "@/components/MyNamesModal";
+import PaymentIcon from "@mui/icons-material/Payment";
 
-const paymentAssetSymbol = "VOI";
+export const DEFAULT_PAYMENT_METHOD = "VOI";
 
 interface NavLinkProps {
   to: string;
@@ -199,6 +201,11 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
     "view"
   );
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [paymentAssetSymbol, setPaymentAssetSymbol] = useState<string>(
+    () =>
+      localStorage.getItem("preferredPaymentMethod") || DEFAULT_PAYMENT_METHOD
+  );
 
   const { balance, loading } = useVoiBalance(activeAddress, selectedNetwork);
 
@@ -578,6 +585,21 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
 
   const refreshName = () => {
     setRefreshTrigger((prev) => prev + 1);
+  };
+
+  const handlePaymentModalOpen = () => {
+    setPaymentModalOpen(true);
+    handleSettingsClose();
+  };
+
+  const handlePaymentModalClose = () => {
+    setPaymentModalOpen(false);
+  };
+
+  const handlePaymentMethodChange = (event: SelectChangeEvent<string>) => {
+    const newMethod = event.target.value;
+    setPaymentAssetSymbol(newMethod);
+    localStorage.setItem("preferredPaymentMethod", newMethod);
   };
 
   return (
@@ -977,35 +999,6 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
           },
         }}
       >
-        {/*
-        <MenuItem
-          onClick={handleNetworkModalOpen}
-          sx={{
-            borderRadius: "8px",
-            "&:hover": {
-              backgroundColor: "rgba(139, 92, 246, 0.04)",
-            },
-            py: 1,
-          }}
-        >
-          <NetworkIcon
-            sx={{
-              mr: 2,
-              color: "#8B5CF6",
-              fontSize: 20,
-            }}
-          />
-          <Box>
-            <Typography sx={{ fontSize: "0.875rem", fontWeight: 500 }}>
-              Network
-            </Typography>
-            <Typography sx={{ fontSize: "0.75rem", color: "#6B7280" }}>
-              {selectedNetwork === "mainnet" ? "Voi Mainnet" : "Voi Testnet"}
-            </Typography>
-          </Box>
-        </MenuItem>
-        */}
-
         <MenuItem
           onClick={() => {
             toggleTheme();
@@ -1042,6 +1035,33 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
             </Typography>
             <Typography sx={{ fontSize: "0.75rem", color: "#6B7280" }}>
               Switch to {mode === "light" ? "Dark" : "Light"} Mode
+            </Typography>
+          </Box>
+        </MenuItem>
+
+        <MenuItem
+          onClick={handlePaymentModalOpen}
+          sx={{
+            borderRadius: "8px",
+            "&:hover": {
+              backgroundColor: "rgba(139, 92, 246, 0.04)",
+            },
+            py: 1,
+          }}
+        >
+          <PaymentIcon
+            sx={{
+              mr: 2,
+              color: "#8B5CF6",
+              fontSize: 20,
+            }}
+          />
+          <Box>
+            <Typography sx={{ fontSize: "0.875rem", fontWeight: 500 }}>
+              Payment
+            </Typography>
+            <Typography sx={{ fontSize: "0.75rem", color: "#6B7280" }}>
+              Manage payment settings
             </Typography>
           </Box>
         </MenuItem>
@@ -1126,6 +1146,80 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
         setName={handleSetName}
         onNameSet={refreshName}
       />
+
+      <Dialog
+        open={paymentModalOpen}
+        onClose={handlePaymentModalClose}
+        PaperProps={{
+          sx: {
+            backgroundColor: "background.paper",
+            maxWidth: "400px",
+            width: "100%",
+            borderRadius: "12px",
+          },
+        }}
+      >
+        <DialogContent sx={{ p: 3 }}>
+          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+            Set Payment Method
+          </Typography>
+          <Typography sx={{ color: "text.secondary", mb: 3 }}>
+            Choose your preferred payment method for transactions.
+          </Typography>
+          <Select
+            fullWidth
+            value={paymentAssetSymbol}
+            onChange={handlePaymentMethodChange}
+            sx={{
+              mb: 2,
+              "& .MuiOutlinedInput-notchedOutline": {
+                borderColor: mode === "light" ? "#E5E7EB" : "#374151",
+              },
+              "&:hover .MuiOutlinedInput-notchedOutline": {
+                borderColor: "#8B5CF6",
+              },
+              "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                borderColor: "#8B5CF6",
+              },
+            }}
+          >
+            <MenuItem value="VOI">VOI</MenuItem>
+            {/*<MenuItem value="aUSDC">aUSDC</MenuItem>*/}
+            <MenuItem value="UNIT">UNIT</MenuItem>
+          </Select>
+          <Box
+            sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 3 }}
+          >
+            <Button
+              onClick={handlePaymentModalClose}
+              sx={{
+                color: "text.primary",
+                "&:hover": {
+                  backgroundColor:
+                    mode === "light"
+                      ? "rgba(0, 0, 0, 0.04)"
+                      : "rgba(255, 255, 255, 0.08)",
+                },
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              sx={{
+                backgroundColor: "#8B5CF6",
+                color: "white",
+                "&:hover": {
+                  backgroundColor: "#7C3AED",
+                },
+              }}
+              onClick={handlePaymentModalClose}
+            >
+              Save
+            </Button>
+          </Box>
+        </DialogContent>
+      </Dialog>
 
       <Box
         sx={{
