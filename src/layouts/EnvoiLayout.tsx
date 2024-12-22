@@ -22,6 +22,7 @@ import {
   DialogContent,
   Alert,
   Select,
+  SelectChangeEvent,
 } from "@mui/material";
 import { useWallet } from "@txnlab/use-wallet-react";
 import { Link, useLocation } from "react-router-dom";
@@ -44,6 +45,7 @@ import { getAlgorandClients } from "@/wallets";
 import { APP_SPEC as ReverseRegistrarSpec } from "@/clients/ReverseRegistrarClient";
 import { APP_SPEC as VNSPublicResolverSpec } from "@/clients/VNSPublicResolverClient";
 import { APP_SPEC as RegistrySpec } from "@/clients/VNSRegistryClient";
+import { APP_SPEC as VNSRegistrarSpec } from "@/clients/VNSRegistrarClient";
 import algosdk from "algosdk";
 import {
   namehash,
@@ -56,8 +58,12 @@ import ReservationsModal from "@/components/ReservationsModal";
 import { rsvps } from "@/constants/rsvps";
 import DomainIcon from "@mui/icons-material/Domain";
 import MyNamesModal from "@/components/MyNamesModal";
+import PaymentIcon from "@mui/icons-material/Payment";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "@/store/store";
+import { setPaymentMethod } from "@/store/userSlice";
 
-const paymentAssetSymbol = "VOI";
+export const DEFAULT_PAYMENT_METHOD = "VOI";
 
 interface NavLinkProps {
   to: string;
@@ -199,6 +205,11 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
     "view"
   );
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const dispatch = useDispatch();
+  const paymentAssetSymbol = useSelector(
+    (state: RootState) => state.user.paymentMethod
+  );
 
   const { balance, loading } = useVoiBalance(activeAddress, selectedNetwork);
 
@@ -331,7 +342,6 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
 
   useEffect(() => {
     const currentEndpoints = NETWORK_CONFIG[selectedNetwork];
-
     console.log("Current endpoints:", currentEndpoints);
   }, [selectedNetwork]);
 
@@ -353,12 +363,8 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
         tokenId: 828295, // en Voi
       };
 
-      // const aUSDC = {
-      //   asaAssetId: 302190,
-      //   tokenId: 395614,
-      // };
-
       const { algodClient, indexerClient } = getAlgorandClients();
+
       const ci = new CONTRACT(
         vns.reverseRegistrar,
         algodClient,
@@ -369,6 +375,23 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
           sk: new Uint8Array(),
         }
       );
+
+      const ciRegistrar = new CONTRACT(
+        vns.registrar,
+        algodClient,
+        indexerClient,
+        {
+          name: "registrar",
+          description: "Registrar",
+          methods: VNSRegistrarSpec.contract.methods,
+          events: [],
+        },
+        {
+          addr: activeAccount.address,
+          sk: new Uint8Array(),
+        }
+      );
+
       const ciRegistry = new CONTRACT(
         vns.register,
         algodClient,
@@ -384,6 +407,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
           sk: new Uint8Array(),
         }
       );
+
       const builder = {
         arc200: new CONTRACT(
           wVOI.tokenId,
@@ -435,33 +459,37 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
           true
         ),
       };
+
       const label = `${activeAccount.address}.addr.reverse`;
-      const node = await namehash(label);
-      const ownerOfR = await ciRegistry.ownerOf(node);
+      const nodeReverse = await namehash(label);
+      const nodeName = await namehash(name);
+      const tokenId = uint8ArrayToBigInt(nodeName);
+
+      const ownerOfR = await ciRegistry.ownerOf(nodeReverse);
       if (!ownerOfR.success) {
         throw new Error("Failed to get owner of node");
       }
       const ownerOf = ownerOfR.returnValue;
+
+      const registrarOwnerOfR = await ciRegistrar.arc72_ownerOf(tokenId);
+      if (!registrarOwnerOfR.success) {
+        throw new Error("Failed to get owner of node");
+      }
+      const registrarOwnerOf = registrarOwnerOfR.returnValue;
+
       const doRegister = ownerOf !== activeAccount.address;
+
+      let doReclaim = ownerOf !== registrarOwnerOf;
 
       const buildN = [];
       let customR;
       for (const p0 of [0, 28500]) {
+        if (doReclaim) {
+        }
         if (doRegister) {
-          // Deposit USDC (ASA -> ARC200)
-          // {
-          //   const txnO = (await builder.arc200.deposit(1e6))?.obj;
-          //   const assetTransfer = {
-          //     xaid: aUSDC.asaAssetId,
-          //     aamt: 1e6,
-          //     payment: 28500,
-          //   };
-          //   buildN.push({
-          //     ...txnO,
-          //     ...assetTransfer,
-          //   });
-          // }
+          // -------------------------------
           // Create wVOI Balance for user
+          // -------------------------------
           if (p0 > 0) {
             const txnO = (
               await builder.arc200.createBalanceBox(activeAccount.address)
@@ -474,7 +502,9 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
               ),
             });
           }
+          // -------------------------------
           // deposit wVOI (NET -> ARC200)
+          // -------------------------------
           {
             const txnO = (await builder.arc200.deposit(1000 * 1e6))?.obj;
             buildN.push({
@@ -485,7 +515,9 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
               ),
             });
           }
+          // -------------------------------
           // approve spending for register
+          // -------------------------------
           {
             const txnO = (
               await builder.arc200.arc200_approve(
@@ -503,7 +535,9 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
               ),
             });
           }
+          // -------------------------------
           // register with reverse registrar
+          // -------------------------------
           {
             const txnO = (
               await builder.registrar.register(
@@ -521,7 +555,9 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
             });
           }
         }
+        // -------------------------------
         // set name with resolver
+        // -------------------------------
         {
           const txnO = (
             await builder.resolver.setName(
@@ -537,6 +573,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
             ),
           });
         }
+        // -------------------------------
         ci.setFee(15000);
         ci.setEnableGroupResourceSharing(true);
         ci.setExtraTxns(buildN);
@@ -578,6 +615,20 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
 
   const refreshName = () => {
     setRefreshTrigger((prev) => prev + 1);
+  };
+
+  const handlePaymentModalOpen = () => {
+    setPaymentModalOpen(true);
+    handleSettingsClose();
+  };
+
+  const handlePaymentModalClose = () => {
+    setPaymentModalOpen(false);
+  };
+
+  const handlePaymentMethodChange = (event: SelectChangeEvent<string>) => {
+    const newMethod = event.target.value;
+    dispatch(setPaymentMethod(newMethod));
   };
 
   return (
@@ -977,35 +1028,6 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
           },
         }}
       >
-        {/*
-        <MenuItem
-          onClick={handleNetworkModalOpen}
-          sx={{
-            borderRadius: "8px",
-            "&:hover": {
-              backgroundColor: "rgba(139, 92, 246, 0.04)",
-            },
-            py: 1,
-          }}
-        >
-          <NetworkIcon
-            sx={{
-              mr: 2,
-              color: "#8B5CF6",
-              fontSize: 20,
-            }}
-          />
-          <Box>
-            <Typography sx={{ fontSize: "0.875rem", fontWeight: 500 }}>
-              Network
-            </Typography>
-            <Typography sx={{ fontSize: "0.75rem", color: "#6B7280" }}>
-              {selectedNetwork === "mainnet" ? "Voi Mainnet" : "Voi Testnet"}
-            </Typography>
-          </Box>
-        </MenuItem>
-        */}
-
         <MenuItem
           onClick={() => {
             toggleTheme();
@@ -1042,6 +1064,33 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
             </Typography>
             <Typography sx={{ fontSize: "0.75rem", color: "#6B7280" }}>
               Switch to {mode === "light" ? "Dark" : "Light"} Mode
+            </Typography>
+          </Box>
+        </MenuItem>
+
+        <MenuItem
+          onClick={handlePaymentModalOpen}
+          sx={{
+            borderRadius: "8px",
+            "&:hover": {
+              backgroundColor: "rgba(139, 92, 246, 0.04)",
+            },
+            py: 1,
+          }}
+        >
+          <PaymentIcon
+            sx={{
+              mr: 2,
+              color: "#8B5CF6",
+              fontSize: 20,
+            }}
+          />
+          <Box>
+            <Typography sx={{ fontSize: "0.875rem", fontWeight: 500 }}>
+              Payment
+            </Typography>
+            <Typography sx={{ fontSize: "0.75rem", color: "#6B7280" }}>
+              Manage payment settings
             </Typography>
           </Box>
         </MenuItem>
@@ -1126,6 +1175,80 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
         setName={handleSetName}
         onNameSet={refreshName}
       />
+
+      <Dialog
+        open={paymentModalOpen}
+        onClose={handlePaymentModalClose}
+        PaperProps={{
+          sx: {
+            backgroundColor: "background.paper",
+            maxWidth: "400px",
+            width: "100%",
+            borderRadius: "12px",
+          },
+        }}
+      >
+        <DialogContent sx={{ p: 3 }}>
+          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+            Set Payment Method
+          </Typography>
+          <Typography sx={{ color: "text.secondary", mb: 3 }}>
+            Choose your preferred payment method for transactions.
+          </Typography>
+          <Select
+            fullWidth
+            value={paymentAssetSymbol}
+            onChange={handlePaymentMethodChange}
+            sx={{
+              mb: 2,
+              "& .MuiOutlinedInput-notchedOutline": {
+                borderColor: mode === "light" ? "#E5E7EB" : "#374151",
+              },
+              "&:hover .MuiOutlinedInput-notchedOutline": {
+                borderColor: "#8B5CF6",
+              },
+              "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                borderColor: "#8B5CF6",
+              },
+            }}
+          >
+            <MenuItem value="VOI">VOI</MenuItem>
+            {/*<MenuItem value="aUSDC">aUSDC</MenuItem>*/}
+            <MenuItem value="UNIT">UNIT</MenuItem>
+          </Select>
+          <Box
+            sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 3 }}
+          >
+            <Button
+              onClick={handlePaymentModalClose}
+              sx={{
+                color: "text.primary",
+                "&:hover": {
+                  backgroundColor:
+                    mode === "light"
+                      ? "rgba(0, 0, 0, 0.04)"
+                      : "rgba(255, 255, 255, 0.08)",
+                },
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              sx={{
+                backgroundColor: "#8B5CF6",
+                color: "white",
+                "&:hover": {
+                  backgroundColor: "#7C3AED",
+                },
+              }}
+              onClick={handlePaymentModalClose}
+            >
+              Save
+            </Button>
+          </Box>
+        </DialogContent>
+      </Dialog>
 
       <Box
         sx={{

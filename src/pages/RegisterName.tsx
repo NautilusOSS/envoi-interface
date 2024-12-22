@@ -38,6 +38,9 @@ import { RegistryService } from "@/services/registry";
 import { debounce } from "lodash";
 import { rsvps } from "@/constants/rsvps";
 import { useNavigate } from "react-router-dom";
+import { DEFAULT_PAYMENT_METHOD } from "@/layouts/EnvoiLayout";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
 
 const ALGORAND_ZERO_ADDRESS =
   "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5HFKQ";
@@ -78,6 +81,16 @@ const RegisterName: React.FC = () => {
   const [isAvailable, setIsAvailable] = React.useState<boolean>(false);
   const [isChecking, setIsChecking] = React.useState<boolean>(false);
 
+  const priceLookup: Record<string, number> = {
+    VOI: 2000,
+    aUSDC: 5,
+    UNIT: 50,
+  };
+
+  const paymentAssetSymbol = useSelector(
+    (state: RootState) => state.user.paymentMethod
+  );
+
   useEffect(() => {
     if (initialName) {
       const fullName = `${initialName}.voi`;
@@ -108,10 +121,10 @@ const RegisterName: React.FC = () => {
   };
 
   useEffect(() => {
-    const basePrice = getNamePrice(name);
-    const totalPrice = basePrice * parseInt(duration);
+    const basePrice = getNamePrice(name, priceLookup[paymentAssetSymbol]);
+    const totalPrice = basePrice * parseInt(duration.toString());
     setPrice(totalPrice);
-  }, [name, duration]);
+  }, [name, duration, paymentAssetSymbol]);
 
   const debouncedCheckAvailability = React.useMemo(
     () =>
@@ -162,7 +175,7 @@ const RegisterName: React.FC = () => {
     );
   };
 
-  const handleConfirmRegister = async () => {
+  const handleConfirmRegisterUNIT = async () => {
     if (!activeAccount) {
       enqueueSnackbar("Please connect your wallet to register a name", {
         variant: "error",
@@ -186,12 +199,6 @@ const RegisterName: React.FC = () => {
     }
 
     try {
-      console.log({
-        name,
-        duration,
-        price,
-      });
-
       setLoading(true);
       setError(null);
       const { algodClient, indexerClient } = getAlgorandClients();
@@ -201,10 +208,406 @@ const RegisterName: React.FC = () => {
         sk: new Uint8Array(),
       });
 
-      // const aUSDC = {
-      //   asaAssetId: 302190,
-      //   tokenId: 395614,
-      // };
+      const UNIT = {
+        tokenId: 420069,
+        decimals: 8,
+      };
+
+      const vns = {
+        registrar: 797609,
+        resolver: 797608,
+      };
+
+      const builder = {
+        arc200: new CONTRACT(
+          UNIT.tokenId,
+          algodClient,
+          indexerClient,
+          abi.nt200,
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(),
+          },
+          true,
+          false,
+          true
+        ),
+        registrar: new CONTRACT(
+          vns.registrar,
+          algodClient,
+          indexerClient,
+          {
+            name: "registrar",
+            description: "Registrar",
+            methods: VNSRegistrarSpec.contract.methods,
+            events: [],
+          },
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(),
+          },
+          true,
+          false,
+          true
+        ),
+        resolver: new CONTRACT(
+          vns.resolver,
+          algodClient,
+          indexerClient,
+          {
+            name: "resolver",
+            description: "Resolver",
+            methods: VNSResolverSpec.contract.methods,
+            events: [],
+          },
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(),
+          },
+          true,
+          false,
+          true
+        ),
+      };
+
+      let customR;
+      for (const p0 of [0, 28500]) {
+        const buildN = [];
+
+        // Approve spending
+        {
+          const paramSpender = algosdk.getApplicationAddress(vns.registrar);
+          const paramAmount = price * 10 ** UNIT.decimals;
+          const txnO = (
+            await builder.arc200.arc200_approve(paramSpender, paramAmount)
+          )?.obj;
+          buildN.push({
+            ...txnO,
+            payment: p0,
+            note: new TextEncoder().encode(
+              `envoi arc200_approve ${price} ${paymentAssetSymbol} spending for ${name}.voi payment`
+            ),
+          });
+        }
+
+        // Register name
+        {
+          const paramName = stringToUint8Array(name, 32);
+          const paramOwner = activeAccount.address;
+          const paramDuration = Number(duration) * 365 * 24 * 60 * 60; // Convert years to seconds
+          const txnO = (
+            await builder.registrar[
+              `register_${paymentAssetSymbol.toLowerCase()}`
+            ](paramName, paramOwner, paramDuration)
+          )?.obj;
+          buildN.push({
+            ...txnO,
+            payment: 336700,
+            note: new TextEncoder().encode(
+              `envoi registrar register ${name}.voi for ${duration} years`
+            ),
+          });
+        }
+
+        // ----------------------------------------------------------------
+        // TODO if first name for user setup reverse registrar as well
+        // ----------------------------------------------------------------
+
+        // set record name in resolver
+        {
+          const paramNode = await namehash(`${name}.voi`);
+          const paramName = stringToUint8Array(`${name}.voi`, 256);
+          const txnO = (await builder.resolver.setName(paramNode, paramName))
+            ?.obj;
+          buildN.push({
+            ...txnO,
+            payment: 336701,
+            note: new TextEncoder().encode(
+              `envoi resolver setName ${name}.voi`
+            ),
+          });
+        }
+
+        ci.setFee(15000);
+        ci.setEnableGroupResourceSharing(true);
+        ci.setExtraTxns(buildN);
+
+        customR = await ci.custom();
+        console.log({ customR });
+        if (customR.success) {
+          break;
+        }
+      }
+      if (!customR.success) {
+        throw new Error("Failed to register name");
+      }
+
+      const stxns = await signTransactions(
+        customR.txns.map(
+          (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+        )
+      );
+
+      await algodClient.sendRawTransaction(stxns as Uint8Array[]).do();
+      setSuccess(true);
+      enqueueSnackbar("Name registered successfully", {
+        variant: "success",
+      });
+      setShowConfirmation(false);
+    } catch (err) {
+      console.error("Error registering name:", err);
+      setError(err instanceof Error ? err.message : "Failed to register name");
+      enqueueSnackbar("Failed to register name. Please try again.", {
+        variant: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmRegisterAUSD = async () => {
+    if (!activeAccount) {
+      enqueueSnackbar("Please connect your wallet to register a name", {
+        variant: "error",
+      });
+      return;
+    }
+
+    const fullName = `${name}.voi`;
+    const reservedOwner = rsvps[fullName];
+
+    // Check if name is reserved and prevent registration if not the reserved owner
+    if (reservedOwner && reservedOwner !== activeAccount.address) {
+      enqueueSnackbar(`${fullName} is reserved and cannot be registered`, {
+        variant: "error",
+        anchorOrigin: {
+          vertical: "top",
+          horizontal: "center",
+        },
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      const { algodClient, indexerClient } = getAlgorandClients();
+
+      const aUSDC = {
+        asaAssetId: 302190,
+        tokenId: 395614,
+        decimals: 6,
+        symbol: "aUSDC",
+      };
+
+      const vns = {
+        registrar: 797609,
+        resolver: 797608,
+      };
+
+      const ci = new CONTRACT(
+        vns.registrar,
+        algodClient,
+        indexerClient,
+        abi.custom,
+        {
+          addr: activeAccount.address,
+          sk: new Uint8Array(),
+        }
+      );
+
+      const builder = {
+        arc200: new CONTRACT(
+          aUSDC.tokenId,
+          algodClient,
+          indexerClient,
+          abi.nt200,
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(),
+          },
+          true,
+          false,
+          true
+        ),
+        registrar: new CONTRACT(
+          vns.registrar,
+          algodClient,
+          indexerClient,
+          {
+            name: "registrar",
+            description: "Registrar",
+            methods: VNSRegistrarSpec.contract.methods,
+            events: [],
+          },
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(),
+          },
+          true,
+          false,
+          true
+        ),
+        resolver: new CONTRACT(
+          vns.resolver,
+          algodClient,
+          indexerClient,
+          {
+            name: "resolver",
+            description: "Resolver",
+            methods: VNSResolverSpec.contract.methods,
+            events: [],
+          },
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(),
+          },
+          true,
+          false,
+          true
+        ),
+      };
+
+      let customR;
+      {
+        const buildN = [];
+
+        // Deposit USDC (ASA -> ARC200)
+        {
+          const txnO = (await builder.arc200.deposit(price * 1e6))?.obj;
+          const assetTransfer = {
+            xaid: aUSDC.asaAssetId,
+            aamt: price * 10 ** aUSDC.decimals,
+            payment: 28500,
+          };
+          buildN.push({
+            ...txnO,
+            ...assetTransfer,
+          });
+        }
+
+        // Approve spending
+        {
+          const paramSpender = algosdk.getApplicationAddress(vns.registrar);
+          const paramAmount = price * 1e6;
+          const txnO = (
+            await builder.arc200.arc200_approve(paramSpender, paramAmount)
+          )?.obj;
+          buildN.push({
+            ...txnO,
+            payment: 28501,
+            note: new TextEncoder().encode(
+              `envoi arc200_approve ${price} ${paymentAssetSymbol} spending for ${name}.voi payment`
+            ),
+          });
+        }
+
+        // Register name
+        {
+          const paramName = stringToUint8Array(name, 32);
+          const paramOwner = activeAccount.address;
+          const paramDuration = Number(duration) * 365 * 24 * 60 * 60; // Convert years to seconds
+          const txnO = (
+            await builder.registrar[`register_${aUSDC.symbol.toLowerCase()}`](
+              paramName,
+              paramOwner,
+              paramDuration
+            )
+          )?.obj;
+          buildN.push({
+            ...txnO,
+            payment: 336700,
+            note: new TextEncoder().encode(
+              `envoi registrar register ${name}.voi for ${duration} years`
+            ),
+          });
+        }
+
+        // ----------------------------------------------------------------
+        // TODO if first name for user setup reverse registrar as well
+        // ----------------------------------------------------------------
+
+        // set record name in resolver
+        {
+          const paramNode = await namehash(`${name}.voi`);
+          const paramName = stringToUint8Array(`${name}.voi`, 256);
+          const txnO = (await builder.resolver.setName(paramNode, paramName))
+            ?.obj;
+          buildN.push({
+            ...txnO,
+            payment: 336701,
+            note: new TextEncoder().encode(
+              `envoi resolver setName ${name}.voi`
+            ),
+          });
+        }
+
+        ci.setFee(15000);
+        ci.setEnableGroupResourceSharing(true);
+        ci.setExtraTxns(buildN);
+
+        customR = await ci.custom();
+      }
+
+      if (!customR.success) {
+        throw new Error("Failed to register name");
+      }
+
+      const stxns = await signTransactions(
+        customR.txns.map(
+          (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+        )
+      );
+
+      await algodClient.sendRawTransaction(stxns as Uint8Array[]).do();
+      setSuccess(true);
+      enqueueSnackbar("Name registered successfully!", {
+        variant: "success",
+      });
+      setShowConfirmation(false);
+    } catch (err) {
+      console.error("Error registering name:", err);
+      setError(err instanceof Error ? err.message : "Failed to register name");
+      enqueueSnackbar("Failed to register name. Please try again.", {
+        variant: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmRegisterVOI = async () => {
+    if (!activeAccount) {
+      enqueueSnackbar("Please connect your wallet to register a name", {
+        variant: "error",
+      });
+      return;
+    }
+
+    const fullName = `${name}.voi`;
+    const reservedOwner = rsvps[fullName];
+
+    // Check if name is reserved and prevent registration if not the reserved owner
+    if (reservedOwner && reservedOwner !== activeAccount.address) {
+      enqueueSnackbar(`${fullName} is reserved and cannot be registered`, {
+        variant: "error",
+        anchorOrigin: {
+          vertical: "top",
+          horizontal: "center",
+        },
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      const { algodClient, indexerClient } = getAlgorandClients();
+
+      const ci = new CONTRACT(797609, algodClient, indexerClient, abi.custom, {
+        addr: activeAccount.address,
+        sk: new Uint8Array(),
+      });
 
       const vns = {
         registrar: 797609,
@@ -417,6 +820,17 @@ const RegisterName: React.FC = () => {
     }
   };
 
+  const handleConfirmRegister = async () => {
+    switch (paymentAssetSymbol) {
+      case "VOI":
+        return handleConfirmRegisterVOI();
+      case "UNIT":
+        return handleConfirmRegisterUNIT();
+      default:
+        throw new Error("Unsupported payment method");
+    }
+  };
+
   // Create a reusable Terms of Service modal component
   const TermsOfServiceModal = () => (
     <Dialog
@@ -471,7 +885,6 @@ const RegisterName: React.FC = () => {
   const isReservedOwner = activeAccount?.address === reservedOwner;
 
   const calculateTotalCost = () => {
-    const namePrice = price * 1e6;
     const totalFees =
       TRANSACTION_FEES.deposit +
       TRANSACTION_FEES.approve +
@@ -735,16 +1148,17 @@ const RegisterName: React.FC = () => {
               Name Cost: {price.toLocaleString()} {paymentAssetSymbol}
             </Typography>
             <Typography variant="body1" gutterBottom>
-              Transaction Fees: {calculateTotalCost().fees.toLocaleString()}{" "}
-              {paymentAssetSymbol}
+              Transaction Fees: {calculateTotalCost().fees.toLocaleString()} VOI
             </Typography>
             <Typography
               variant="body1"
               gutterBottom
               sx={{ fontWeight: "bold" }}
             >
-              Total Cost: {calculateTotalCost().total.toLocaleString()}{" "}
-              {paymentAssetSymbol}
+              Total Cost:{" "}
+              {paymentAssetSymbol === "VOI"
+                ? `${calculateTotalCost().total.toLocaleString()} ${paymentAssetSymbol}`
+                : `${calculateTotalCost().namePrice.toLocaleString()} ${paymentAssetSymbol} + ${calculateTotalCost().fees.toLocaleString()} VOI`}
             </Typography>
 
             <Box sx={{ mt: 3 }}>
