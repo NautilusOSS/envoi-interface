@@ -45,6 +45,7 @@ import { getAlgorandClients } from "@/wallets";
 import { APP_SPEC as ReverseRegistrarSpec } from "@/clients/ReverseRegistrarClient";
 import { APP_SPEC as VNSPublicResolverSpec } from "@/clients/VNSPublicResolverClient";
 import { APP_SPEC as RegistrySpec } from "@/clients/VNSRegistryClient";
+import { APP_SPEC as VNSRegistrarSpec } from "@/clients/VNSRegistrarClient";
 import algosdk from "algosdk";
 import {
   namehash,
@@ -58,6 +59,9 @@ import { rsvps } from "@/constants/rsvps";
 import DomainIcon from "@mui/icons-material/Domain";
 import MyNamesModal from "@/components/MyNamesModal";
 import PaymentIcon from "@mui/icons-material/Payment";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "@/store/store";
+import { setPaymentMethod } from "@/store/userSlice";
 
 export const DEFAULT_PAYMENT_METHOD = "VOI";
 
@@ -202,9 +206,9 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
   );
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [paymentAssetSymbol, setPaymentAssetSymbol] = useState<string>(
-    () =>
-      localStorage.getItem("preferredPaymentMethod") || DEFAULT_PAYMENT_METHOD
+  const dispatch = useDispatch();
+  const paymentAssetSymbol = useSelector(
+    (state: RootState) => state.user.paymentMethod
   );
 
   const { balance, loading } = useVoiBalance(activeAddress, selectedNetwork);
@@ -338,7 +342,6 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
 
   useEffect(() => {
     const currentEndpoints = NETWORK_CONFIG[selectedNetwork];
-
     console.log("Current endpoints:", currentEndpoints);
   }, [selectedNetwork]);
 
@@ -360,12 +363,8 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
         tokenId: 828295, // en Voi
       };
 
-      // const aUSDC = {
-      //   asaAssetId: 302190,
-      //   tokenId: 395614,
-      // };
-
       const { algodClient, indexerClient } = getAlgorandClients();
+
       const ci = new CONTRACT(
         vns.reverseRegistrar,
         algodClient,
@@ -376,6 +375,23 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
           sk: new Uint8Array(),
         }
       );
+
+      const ciRegistrar = new CONTRACT(
+        vns.registrar,
+        algodClient,
+        indexerClient,
+        {
+          name: "registrar",
+          description: "Registrar",
+          methods: VNSRegistrarSpec.contract.methods,
+          events: [],
+        },
+        {
+          addr: activeAccount.address,
+          sk: new Uint8Array(),
+        }
+      );
+
       const ciRegistry = new CONTRACT(
         vns.register,
         algodClient,
@@ -391,6 +407,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
           sk: new Uint8Array(),
         }
       );
+
       const builder = {
         arc200: new CONTRACT(
           wVOI.tokenId,
@@ -442,33 +459,37 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
           true
         ),
       };
+
       const label = `${activeAccount.address}.addr.reverse`;
-      const node = await namehash(label);
-      const ownerOfR = await ciRegistry.ownerOf(node);
+      const nodeReverse = await namehash(label);
+      const nodeName = await namehash(name);
+      const tokenId = uint8ArrayToBigInt(nodeName);
+
+      const ownerOfR = await ciRegistry.ownerOf(nodeReverse);
       if (!ownerOfR.success) {
         throw new Error("Failed to get owner of node");
       }
       const ownerOf = ownerOfR.returnValue;
+
+      const registrarOwnerOfR = await ciRegistrar.arc72_ownerOf(tokenId);
+      if (!registrarOwnerOfR.success) {
+        throw new Error("Failed to get owner of node");
+      }
+      const registrarOwnerOf = registrarOwnerOfR.returnValue;
+
       const doRegister = ownerOf !== activeAccount.address;
+
+      let doReclaim = ownerOf !== registrarOwnerOf;
 
       const buildN = [];
       let customR;
       for (const p0 of [0, 28500]) {
+        if (doReclaim) {
+        }
         if (doRegister) {
-          // Deposit USDC (ASA -> ARC200)
-          // {
-          //   const txnO = (await builder.arc200.deposit(1e6))?.obj;
-          //   const assetTransfer = {
-          //     xaid: aUSDC.asaAssetId,
-          //     aamt: 1e6,
-          //     payment: 28500,
-          //   };
-          //   buildN.push({
-          //     ...txnO,
-          //     ...assetTransfer,
-          //   });
-          // }
+          // -------------------------------
           // Create wVOI Balance for user
+          // -------------------------------
           if (p0 > 0) {
             const txnO = (
               await builder.arc200.createBalanceBox(activeAccount.address)
@@ -481,7 +502,9 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
               ),
             });
           }
+          // -------------------------------
           // deposit wVOI (NET -> ARC200)
+          // -------------------------------
           {
             const txnO = (await builder.arc200.deposit(1000 * 1e6))?.obj;
             buildN.push({
@@ -492,7 +515,9 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
               ),
             });
           }
+          // -------------------------------
           // approve spending for register
+          // -------------------------------
           {
             const txnO = (
               await builder.arc200.arc200_approve(
@@ -510,7 +535,9 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
               ),
             });
           }
+          // -------------------------------
           // register with reverse registrar
+          // -------------------------------
           {
             const txnO = (
               await builder.registrar.register(
@@ -528,7 +555,9 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
             });
           }
         }
+        // -------------------------------
         // set name with resolver
+        // -------------------------------
         {
           const txnO = (
             await builder.resolver.setName(
@@ -544,6 +573,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
             ),
           });
         }
+        // -------------------------------
         ci.setFee(15000);
         ci.setEnableGroupResourceSharing(true);
         ci.setExtraTxns(buildN);
@@ -598,8 +628,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
 
   const handlePaymentMethodChange = (event: SelectChangeEvent<string>) => {
     const newMethod = event.target.value;
-    setPaymentAssetSymbol(newMethod);
-    localStorage.setItem("preferredPaymentMethod", newMethod);
+    dispatch(setPaymentMethod(newMethod));
   };
 
   return (
