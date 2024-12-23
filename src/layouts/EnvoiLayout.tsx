@@ -376,16 +376,11 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
         }
       );
 
-      const ciRegistrar = new CONTRACT(
-        vns.registrar,
+      const ciARC200 = new CONTRACT(
+        wVOI.tokenId,
         algodClient,
         indexerClient,
-        {
-          name: "registrar",
-          description: "Registrar",
-          methods: VNSRegistrarSpec.contract.methods,
-          events: [],
-        },
+        abi.nt200,
         {
           addr: activeAccount.address,
           sk: new Uint8Array(),
@@ -423,6 +418,24 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
           true
         ),
         registrar: new CONTRACT(
+          vns.registrar,
+          algodClient,
+          indexerClient,
+          {
+            name: "registrar",
+            description: "Registrar",
+            methods: VNSRegistrarSpec.contract.methods,
+            events: [],
+          },
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(),
+          },
+          true,
+          false,
+          true
+        ),
+        reverseRegistrar: new CONTRACT(
           vns.reverseRegistrar,
           algodClient,
           indexerClient,
@@ -462,8 +475,9 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
 
       const label = `${activeAccount.address}.addr.reverse`;
       const nodeReverse = await namehash(label);
+
       const nodeName = await namehash(name);
-      const tokenId = uint8ArrayToBigInt(nodeName);
+      const leafName = stringToUint8Array(name.split(".")[0], 32);
 
       const ownerOfR = await ciRegistry.ownerOf(nodeReverse);
       if (!ownerOfR.success) {
@@ -471,20 +485,29 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
       }
       const ownerOf = ownerOfR.returnValue;
 
-      const registrarOwnerOfR = await ciRegistrar.arc72_ownerOf(tokenId);
-      if (!registrarOwnerOfR.success) {
+      const nameOwnerOfR = await ciRegistry.ownerOf(nodeName);
+      if (!nameOwnerOfR.success) {
         throw new Error("Failed to get owner of node");
       }
-      const registrarOwnerOf = registrarOwnerOfR.returnValue;
+      const nameOwnerOf = nameOwnerOfR.returnValue;
 
       const doRegister = ownerOf !== activeAccount.address;
 
-      let doReclaim = ownerOf !== registrarOwnerOf;
+      const doReclaim = ownerOf !== nameOwnerOf;
 
       const buildN = [];
       let customR;
       for (const p0 of [0, 28500]) {
         if (doReclaim) {
+          // -------------------------------
+          // reclaim registrar
+          // -------------------------------
+          const txnO = await builder.registrar.reclaim(leafName);
+          buildN.push({
+            ...(txnO?.obj || {}),
+            payment: 0,
+            note: new TextEncoder().encode(`registrar reclaim ${name}`),
+          });
         }
         if (doRegister) {
           // -------------------------------
@@ -498,7 +521,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
               ...txnO,
               payment: p0,
               note: new TextEncoder().encode(
-                `envoi createBalanceBox 1000 ${paymentAssetSymbol} for reverse-registrar payment`
+                `envoi createBalanceBox 1000 ${paymentAssetSymbol}`
               ),
             });
           }
@@ -511,7 +534,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
               ...txnO,
               payment: 1000 * 1e6,
               note: new TextEncoder().encode(
-                `envoi deposit 1000 ${paymentAssetSymbol} for reverse-registrar payment`
+                `envoi deposit 1000 ${paymentAssetSymbol}`
               ),
             });
           }
@@ -540,7 +563,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
           // -------------------------------
           {
             const txnO = (
-              await builder.registrar.register(
+              await builder.reverseRegistrar.register(
                 algosdk.decodeAddress(activeAccount.address).publicKey,
                 activeAccount.address,
                 0
@@ -574,7 +597,8 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
           });
         }
         // -------------------------------
-        ci.setFee(15000);
+        ci.setBeaconId(vns.reverseRegistrar);
+        ci.setFee(2000);
         ci.setEnableGroupResourceSharing(true);
         ci.setExtraTxns(buildN);
         customR = await ci.custom();
@@ -582,7 +606,6 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
           break;
         }
       }
-      console.log({ customR });
       if (!customR.success) {
         throw new Error("Failed to register name");
       }
