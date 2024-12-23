@@ -38,6 +38,7 @@ const ContractInfoModal: React.FC<ContractInfoModalProps> = ({
       vnsResolver: 797608,
       vnsRegistrar: 797609,
       vnsReverseRegistrar: 797610,
+      vnsCollectionRegistrar: 846601,
       ausdc: {
         asaId: 302190,
         tokenId: 395614,
@@ -49,7 +50,11 @@ const ContractInfoModal: React.FC<ContractInfoModalProps> = ({
       vnsResolver: 30001,
       vnsRegistrar: 30002,
       vnsReverseRegistrar: 30003,
-      ausdc: 20438,
+      vnsCollectionRegistrar: 0,
+      ausdc: {
+        asaId: 20438,
+        tokenId: 20438,
+      },
       wvoi: 0,
     },
   };
@@ -202,6 +207,20 @@ const ContractInfoModal: React.FC<ContractInfoModalProps> = ({
                 sx={{ color: "#8B5CF6" }}
               >
                 {currentContracts.vnsReverseRegistrar}
+              </Link>
+            </Typography>
+          </ListItem>
+          {/* collection registrar */}
+          <ListItem>
+            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+              VNS Collection Registrar:{" "}
+              <Link
+                href={getExplorerLink(currentContracts.vnsCollectionRegistrar)}
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{ color: "#8B5CF6" }}
+              >
+                {currentContracts.vnsCollectionRegistrar}
               </Link>
             </Typography>
           </ListItem>
