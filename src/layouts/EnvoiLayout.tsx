@@ -511,6 +511,9 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
           // -------------------------------
           // reclaim registrar
           // -------------------------------
+          ci.setTransfers([
+            [1000 * 1e6, algosdk.getApplicationAddress(wVOI.tokenId)],
+          ]);
           const txnO = await builder.registrar.reclaim(leafName);
           buildN.push({
             ...(txnO?.obj || {}),
