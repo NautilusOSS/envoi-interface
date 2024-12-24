@@ -707,7 +707,7 @@ const ProfilePage: React.FC = () => {
           )}
 
           <div className="detail-divider">
-            {isOwner && (
+            {true && (
               <button
                 className="edit-profile-button"
                 onClick={handleOpenEditModal}
