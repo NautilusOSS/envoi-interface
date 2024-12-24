@@ -64,12 +64,11 @@ const CollectionsModal: React.FC<CollectionsModalProps> = ({
   const [setNameModalOpen, setSetNameModalOpen] = useState(false);
 
   useEffect(() => {
+    if (!activeAccount?.address) return;
     const fetchCollections = async () => {
       try {
         const response = await fetch(
-          "https://mainnet-idx.nautilus.sh/nft-indexer/v1/collections?creator=BRB3JP4LIW5Q755FJCGVAOA4W3THJ7BR3K6F26EVCGMETLEAZOQRHHJNLQ"
-          //"https://mainnet-idx.nautilus.sh/nft-indexer/v1/collections?creator=DORKHJKTKPZPV2ZLS45X4P6FV7VLE7QZQ7RZCN3DNRKXB56K22LX4RTXDI"
-          //"https://mainnet-idx.nautilus.sh/nft-indexer/v1/collections?creator=DQVAPFLH3ZOG3LJPFCDATKKTO5YXM77ENZBAEO5LPL7AO6QASBEEKDVS4I"
+          `https://mainnet-idx.nautilus.sh/nft-indexer/v1/collections?creator=${activeAccount?.address}`
         );
         const data = await response.json();
         //const filtered = data.collections.filter((c) => c.totalSupply > 0);
@@ -85,7 +84,7 @@ const CollectionsModal: React.FC<CollectionsModalProps> = ({
       fetchCollections();
       setCurrentPage(0); // Reset to first page when modal opens
     }
-  }, [open]);
+  }, [open, activeAccount?.address]);
 
   console.log({ collections });
 
