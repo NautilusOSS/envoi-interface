@@ -29,6 +29,7 @@ import LocationOnIcon from "@mui/icons-material/LocationOn";
 import SearchIcon from "@mui/icons-material/Search";
 import InputAdornment from "@mui/material/InputAdornment";
 import LinkIcon from "@mui/icons-material/Link";
+import { ARC72Service } from "@/services/arc72";
 type NetworkType = "mainnet" | "testnet";
 
 interface NFTMetadata {
@@ -195,33 +196,6 @@ const ProfilePage: React.FC = () => {
     handleCloseNftModal();
   };
 
-  // TODO: This is a hack to check if the user is the owner of the name
-  // how to do this properly:
-  // get ownerOf in registry using node
-  // get arc_ownerOf in registrar using node
-  // fallback to ownerOf
-  const fetchIsOwner = async (address: string) => {
-    try {
-      const response = await fetch(
-        `https://mainnet-idx.nautilus.sh/nft-indexer/v1/tokens?owner=${address}&include=all`
-      );
-      const data = await response.json();
-      // Check if any NFT metadata.name matches the current name
-      const hasMatchingNFT = data.tokens.some((nft: NFTToken) => {
-        try {
-          const metadata: NFTMetadata = JSON.parse(nft.metadata);
-          console.log(metadata.name, name);
-          return metadata.name === name;
-        } catch (e) {
-          return false;
-        }
-      });
-      setIsOwner(hasMatchingNFT);
-    } catch (error) {
-      console.error("Error fetching NFTs:", error);
-    }
-  };
-
   const fetchNFTs = async (address: string) => {
     setLoading(true);
     try {
@@ -230,19 +204,6 @@ const ProfilePage: React.FC = () => {
       );
       const data = await response.json();
       setNfts(data.tokens);
-
-      // Check if any NFT metadata.name matches the current name
-      const hasMatchingNFT = data.tokens.some((nft: NFTToken) => {
-        try {
-          const metadata: NFTMetadata = JSON.parse(nft.metadata);
-          console.log(metadata.name, name);
-          return metadata.name === name;
-        } catch (e) {
-          return false;
-        }
-      });
-
-      setIsOwner(hasMatchingNFT);
     } catch (error) {
       console.error("Error fetching NFTs:", error);
     }
@@ -256,10 +217,15 @@ const ProfilePage: React.FC = () => {
   }, [isNftModalOpen, owner]);
 
   useEffect(() => {
-    if (activeAccount?.address) {
-      fetchIsOwner(activeAccount.address);
-    }
-  }, [activeAccount?.address]);
+    if (!activeAccount) return;
+    (async () => {
+      const node = await namehash(name || "");
+      const tokenId = uint8ArrayToBigInt(node);
+      const arc72 = new ARC72Service("mainnet", activeAccount.address, 797609);
+      const owner = await arc72.ownerOf(tokenId);
+      setIsOwner(owner === activeAccount.address);
+    })();
+  }, [name, activeAccount]);
 
   useEffect(() => {
     const registry = new RegistryService("mainnet");
@@ -707,7 +673,7 @@ const ProfilePage: React.FC = () => {
           )}
 
           <div className="detail-divider">
-            {true && (
+            {isOwner && (
               <button
                 className="edit-profile-button"
                 onClick={handleOpenEditModal}
