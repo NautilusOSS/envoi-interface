@@ -6,6 +6,17 @@ async function sha256(data: Uint8Array): Promise<Uint8Array> {
   return new Uint8Array(hashBuffer);
 }
 
+export function bigIntToUint8Array(bigInt: bigint) {
+  const uint8Array = new Uint8Array(32);
+  let tempBigInt = bigInt;
+  // Find the highest non-zero byte
+  for (let i = 31; i >= 0; i--) {
+    uint8Array[i] = Number(tempBigInt & BigInt(0xff));
+    tempBigInt >>= BigInt(8);
+  }
+  return uint8Array;
+}
+
 export function uint8ArrayToBigInt(uint8Array: Uint8Array) {
   let result = BigInt(0); // Initialize the BigInt result
   for (let i = 0; i < uint8Array.length; i++) {
@@ -46,8 +57,14 @@ export async function namehash(name: string): Promise<Uint8Array> {
       // Skip empty labels
       // Hash the label
       const labelBytes = new TextEncoder().encode(label);
+      // const labelHash = !isAlgorandAddress(label)
+      //   ? await sha256(labelBytes)
+      //   : await sha256(algosdk.decodeAddress(label).publicKey);
+      const isNumber = !isNaN(Number(label));
       const labelHash = !isAlgorandAddress(label)
-        ? await sha256(labelBytes)
+        ? !isNumber
+          ? await sha256(labelBytes)
+          : await sha256(bigIntToUint8Array(BigInt(label)))
         : await sha256(algosdk.decodeAddress(label).publicKey);
 
       // Concatenate current node hash with label hash and hash again

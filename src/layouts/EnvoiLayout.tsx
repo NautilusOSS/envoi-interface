@@ -62,7 +62,8 @@ import PaymentIcon from "@mui/icons-material/Payment";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import { setPaymentMethod } from "@/store/userSlice";
-
+import CollectionsIcon from "@mui/icons-material/Collections";
+import CollectionsModal from "@/components/CollectionsModal";
 export const DEFAULT_PAYMENT_METHOD = "VOI";
 
 interface NavLinkProps {
@@ -210,6 +211,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
   const paymentAssetSymbol = useSelector(
     (state: RootState) => state.user.paymentMethod
   );
+  const [collectionsModalOpen, setCollectionsModalOpen] = useState(false);
 
   const { balance, loading } = useVoiBalance(activeAddress, selectedNetwork);
 
@@ -666,6 +668,11 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
     dispatch(setPaymentMethod(newMethod));
   };
 
+  const handleCollectionsClick = () => {
+    setCollectionsModalOpen(true);
+    handleDrawerClose();
+  };
+
   return (
     <Box
       sx={{
@@ -902,6 +909,41 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
                     }}
                   >
                     My Names
+                  </Typography>
+                </ListItem>
+
+                <ListItem
+                  onClick={handleCollectionsClick}
+                  sx={{
+                    cursor: "pointer",
+                    "&:hover": {
+                      backgroundColor:
+                        mode === "light"
+                          ? "rgba(139, 92, 246, 0.04)"
+                          : "rgba(139, 92, 246, 0.08)",
+                    },
+                    borderRadius: "8px",
+                    mb: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    textDecoration: "none",
+                  }}
+                >
+                  <CollectionsIcon
+                    sx={{
+                      color: "#8B5CF6",
+                      mr: 2,
+                      fontSize: 20,
+                    }}
+                  />
+                  <Typography
+                    sx={{
+                      color: "text.primary",
+                      fontSize: "0.875rem",
+                      fontWeight: 500,
+                    }}
+                  >
+                    My Collections
                   </Typography>
                 </ListItem>
 
@@ -1284,6 +1326,11 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
           </Box>
         </DialogContent>
       </Dialog>
+
+      <CollectionsModal
+        open={collectionsModalOpen}
+        onClose={() => setCollectionsModalOpen(false)}
+      />
 
       <Box
         sx={{

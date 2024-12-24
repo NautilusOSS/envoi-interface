@@ -616,11 +616,11 @@ const RegisterName: React.FC = () => {
 
       const wVOI = {
         tokenId: 828295, // en Voi
+        decimals: 6,
       };
 
       const builder = {
         arc200: new CONTRACT(
-          //aUSDC.tokenId,
           wVOI.tokenId,
           algodClient,
           indexerClient,
@@ -690,37 +690,27 @@ const RegisterName: React.FC = () => {
         // }
 
         // Create wVOI Balance for user
-        if (p0 > 0) {
-          const txnO = (
-            await builder.arc200.createBalanceBox(activeAccount.address)
-          )?.obj;
-          buildN.push({
-            ...txnO,
-            payment: p0,
-            note: new TextEncoder().encode(
-              `envoi createBalanceBox ${price} ${paymentAssetSymbol} for ${name}.voi payment`
-            ),
-          });
-        }
-        // Create wVOI balance for treasury (once)
-        // {
+        // if (p0 > 0) {
         //   const txnO = (
-        //     await builder.arc200.createBalanceBox(
-        //       "BRB3JP4LIW5Q755FJCGVAOA4W3THJ7BR3K6F26EVCGMETLEAZOQRHHJNLQ"
-        //     )
+        //     await builder.arc200.createBalanceBox(activeAccount.address)
         //   )?.obj;
         //   buildN.push({
         //     ...txnO,
-        //     payment: 28501,
+        //     payment: p0,
+        //     note: new TextEncoder().encode(
+        //       `envoi createBalanceBox ${price} ${paymentAssetSymbol} for ${name}.voi payment`
+        //     ),
         //   });
         // }
 
         // Deposit VOI (NET -> ARC200)
         {
-          const txnO = (await builder.arc200.deposit(price * 1e6))?.obj;
+          const txnO = (
+            await builder.arc200.deposit(price * 10 ** wVOI.decimals)
+          )?.obj;
           buildN.push({
             ...txnO,
-            payment: price * 1e6,
+            payment: price * 10 ** wVOI.decimals,
             note: new TextEncoder().encode(
               `envoi deposit ${price} ${paymentAssetSymbol} for ${name}.voi payment`
             ),
@@ -788,6 +778,9 @@ const RegisterName: React.FC = () => {
         ci.setExtraTxns(buildN);
 
         customR = await ci.custom();
+
+        console.log("customR", customR);
+
         if (customR.success) {
           break;
         }

@@ -32,7 +32,7 @@ import { useSnackbar } from "notistack";
 interface MyNamesModalProps {
   open: boolean;
   onClose: () => void;
-  mode: "view" | "setPrimary";
+  mode: "view" | "setPrimary" | "setName";
   setName?: (name: string) => Promise<void>;
   onNameSet?: () => void;
 }
@@ -80,12 +80,12 @@ const MyNamesModal: React.FC<MyNamesModalProps> = ({
     setSetNameModalOpen(true);
   };
 
-  const handleSetNameConfirm = async () => {
+  const handleSetNameConfirm = async (name?: string) => {
     if (!activeAccount || !setName) return;
 
     try {
       setLoading(true);
-      await setName(selectedName);
+      await setName(name || selectedName);
 
       await refetch();
 
@@ -194,7 +194,11 @@ const MyNamesModal: React.FC<MyNamesModalProps> = ({
             component="h2"
             sx={{ mb: 3, color: "#8B5CF6" }}
           >
-            {modalMode === "setPrimary" ? "Set Primary Name" : "My Names"}
+            {modalMode === "setPrimary"
+              ? "Set Primary Name"
+              : modalMode === "setName"
+              ? "Set Name"
+              : "My Names"}
           </Typography>
 
           {!loading && names.length > 0 && (
@@ -242,6 +246,17 @@ const MyNamesModal: React.FC<MyNamesModalProps> = ({
                       {name}
                     </Typography>
                     <Box sx={{ display: "flex", gap: 1 }}>
+                      {modalMode === "setName" && (
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => {
+                            handleSetNameConfirm(name);
+                          }}
+                        >
+                          Set Name
+                        </Button>
+                      )}
                       {modalMode === "setPrimary" && (
                         <>
                           {name === displayName ? (

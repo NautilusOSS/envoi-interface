@@ -28,7 +28,7 @@ import WebIcon from "@mui/icons-material/Web";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import SearchIcon from "@mui/icons-material/Search";
 import InputAdornment from "@mui/material/InputAdornment";
-
+import LinkIcon from "@mui/icons-material/Link";
 type NetworkType = "mainnet" | "testnet";
 
 interface NFTMetadata {
@@ -94,13 +94,13 @@ const AVAILABLE_FIELDS: ProfileField[] = [
     icon: <EmailIcon />,
     placeholder: "Enter your email address",
   },
+  */
   {
     key: "url",
     label: "Website",
     icon: <WebIcon />,
     placeholder: "Enter your website URL",
   },
-  */
   {
     key: "location",
     label: "Location",
@@ -143,6 +143,10 @@ const ProfilePage: React.FC = () => {
   const [isPendingTx, setIsPendingTx] = useState(false);
   const [isFieldCatalogOpen, setIsFieldCatalogOpen] = useState(false);
   const [fieldSearchQuery, setFieldSearchQuery] = useState("");
+  const [url, setUrl] = React.useState<string | null>(null);
+  const [newUrl, setNewUrl] = React.useState<string | null>(null);
+  const [resolvedName, setResolvedName] = React.useState<string | null>(null);
+  const [isOwner, setIsOwner] = useState<boolean>(false);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -164,12 +168,14 @@ const ProfilePage: React.FC = () => {
     setNewTwitter(twitter);
     setNewGithub(github);
     setNewLocation(location);
+    setNewUrl(url);
   };
   const handleCloseEditModal = () => {
     setIsEditModalOpen(false);
     setNewTwitter(null);
     setNewGithub(null);
     setNewLocation(null);
+    setNewUrl(null);
   };
 
   const handleAvatarClick = (event: React.MouseEvent) => {
@@ -189,6 +195,33 @@ const ProfilePage: React.FC = () => {
     handleCloseNftModal();
   };
 
+  // TODO: This is a hack to check if the user is the owner of the name
+  // how to do this properly:
+  // get ownerOf in registry using node
+  // get arc_ownerOf in registrar using node
+  // fallback to ownerOf
+  const fetchIsOwner = async (address: string) => {
+    try {
+      const response = await fetch(
+        `https://mainnet-idx.nautilus.sh/nft-indexer/v1/tokens?owner=${address}&include=all`
+      );
+      const data = await response.json();
+      // Check if any NFT metadata.name matches the current name
+      const hasMatchingNFT = data.tokens.some((nft: NFTToken) => {
+        try {
+          const metadata: NFTMetadata = JSON.parse(nft.metadata);
+          console.log(metadata.name, name);
+          return metadata.name === name;
+        } catch (e) {
+          return false;
+        }
+      });
+      setIsOwner(hasMatchingNFT);
+    } catch (error) {
+      console.error("Error fetching NFTs:", error);
+    }
+  };
+
   const fetchNFTs = async (address: string) => {
     setLoading(true);
     try {
@@ -197,6 +230,19 @@ const ProfilePage: React.FC = () => {
       );
       const data = await response.json();
       setNfts(data.tokens);
+
+      // Check if any NFT metadata.name matches the current name
+      const hasMatchingNFT = data.tokens.some((nft: NFTToken) => {
+        try {
+          const metadata: NFTMetadata = JSON.parse(nft.metadata);
+          console.log(metadata.name, name);
+          return metadata.name === name;
+        } catch (e) {
+          return false;
+        }
+      });
+
+      setIsOwner(hasMatchingNFT);
     } catch (error) {
       console.error("Error fetching NFTs:", error);
     }
@@ -210,6 +256,12 @@ const ProfilePage: React.FC = () => {
   }, [isNftModalOpen, owner]);
 
   useEffect(() => {
+    if (activeAccount?.address) {
+      fetchIsOwner(activeAccount.address);
+    }
+  }, [activeAccount?.address]);
+
+  useEffect(() => {
     const registry = new RegistryService("mainnet");
     const registrar = new RegistrarService("mainnet");
     const resolver = new ResolverService("mainnet");
@@ -220,10 +272,13 @@ const ProfilePage: React.FC = () => {
       const tokenId = uint8ArrayToBigInt(nameHash);
       registrar.expiration(tokenId).then((expiryTimestamp) => {
         const expiryTimestampNumber = Number(expiryTimestamp);
-        if (expiryTimestampNumber) {
-          setExpiry(new Date(expiryTimestampNumber * 1000));
-        }
+        //if (expiryTimestampNumber) {
+        setExpiry(new Date(expiryTimestampNumber * 1000));
+        //}
       });
+    });
+    resolver.name(name || "").then((resolvedName: string | null) => {
+      setResolvedName(resolvedName);
     });
     resolver.text(name || "", "avatar").then((avatar: string | null) => {
       setAvatarText(avatar);
@@ -236,6 +291,9 @@ const ProfilePage: React.FC = () => {
     });
     resolver.text(name || "", "location").then((location: string | null) => {
       setLocation(location);
+    });
+    resolver.text(name || "", "url").then((url: string | null) => {
+      setUrl(url);
     });
   }, [name]);
 
@@ -310,9 +368,17 @@ const ProfilePage: React.FC = () => {
     try {
       if (!activeAccount) return;
       const resolver = new ResolverService("mainnet", activeAccount.address);
+      const registrar = new RegistrarService("mainnet", activeAccount.address);
       resolver.setMode("builder");
+      registrar.setMode("builder");
       console.log("Building txns...");
+      const doReclaim = owner !== activeAccount.address;
       const buildN = [];
+      if (doReclaim) {
+        const label = name.split(".")[0];
+        const reclaimR: any = await registrar.reclaim(label);
+        buildN.push(reclaimR);
+      }
       let avatarUpdated = false;
       if (profileImage !== avatarText) {
         if (profileImage) {
@@ -344,6 +410,13 @@ const ProfilePage: React.FC = () => {
         );
         buildN.push(setTextR);
         githubUpdated = true;
+      }
+
+      let urlUpdated = false;
+      if (url !== newUrl) {
+        const setTextR: any = await resolver.setText(name, "url", newUrl || "");
+        buildN.push(setTextR);
+        urlUpdated = true;
       }
 
       let locationUpdated = false;
@@ -423,6 +496,17 @@ const ProfilePage: React.FC = () => {
         setGithub(newGithubText);
       }
 
+      if (urlUpdated) {
+        let newUrlText = await resolver.text(name || "", "url");
+        do {
+          if (newUrlText !== url) {
+            break;
+          }
+          newUrlText = await resolver.text(name || "", "url");
+        } while (1);
+        setUrl(newUrlText);
+      }
+
       if (locationUpdated) {
         let newLocationText = await resolver.text(name || "", "location");
         do {
@@ -461,6 +545,9 @@ const ProfilePage: React.FC = () => {
       case "location":
         if (!newLocation) setNewLocation(" ");
         break;
+      case "url":
+        if (!newUrl) setNewUrl(" ");
+        break;
       // Add more cases for other fields as needed
     }
     handleCloseFieldCatalog();
@@ -494,6 +581,18 @@ const ProfilePage: React.FC = () => {
             <h2>Profile Details</h2>
           </div>
 
+          {resolvedName ? (
+            <div className="detail-row">
+              <div className="detail-icon">
+                <TimerIcon />
+              </div>
+              <div className="detail-content">
+                <label>Name</label>
+                <div className="detail-value">{resolvedName}</div>
+              </div>
+            </div>
+          ) : null}
+
           <div className="detail-row">
             <div className="detail-icon">
               <AccountBalanceWalletIcon />
@@ -520,15 +619,17 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="detail-row">
-            <div className="detail-icon">
-              <TimerIcon />
+          {expiry > 0 ? (
+            <div className="detail-row">
+              <div className="detail-icon">
+                <TimerIcon />
+              </div>
+              <div className="detail-content">
+                <label>Expiry</label>
+                <div className="detail-value">{formatExpiry(expiry)}</div>
+              </div>
             </div>
-            <div className="detail-content">
-              <label>Expiry</label>
-              <div className="detail-value">{formatExpiry(expiry)}</div>
-            </div>
-          </div>
+          ) : null}
 
           {twitter && (
             <div className="detail-row">
@@ -539,12 +640,12 @@ const ProfilePage: React.FC = () => {
                 <label>Twitter</label>
                 <div className="detail-value">
                   <a
-                    href={`https://twitter.com/${twitter}`}
+                    href={`https://twitter.com/${twitter.replace(" ", "")}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="twitter-link"
                   >
-                    @{twitter}
+                    @{twitter.replace(" ", "")}
                   </a>
                 </div>
               </div>
@@ -572,6 +673,27 @@ const ProfilePage: React.FC = () => {
             </div>
           )}
 
+          {url && (
+            <div className="detail-row">
+              <div className="detail-icon">
+                <LinkIcon />
+              </div>
+              <div className="detail-content">
+                <label>URL</label>
+                <div className="detail-value">
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="url-link"
+                  >
+                    {url.replace("https://", "")}
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+
           {location && (
             <div className="detail-row">
               <div className="detail-icon">
@@ -585,7 +707,7 @@ const ProfilePage: React.FC = () => {
           )}
 
           <div className="detail-divider">
-            {activeAccount?.address === owner && (
+            {isOwner && (
               <button
                 className="edit-profile-button"
                 onClick={handleOpenEditModal}
@@ -720,6 +842,57 @@ const ProfilePage: React.FC = () => {
                   sx={{ minWidth: "auto", height: "56px" }}
                   onClick={() => {
                     setNewGithub("");
+                  }}
+                >
+                  <DeleteIcon />
+                </Button>
+              </div>
+            )}
+
+            {newUrl && (
+              <div
+                className="field-wrapper"
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                <TextField
+                  fullWidth
+                  id="url"
+                  label="URL"
+                  placeholder="Enter your URL"
+                  variant="outlined"
+                  margin="normal"
+                  value={newUrl || ""}
+                  onChange={(e) => setNewUrl(e.target.value)}
+                  InputLabelProps={{
+                    shrink: true,
+                    style: {
+                      color: theme.palette.mode === "dark" ? "#000" : undefined,
+                    },
+                  }}
+                  InputProps={{
+                    style: {
+                      color: theme.palette.mode === "dark" ? "#000" : undefined,
+                    },
+                    sx: {
+                      "& .MuiOutlinedInput-notchedOutline": {
+                        borderColor:
+                          theme.palette.mode === "dark" ? "#000" : undefined,
+                      },
+                      "&:hover .MuiOutlinedInput-notchedOutline": {
+                        borderColor:
+                          theme.palette.mode === "dark" ? "#000" : undefined,
+                      },
+                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                        borderColor:
+                          theme.palette.mode === "dark" ? "#000" : undefined,
+                      },
+                    },
+                  }}
+                />
+                <Button
+                  sx={{ minWidth: "auto", height: "56px" }}
+                  onClick={() => {
+                    setNewUrl("");
                   }}
                 >
                   <DeleteIcon />
@@ -928,7 +1101,8 @@ const ProfilePage: React.FC = () => {
                 const isFieldActive =
                   (field.key === "com.twitter" && newTwitter) ||
                   (field.key === "com.github" && newGithub) ||
-                  (field.key === "location" && newLocation);
+                  (field.key === "location" && newLocation) ||
+                  (field.key === "url" && newUrl);
 
                 return (
                   <ListItem

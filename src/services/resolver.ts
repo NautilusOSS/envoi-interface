@@ -138,6 +138,15 @@ export class ResolverService {
     this.mode = mode;
   }
 
+  async name(node: string): Promise<string | null> {
+    const nodeBytes = await namehash(node);
+    const info = await this.contractInstance.name(nodeBytes);
+    if (info.success) {
+      return stripTrailingZeroBytes(info.returnValue);
+    }
+    return "";
+  }
+
   async text(node: string, key: string): Promise<string | null> {
     const nodeBytes = await namehash(node);
     const keyBytes = stringToUint8Array(key, 22);
