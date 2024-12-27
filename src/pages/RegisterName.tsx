@@ -690,18 +690,18 @@ const RegisterName: React.FC = () => {
         // }
 
         // Create wVOI Balance for user
-        // if (p0 > 0) {
-        //   const txnO = (
-        //     await builder.arc200.createBalanceBox(activeAccount.address)
-        //   )?.obj;
-        //   buildN.push({
-        //     ...txnO,
-        //     payment: p0,
-        //     note: new TextEncoder().encode(
-        //       `envoi createBalanceBox ${price} ${paymentAssetSymbol} for ${name}.voi payment`
-        //     ),
-        //   });
-        // }
+        if (p0 > 0) {
+          const txnO = (
+            await builder.arc200.createBalanceBox(activeAccount.address)
+          )?.obj;
+          buildN.push({
+            ...txnO,
+            payment: p0,
+            note: new TextEncoder().encode(
+              `envoi createBalanceBox ${price} ${paymentAssetSymbol} for ${name}.voi payment`
+            ),
+          });
+        }
 
         // Deposit VOI (NET -> ARC200)
         {
