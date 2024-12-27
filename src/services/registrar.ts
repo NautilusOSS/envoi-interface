@@ -80,4 +80,9 @@ export class RegistrarService {
       return false;
     }
   }
+
+  async ownerOf(tokenId: BigInt): Promise<string> {
+    const ownerR = await this.contractInstance.arc72_ownerOf(tokenId);
+    return ownerR.returnValue;
+  }
 }

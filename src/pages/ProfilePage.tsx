@@ -30,6 +30,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import InputAdornment from "@mui/material/InputAdornment";
 import LinkIcon from "@mui/icons-material/Link";
 import { ARC72Service } from "@/services/arc72";
+import { zeroAddress } from "@/contants/accounts";
 type NetworkType = "mainnet" | "testnet";
 
 interface NFTMetadata {
@@ -231,9 +232,7 @@ const ProfilePage: React.FC = () => {
     const registry = new RegistryService("mainnet");
     const registrar = new RegistrarService("mainnet");
     const resolver = new ResolverService("mainnet");
-    registry.ownerOf(name || "").then((owner) => {
-      setOwner(owner);
-    });
+
     namehash(name || "").then((nameHash) => {
       const tokenId = uint8ArrayToBigInt(nameHash);
       registrar.expiration(tokenId).then((expiryTimestamp) => {
@@ -241,6 +240,16 @@ const ProfilePage: React.FC = () => {
         //if (expiryTimestampNumber) {
         setExpiry(new Date(expiryTimestampNumber * 1000));
         //}
+      });
+      registrar.ownerOf(tokenId).then((owner) => {
+        console.log({ owner });
+        if (owner != zeroAddress) {
+          setOwner(owner);
+        } else {
+          registry.ownerOf(name || "").then((owner) => {
+            setOwner(owner);
+          });
+        }
       });
     });
     resolver.name(name || "").then((resolvedName: string | null) => {
