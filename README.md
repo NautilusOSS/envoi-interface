@@ -1,5 +1,6 @@
-# Nautilus NFT Marketplace: Front End Interface
+# enVoi: Front End Interface
 
-An open source repository for Nautilus front end interface. Nautilus is a NFT Marketplace on Voi Network.
+An open source repository for enVoi front end interface. enVoi is a naming service on Voi Network.
 
-<img width="1499" alt="Screenshot 2024-07-05 at 14 36 21" src="https://github.com/NautilusOSS/nautilus-interface/assets/23183451/d7135268-6d22-43fb-98b3-2a6dc4bfe9fe">
+<img width="1243" alt="Screenshot 2024-12-27 at 15 19 33" src="https://github.com/user-attachments/assets/52f2a3c1-f898-44e7-8a99-28ed1b8223e8" />
+
