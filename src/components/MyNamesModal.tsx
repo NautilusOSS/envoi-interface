@@ -85,6 +85,9 @@ const MyNamesModal: React.FC<MyNamesModalProps> = ({
 
     try {
       setLoading(true);
+
+      console.log("Setting name:", name || selectedName);
+
       await setName(name || selectedName);
 
       await refetch();
@@ -379,7 +382,7 @@ const MyNamesModal: React.FC<MyNamesModalProps> = ({
               Cancel
             </Button>
             <Button
-              onClick={handleSetNameConfirm}
+              onClick={() => handleSetNameConfirm(selectedName)}
               variant="contained"
               disabled={loading}
               sx={{

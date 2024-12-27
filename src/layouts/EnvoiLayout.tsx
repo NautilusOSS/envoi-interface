@@ -479,6 +479,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
       const nodeReverse = await namehash(label);
 
       const nodeName = await namehash(name);
+
       const leafName = stringToUint8Array(name.split(".")[0], 32);
 
       const registryOwnerOfR = await ciRegistry.ownerOf(nodeReverse);

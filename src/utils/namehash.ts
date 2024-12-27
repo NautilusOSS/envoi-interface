@@ -40,6 +40,8 @@ function isAlgorandAddress(address: string): boolean {
   return true;
 }
 
+
+
 export async function namehash(name: string): Promise<Uint8Array> {
   if (!name) {
     return new Uint8Array(32); // Return 32 bytes of zeros for empty name
