@@ -39,6 +39,7 @@ const ContractInfoModal: React.FC<ContractInfoModalProps> = ({
       vnsRegistrar: 797609,
       vnsReverseRegistrar: 797610,
       vnsCollectionRegistrar: 846601,
+      vnsStakingRegistrar: 876578,
       ausdc: {
         asaId: 302190,
         tokenId: 395614,
@@ -51,6 +52,7 @@ const ContractInfoModal: React.FC<ContractInfoModalProps> = ({
       vnsRegistrar: 30002,
       vnsReverseRegistrar: 30003,
       vnsCollectionRegistrar: 0,
+      vnsStakingRegistrar: 0,
       ausdc: {
         asaId: 20438,
         tokenId: 20438,
@@ -130,149 +132,183 @@ const ContractInfoModal: React.FC<ContractInfoModalProps> = ({
         </Typography>
 
         <List sx={{ mb: 2 }}>
-          <ListItem
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-start",
-              py: 0.5,
-            }}
-          >
-            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-              VNS Registry:{" "}
-              <Link
-                href={getExplorerLink(currentContracts.vnsRegistry)}
-                target="_blank"
-                rel="noopener noreferrer"
-                sx={{ color: "#8B5CF6" }}
-              >
-                {currentContracts.vnsRegistry}
-              </Link>
-            </Typography>
-          </ListItem>
-          <ListItem
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-start",
-              py: 0.5,
-            }}
-          >
-            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-              VNS Resolver:{" "}
-              <Link
-                href={getExplorerLink(currentContracts.vnsResolver)}
-                target="_blank"
-                rel="noopener noreferrer"
-                sx={{ color: "#8B5CF6" }}
-              >
-                {currentContracts.vnsResolver}
-              </Link>
-            </Typography>
-          </ListItem>
-          <ListItem
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-start",
-              py: 0.5,
-            }}
-          >
-            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-              VNS Registrar:{" "}
-              <Link
-                href={getExplorerLink(currentContracts.vnsRegistrar)}
-                target="_blank"
-                rel="noopener noreferrer"
-                sx={{ color: "#8B5CF6" }}
-              >
-                {currentContracts.vnsRegistrar}
-              </Link>
-            </Typography>
-          </ListItem>
-          <ListItem
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-start",
-              py: 0.5,
-            }}
-          >
-            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-              VNS Reverse Registrar:{" "}
-              <Link
-                href={getExplorerLink(currentContracts.vnsReverseRegistrar)}
-                target="_blank"
-                rel="noopener noreferrer"
-                sx={{ color: "#8B5CF6" }}
-              >
-                {currentContracts.vnsReverseRegistrar}
-              </Link>
-            </Typography>
-          </ListItem>
-          {/* collection registrar */}
-          <ListItem>
-            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-              VNS Collection Registrar:{" "}
-              <Link
-                href={getExplorerLink(currentContracts.vnsCollectionRegistrar)}
-                target="_blank"
-                rel="noopener noreferrer"
-                sx={{ color: "#8B5CF6" }}
-              >
-                {currentContracts.vnsCollectionRegistrar}
-              </Link>
-            </Typography>
-          </ListItem>
-          <ListItem
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-start",
-              py: 0.5,
-            }}
-          >
-            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-              Aramid USDC (aUSDC):{" "}
-              <Link
-                href={`https://block.voi.network/explorer/asset/${currentContracts.ausdc}/transactions`}
-                target="_blank"
-                rel="noopener noreferrer"
-                sx={{ color: "#8B5CF6" }}
-              >
-                {currentContracts.ausdc.asaId}
-              </Link>
-              {`, `}
-              <Link
-                href={`https://voiager.xyz/token/${currentContracts.ausdc.tokenId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                sx={{ color: "#8B5CF6" }}
-              >
-                {currentContracts.ausdc.tokenId}
-              </Link>
-            </Typography>
-          </ListItem>
-          <ListItem
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-start",
-              py: 0.5,
-            }}
-          >
-            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-              Wrapped VOI (en VOI):{" "}
-              <Link
-                href={`https://voiager.xyz/token/${currentContracts.wvoi}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                sx={{ color: "#8B5CF6" }}
-              >
-                {currentContracts.wvoi}
-              </Link>
-            </Typography>
-          </ListItem>
+          <Box sx={{ border: "1px solid grey", borderRadius: 1, p: 1 }}>
+            <ListItem
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                py: 0.5,
+              }}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                VNS Registry:{" "}
+                <Link
+                  href={getExplorerLink(currentContracts.vnsRegistry)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{ color: "#8B5CF6" }}
+                >
+                  {currentContracts.vnsRegistry}
+                </Link>
+              </Typography>
+            </ListItem>
+            <ListItem
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                py: 0.5,
+              }}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                VNS Resolver:{" "}
+                <Link
+                  href={getExplorerLink(currentContracts.vnsResolver)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{ color: "#8B5CF6" }}
+                >
+                  {currentContracts.vnsResolver}
+                </Link>
+              </Typography>
+            </ListItem>
+          </Box>
+          <Box sx={{ border: "1px solid grey", borderRadius: 1, p: 1 }}>
+            <ListItem
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                py: 0.5,
+              }}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                VNS Registrar:{" "}
+                <Link
+                  href={getExplorerLink(currentContracts.vnsRegistrar)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{ color: "#8B5CF6" }}
+                >
+                  {currentContracts.vnsRegistrar}
+                </Link>
+              </Typography>
+            </ListItem>
+            <ListItem
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                py: 0.5,
+              }}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                VNS Reverse Address Registrar:{" "}
+                <Link
+                  href={getExplorerLink(currentContracts.vnsReverseRegistrar)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{ color: "#8B5CF6" }}
+                >
+                  {currentContracts.vnsReverseRegistrar}
+                </Link>
+              </Typography>
+            </ListItem>
+            <ListItem
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                py: 0.5,
+              }}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                VNS Collection Registrar:{" "}
+                <Link
+                  href={getExplorerLink(
+                    currentContracts.vnsCollectionRegistrar
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{ color: "#8B5CF6" }}
+                >
+                  {currentContracts.vnsCollectionRegistrar}
+                </Link>
+              </Typography>
+            </ListItem>
+            <ListItem
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                py: 0.5,
+              }}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                VNS Staking Registrar:{" "}
+                <Link
+                  href={getExplorerLink(currentContracts.vnsStakingRegistrar)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{ color: "#8B5CF6" }}
+                >
+                  {currentContracts.vnsStakingRegistrar}
+                </Link>
+              </Typography>
+            </ListItem>
+          </Box>
+          <Box sx={{ border: "1px solid grey", borderRadius: 1, p: 1 }}>
+            <ListItem
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                py: 0.5,
+              }}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                Aramid USDC (aUSDC):{" "}
+                <Link
+                  href={`https://block.voi.network/explorer/asset/${currentContracts.ausdc}/transactions`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{ color: "#8B5CF6" }}
+                >
+                  {currentContracts.ausdc.asaId}
+                </Link>
+                {`, `}
+                <Link
+                  href={`https://voiager.xyz/token/${currentContracts.ausdc.tokenId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{ color: "#8B5CF6" }}
+                >
+                  {currentContracts.ausdc.tokenId}
+                </Link>
+              </Typography>
+            </ListItem>
+            <ListItem
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                py: 0.5,
+              }}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                Wrapped VOI (en VOI):{" "}
+                <Link
+                  href={`https://voiager.xyz/token/${currentContracts.wvoi}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{ color: "#8B5CF6" }}
+                >
+                  {currentContracts.wvoi}
+                </Link>
+              </Typography>
+            </ListItem>
+          </Box>
         </List>
 
         <Typography variant="body2" sx={{ mt: 2, color: "text.secondary" }}>
