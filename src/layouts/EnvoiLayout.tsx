@@ -64,6 +64,9 @@ import { RootState } from "@/store/store";
 import { setPaymentMethod } from "@/store/userSlice";
 import CollectionsIcon from "@mui/icons-material/Collections";
 import CollectionsModal from "@/components/CollectionsModal";
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import StakingModal from '@/components/StakingModal';
+
 export const DEFAULT_PAYMENT_METHOD = "VOI";
 
 interface NavLinkProps {
@@ -212,6 +215,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
     (state: RootState) => state.user.paymentMethod
   );
   const [collectionsModalOpen, setCollectionsModalOpen] = useState(false);
+  const [stakingModalOpen, setStakingModalOpen] = useState(false);
 
   const { balance, loading } = useVoiBalance(activeAddress, selectedNetwork);
 
@@ -674,6 +678,11 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
     handleDrawerClose();
   };
 
+  const handleStakingClick = () => {
+    setStakingModalOpen(true);
+    handleDrawerClose();
+  };
+
   return (
     <Box
       sx={{
@@ -945,6 +954,41 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
                     }}
                   >
                     My Collections
+                  </Typography>
+                </ListItem>
+
+                <ListItem
+                  onClick={handleStakingClick}
+                  sx={{
+                    cursor: "pointer",
+                    "&:hover": {
+                      backgroundColor:
+                        mode === "light"
+                          ? "rgba(139, 92, 246, 0.04)"
+                          : "rgba(139, 92, 246, 0.08)",
+                    },
+                    borderRadius: "8px",
+                    mb: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    textDecoration: "none",
+                  }}
+                >
+                  <AccountBalanceIcon
+                    sx={{
+                      color: "#8B5CF6",
+                      mr: 2,
+                      fontSize: 20,
+                    }}
+                  />
+                  <Typography
+                    sx={{
+                      color: "text.primary",
+                      fontSize: "0.875rem",
+                      fontWeight: 500,
+                    }}
+                  >
+                    Staking Contracts
                   </Typography>
                 </ListItem>
 
@@ -1331,6 +1375,11 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
       <CollectionsModal
         open={collectionsModalOpen}
         onClose={() => setCollectionsModalOpen(false)}
+      />
+
+      <StakingModal 
+        open={stakingModalOpen}
+        onClose={() => setStakingModalOpen(false)}
       />
 
       <Box

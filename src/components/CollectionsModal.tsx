@@ -224,6 +224,7 @@ const CollectionsModal: React.FC<CollectionsModalProps> = ({
         note: new TextEncoder().encode(
           `collectionRegistrar register for ${currentCollection.contractId}.collection.reverse`
         ),
+        foreignApps: [Number(currentCollection.contractId)],
       });
     }
     {
@@ -238,6 +239,7 @@ const CollectionsModal: React.FC<CollectionsModalProps> = ({
         note: new TextEncoder().encode(
           `resolver setName for ${currentCollection.contractId}.collection.reverse to ${name}`
         ),
+        //foreignApps: [797607],
       });
     }
     ci.setFee(2000);
