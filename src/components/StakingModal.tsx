@@ -5,19 +5,23 @@ import {
   Typography,
   Box,
   CircularProgress,
-  Card,
-  CardContent,
-  Button,
   Alert,
   Pagination,
   Snackbar,
 } from "@mui/material";
 import { useWallet } from "@txnlab/use-wallet-react";
 import { getAlgorandClients } from "@/wallets";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import IconButton from "@mui/material/IconButton";
-import Tooltip from "@mui/material/Tooltip";
 import StakingContractCard from "./StakingContractCard";
+import { CONTRACT, abi } from "ulujs";
+import { APP_SPEC as VNSPublicResolverSpec } from "@/clients/VNSPublicResolverClient";
+import { APP_SPEC as VNSStakingRegistrarSpec } from "@/clients/StakingRegistrarClient";
+import { APP_SPEC as VNSRegistrySpec } from "@/clients/VNSRegistryClient";
+import {
+  bigIntToUint8Array,
+  namehash,
+  stringToUint8Array,
+} from "@/utils/namehash";
+import { zeroAddress } from "@/contants/accounts";
 
 interface StakingContract {
   appId: number;
@@ -46,7 +50,7 @@ const StakingModal: React.FC<StakingModalProps> = ({ open, onClose }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [contracts, setContracts] = useState<StakingContract[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const { activeAccount } = useWallet();
+  const { activeAccount, signTransactions } = useWallet();
   const [page, setPage] = useState(1);
   const contractsPerPage = 3;
   const [showCopyNotification, setShowCopyNotification] = useState(false);
@@ -101,6 +105,157 @@ const StakingModal: React.FC<StakingModalProps> = ({ open, onClose }) => {
   const endIndex = startIndex + contractsPerPage;
   const currentContracts = contracts.slice(startIndex, endIndex);
 
+  const handleEditName = async (name: string, contract: StakingContract) => {
+    console.log({ name, contract });
+    try {
+      if (!activeAccount) return;
+      // if reverse collection not registered
+      //   register reverse collection
+      // set name for reverse collection
+      const vns = {
+        registry: 797607,
+        resolver: 797608,
+        registrar: 797609,
+        reverseRegistrar: 797610,
+        collectionRegistrar: 846601,
+        stakingRegistrar: 876578,
+      };
+      const { algodClient } = getAlgorandClients();
+      const ci = new CONTRACT(
+        vns.stakingRegistrar,
+        algodClient,
+        undefined,
+        abi.custom,
+        {
+          addr: activeAccount.address,
+          sk: new Uint8Array(),
+        }
+      );
+      const ciRegistry = new CONTRACT(
+        vns.registry,
+        algodClient,
+        undefined,
+        {
+          name: "VNS Registry",
+          description: "VNS Registry",
+          methods: VNSRegistrySpec.contract.methods,
+          events: [],
+        },
+        {
+          addr: activeAccount.address,
+          sk: new Uint8Array(),
+        }
+      );
+      const builder = {
+        registrar: new CONTRACT(
+          vns.stakingRegistrar,
+          algodClient,
+          undefined,
+          {
+            name: "VNS Staking Registrar",
+            description: "VNS Staking Registrar",
+            methods: VNSStakingRegistrarSpec.contract.methods,
+            events: [],
+          },
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(),
+          },
+          true,
+          false,
+          true
+        ),
+        resolver: new CONTRACT(
+          vns.resolver,
+          algodClient,
+          undefined,
+          {
+            name: "VNS Public Resolver",
+            description: "VNS Public Resolver",
+            methods: VNSPublicResolverSpec.contract.methods,
+            events: [],
+          },
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(),
+          },
+          true,
+          false,
+          true
+        ),
+      };
+
+      // do register if contractId.collection.reverse owner is zero address
+      const ownerOfR = await ciRegistry.ownerOf(
+        await namehash(`${contract.contractAddress}.staking.reverse`)
+      );
+      if (!ownerOfR.success) {
+        throw new Error("Reverse staking not registered");
+      }
+      const ownerOf = ownerOfR.returnValue;
+
+      const doRegister = ownerOf == zeroAddress;
+
+      const buildN = [];
+      if (doRegister) {
+        console.log("registering ");
+        const txnO = (
+          await builder.registrar.register(
+            bigIntToUint8Array(BigInt(contract.appId)),
+            activeAccount.address,
+            0
+          )
+        )?.obj;
+        buildN.push({
+          ...txnO,
+          note: new TextEncoder().encode(
+            `stakingRegistrar register for ${contract.appId}.staking.reverse`
+          ),
+          foreignApps: [Number(contract.appId)],
+          payment: 284000,
+        });
+      }
+      {
+        console.log(
+          `setting name of ${contract.contractAddress}.staking.reverse to ${name}`
+        );
+        const txnO = (
+          await builder.resolver.setName(
+            await namehash(`${contract.contractAddress}.staking.reverse`),
+            stringToUint8Array(name, 256)
+          )
+        )?.obj;
+        console.log({ txnO });
+        buildN.push({
+          ...txnO,
+          note: new TextEncoder().encode(
+            `resolver setName for ${contract.contractAddress}.staking.reverse to ${name}`
+          ),
+        });
+      }
+
+      ci.setFee(2000);
+      ci.setEnableGroupResourceSharing(true);
+      ci.setExtraTxns(buildN);
+      const customR = await ci.custom();
+      if (!customR.success) {
+        console.log({ customR });
+        throw new Error("Failed to set name");
+      }
+      const stxns = await signTransactions(
+        customR.txns.map(
+          (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+        )
+      );
+      const res = await algodClient
+        .sendRawTransaction(stxns as Uint8Array[])
+        .do();
+      console.log({ res });
+    } catch (err) {
+      console.error("Error editing name:", err);
+    }
+  };
+
   const handlePageChange = (
     event: React.ChangeEvent<unknown>,
     value: number
@@ -152,12 +307,13 @@ const StakingModal: React.FC<StakingModalProps> = ({ open, onClose }) => {
         ) : (
           <>
             <Box sx={{ display: "grid", gap: 2 }}>
-              {currentContracts.map((contract) => (
+              {currentContracts.map((contract: StakingContract) => (
                 <StakingContractCard
                   key={contract.appId}
                   contract={contract}
                   onCopyAddress={handleCopyAddress}
                   onExplorerClick={handleExplorerClick}
+                  onEditName={handleEditName}
                 />
               ))}
             </Box>

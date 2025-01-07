@@ -13,17 +13,19 @@ import {
   Pagination,
 } from "@mui/material";
 import { useWallet } from "@txnlab/use-wallet-react";
-import { ResolverService } from "@/services/resolver";
 import axios from "axios";
+import { StakingContract } from "./types";
 
 interface StakingSetNameModalProps {
+  contract: StakingContract;
   open: boolean;
   onClose: () => void;
   contractAddress: string;
-  onNameSelected: (name: string) => void;
+  onNameSelected: (name: string, contract: StakingContract) => void;
 }
 
 const StakingSetNameModal: React.FC<StakingSetNameModalProps> = ({
+  contract,
   open,
   onClose,
   contractAddress,
@@ -45,8 +47,8 @@ const StakingSetNameModal: React.FC<StakingSetNameModalProps> = ({
         setLoading(true);
         setError(null);
         const res = await axios.get(
-          //`https://mainnet-idx.nautilus.sh/nft-indexer/v1/tokens?contractId=797609&owner=${activeAccount.address}`
-          `https://mainnet-idx.nautilus.sh/nft-indexer/v1/tokens?contractId=797609&owner=BRB3JP4LIW5Q755FJCGVAOA4W3THJ7BR3K6F26EVCGMETLEAZOQRHHJNLQ`
+          `https://mainnet-idx.nautilus.sh/nft-indexer/v1/tokens?contractId=797609&owner=${activeAccount.address}`
+          //`https://mainnet-idx.nautilus.sh/nft-indexer/v1/tokens?contractId=797609&owner=BRB3JP4LIW5Q755FJCGVAOA4W3THJ7BR3K6F26EVCGMETLEAZOQRHHJNLQ`
         );
         const ownedNames = res.data.tokens.map((token: any) => {
           const metadata = JSON.parse(token.metadata || "{}");
@@ -67,8 +69,8 @@ const StakingSetNameModal: React.FC<StakingSetNameModalProps> = ({
     }
   }, [open, activeAccount]);
 
-  const handleNameSelect = (name: string) => {
-    onNameSelected(name);
+  const handleNameSelect = (name: string, contract: StakingContract) => {
+    onNameSelected(name, contract);
     onClose();
   };
 
@@ -110,9 +112,11 @@ const StakingSetNameModal: React.FC<StakingSetNameModalProps> = ({
               sx={{ mb: 2, mt: 1 }}
             />
             <List>
-              {displayedNames.map((name) => (
+              {displayedNames.map((name: string) => (
                 <ListItem key={name} disablePadding>
-                  <ListItemButton onClick={() => handleNameSelect(name)}>
+                  <ListItemButton
+                    onClick={() => handleNameSelect(name, contract)}
+                  >
                     <ListItemText primary={name} />
                   </ListItemButton>
                 </ListItem>

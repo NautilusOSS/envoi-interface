@@ -20,7 +20,7 @@ interface StakingContractCardProps {
   contract: StakingContract;
   onCopyAddress: (address: string) => void;
   onExplorerClick: (address: string) => void;
-  onEditName: (name: string) => void;
+  onEditName: (name: string, contract: StakingContract) => void;
 }
 
 const StakingContractCard: React.FC<StakingContractCardProps> = ({
@@ -163,6 +163,7 @@ const StakingContractCard: React.FC<StakingContractCardProps> = ({
         </CardContent>
       </Card>
       <StakingSetNameModal
+        contract={contract}
         open={isSetNameModalOpen}
         onClose={handleSetNameModalClose}
         contractAddress={contract.contractAddress}
