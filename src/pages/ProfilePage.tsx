@@ -308,7 +308,10 @@ const ProfilePage: React.FC = () => {
   const handleNftSelect = (nft) => {
     setSelectedNftId(`nft-${nft.contractId}-${nft.tokenId}`);
     const metadata: NFTMetadata = JSON.parse(nft.metadata);
-    setProfileImage(metadata.image);
+    const imageUrl = metadata.image.startsWith('ipfs://')
+      ? `https://ipfs.io/ipfs/${metadata.image.replace('ipfs://', '')}`
+      : metadata.image;
+    setProfileImage(imageUrl);
     setIsNftModalOpen(false);
   };
 
@@ -320,7 +323,10 @@ const ProfilePage: React.FC = () => {
       if (selectedNft) {
         try {
           const metadata: NFTMetadata = JSON.parse(selectedNft.metadata);
-          setProfileImage(metadata.image);
+          const imageUrl = metadata.image.startsWith('ipfs://')
+            ? `https://ipfs.io/ipfs/${metadata.image.replace('ipfs://', '')}`
+            : metadata.image;
+          setProfileImage(imageUrl);
           setSelectedNftId(null); // Reset selection
         } catch (e) {
           console.error("Error parsing NFT metadata:", e);
@@ -531,6 +537,10 @@ const ProfilePage: React.FC = () => {
   const filteredFields = AVAILABLE_FIELDS.filter((field) =>
     field.label.toLowerCase().includes(fieldSearchQuery.toLowerCase())
   );
+
+  console.log({
+    filteredNfts,
+  });
 
   return (
     <div
@@ -982,6 +992,9 @@ const ProfilePage: React.FC = () => {
             ) : (
               filteredNfts.map((nft) => {
                 const metadata: NFTMetadata = JSON.parse(nft.metadata);
+                const imageUrl = metadata.image.startsWith('ipfs://')
+                  ? `https://ipfs.io/ipfs/${metadata.image.replace('ipfs://', '')}`
+                  : metadata.image;
                 return (
                   <div
                     key={`nft-${nft.contractId}-${nft.tokenId}`}
@@ -992,7 +1005,7 @@ const ProfilePage: React.FC = () => {
                     }`}
                     onClick={() => handleNftSelect(nft)}
                   >
-                    <img src={metadata.image} alt={metadata.name} />
+                    <img src={imageUrl} alt={metadata.name} />
                     <p>{metadata.name}</p>
                     <p className="collection-name">{nft.collectionName}</p>
                   </div>
