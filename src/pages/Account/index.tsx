@@ -196,8 +196,6 @@ export const Account: React.FC = () => {
     });
   }, [normalListings]);
 
-  console.log({ filteredListings });
-
   /* NFT Navigator Collections */
   const [collections, setCollections] = React.useState<any>(null);
   React.useEffect(() => {

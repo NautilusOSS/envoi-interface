@@ -40,8 +40,6 @@ function isAlgorandAddress(address: string): boolean {
   return true;
 }
 
-
-
 export async function namehash(name: string): Promise<Uint8Array> {
   if (!name) {
     return new Uint8Array(32); // Return 32 bytes of zeros for empty name
@@ -50,30 +48,45 @@ export async function namehash(name: string): Promise<Uint8Array> {
   // Split the name into labels and reverse them
   const labels = name.split(".").reverse();
 
+  let hashType = "name";
+  if (["reverse"].includes(labels[0])) {
+    hashType = "any";
+  }
+
   // Start with empty hash (32 bytes of zeros)
   let node = new Uint8Array(32);
 
   // Hash each label
   for (const label of labels) {
     if (label) {
-      // Skip empty labels
-      // Hash the label
-      const labelBytes = new TextEncoder().encode(label);
-      // const labelHash = !isAlgorandAddress(label)
-      //   ? await sha256(labelBytes)
-      //   : await sha256(algosdk.decodeAddress(label).publicKey);
-      const isNumber = !isNaN(Number(label));
-      const labelHash = !isAlgorandAddress(label)
-        ? !isNumber
-          ? await sha256(labelBytes)
-          : await sha256(bigIntToUint8Array(BigInt(label)))
-        : await sha256(algosdk.decodeAddress(label).publicKey);
+      if (hashType === "name") {
+        const labelBytes = new TextEncoder().encode(label);
+        const labelHash = await sha256(labelBytes);
+        // Concatenate current node hash with label hash and hash again
+        const combined = new Uint8Array(labelHash.length + node.length);
+        combined.set(node);
+        combined.set(labelHash, node.length);
+        node = await sha256(combined);
+      } else {
+        // Skip empty labels
+        // Hash the label
+        const labelBytes = new TextEncoder().encode(label);
+        // const labelHash = !isAlgorandAddress(label)
+        //   ? await sha256(labelBytes)
+        //   : await sha256(algosdk.decodeAddress(label).publicKey);
+        const isNumber = !isNaN(Number(label));
+        const labelHash = !isAlgorandAddress(label)
+          ? !isNumber
+            ? await sha256(labelBytes)
+            : await sha256(bigIntToUint8Array(BigInt(label)))
+          : await sha256(algosdk.decodeAddress(label).publicKey);
 
-      // Concatenate current node hash with label hash and hash again
-      const combined = new Uint8Array(labelHash.length + node.length);
-      combined.set(node);
-      combined.set(labelHash, node.length);
-      node = await sha256(combined);
+        // Concatenate current node hash with label hash and hash again
+        const combined = new Uint8Array(labelHash.length + node.length);
+        combined.set(node);
+        combined.set(labelHash, node.length);
+        node = await sha256(combined);
+      }
     }
   }
 
