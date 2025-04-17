@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import LaunchIcon from "@mui/icons-material/Launch";
@@ -7,7 +7,18 @@ import TimerIcon from "@mui/icons-material/Timer";
 import "./ProfilePage.scss";
 import { RegistryService } from "@/services/registry";
 import { useWallet } from "@txnlab/use-wallet-react";
-import { Snackbar, Alert, Avatar, Modal, Box, Button } from "@mui/material";
+// import {  } from "@/constants/fees";
+import {
+  Snackbar,
+  Alert,
+  Avatar,
+  Modal,
+  Box,
+  Button,
+  Typography,
+  IconButton,
+  Tooltip,
+} from "@mui/material";
 import { useTheme } from "@/contexts/ThemeContext";
 import { RegistrarService } from "@/services/registrar";
 import { namehash, uint8ArrayToBigInt } from "@/utils/namehash";
@@ -31,6 +42,16 @@ import InputAdornment from "@mui/material/InputAdornment";
 import LinkIcon from "@mui/icons-material/Link";
 import { ARC72Service } from "@/services/arc72";
 import { zeroAddress } from "@/contants/accounts";
+import { useSnackbar } from "notistack";
+import { FastForwardIcon } from "lucide-react";
+import CloseIcon from "@mui/icons-material/Close";
+import { getAlgorandClients } from "@/wallets";
+import algosdk from "algosdk";
+import { APP_SPEC as VNSRegistrarSpec } from "@/clients/VNSRegistrarClient";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import { TRANSACTION_FEES } from "@/constants/fees";
+import { useNameRegistration } from "@/hooks/useNameRegistration";
+import { useNameRegistry } from "@/hooks/useNameRegistry";
 type NetworkType = "mainnet" | "testnet";
 
 interface NFTMetadata {
@@ -49,24 +70,26 @@ interface NFTToken {
 
 interface SelectNFTModalProps {
   onClose: () => void;
-  // ... other props ...
+  selectedNftId: string | null;
+  setSelectedNftId: (id: string | null) => void;
 }
 
 const SelectNFTModal: React.FC<SelectNFTModalProps> = ({
   onClose,
-  ...props
+  selectedNftId,
+  setSelectedNftId,
 }) => {
-  // ... modal code ...
-
-  <Button
-    onClick={() => {
-      onClose();
-      setSelectedNftId(null);
-    }}
-    variant="outlined"
-  >
-    Cancel
-  </Button>;
+  return (
+    <Button
+      onClick={() => {
+        onClose();
+        setSelectedNftId(null);
+      }}
+      variant="outlined"
+    >
+      Cancel
+    </Button>
+  );
 };
 
 interface ProfileField {
@@ -111,10 +134,357 @@ const AVAILABLE_FIELDS: ProfileField[] = [
   },
 ];
 
+interface ExtendModalProps {
+  open: boolean;
+  onClose: () => void;
+  name: string;
+  onConfirm: (duration: string) => void;
+}
+
+const ExtendModal: React.FC<ExtendModalProps> = ({
+  open,
+  onClose,
+  name,
+  onConfirm,
+}) => {
+  const { theme } = useTheme();
+
+  const {
+    calculateTotalCost,
+    setDuration,
+    duration,
+    getPriceBreakdownJSX,
+    getPriceBreakdown,
+  } = useNameRegistration({ initialName: name });
+
+  return (
+    <Modal open={open} onClose={onClose}>
+      <Box
+        className="edit-modal"
+        sx={{ display: "flex", gap: 2, mb: 2, flexDirection: "column" }}
+      >
+        <IconButton
+          onClick={onClose}
+          sx={{
+            position: "absolute",
+            right: 16,
+            top: 16,
+            color: "text.secondary",
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+
+        <Typography
+          variant="h6"
+          component="h2"
+          sx={{
+            mb: 3,
+            textAlign: "center",
+            fontSize: "1.25rem",
+            fontWeight: 500,
+            color: "#111827",
+          }}
+        >
+          Extend {name}
+        </Typography>
+
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 2,
+            mb: 1,
+            "& .MuiButton-root": {
+              minWidth: "40px",
+              width: "40px",
+              height: "40px",
+              p: 0,
+              borderRadius: "50%",
+              border: "2px solid",
+              borderColor: "#E5E7EB",
+              color: "#374151",
+              "&:hover": {
+                borderColor: "#D1D5DB",
+                bgcolor: "#F9FAFB",
+              },
+            },
+          }}
+        >
+          <Button
+            variant="outlined"
+            onClick={() =>
+              setDuration((prev) =>
+                parseInt(prev) > 1 ? String(parseInt(prev) - 1) : "1"
+              )
+            }
+          >
+            -
+          </Button>
+          <Typography
+            variant="h4"
+            component="span"
+            sx={{
+              color: "#6366F1",
+              fontWeight: 500,
+              minWidth: "120px",
+              textAlign: "center",
+              fontSize: "2rem",
+            }}
+          >
+            {duration} year{parseInt(duration) !== 1 ? "s" : ""}
+          </Typography>
+          <Button
+            variant="outlined"
+            onClick={() => setDuration((prev) => String(parseInt(prev) + 1))}
+          >
+            +
+          </Button>
+        </Box>
+
+        <Box
+          sx={{
+            p: 2,
+            bgcolor: theme.palette.mode === "light" ? "#F9FAFB" : "#1F2937",
+            borderRadius: 1,
+            border: "1px solid",
+            borderColor: theme.palette.mode === "light" ? "#E5E7EB" : "#374151",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 1,
+              mb: 1,
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              Extension Cost
+            </Typography>
+            <Tooltip title={getPriceBreakdownJSX()} arrow>
+              <IconButton size="small">
+                <HelpOutlineIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
+          <Typography variant="h6" color="text.primary" align="center">
+            {calculateTotalCost().namePrice.toLocaleString()} VOI
+          </Typography>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            align="center"
+            display="block"
+          >
+            Transaction Fees: {calculateTotalCost().fees.toLocaleString()} VOI
+          </Typography>
+          <Typography
+            variant="body2"
+            color="text.primary"
+            align="center"
+            sx={{ mt: 1, fontWeight: "bold" }}
+          >
+            Total: {calculateTotalCost().total.toLocaleString()} VOI
+          </Typography>
+        </Box>
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 2,
+          }}
+        >
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={onClose}
+            sx={{
+              bgcolor: "grey.50",
+              border: "none",
+              color: "text.primary",
+              "&:hover": {
+                bgcolor: "grey.100",
+                border: "none",
+              },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={() => onConfirm(duration)}
+            sx={{
+              bgcolor: "primary.main",
+              color: "white",
+              "&:hover": {
+                bgcolor: "primary.dark",
+              },
+            }}
+          >
+            Next
+          </Button>
+        </Box>
+      </Box>
+    </Modal>
+  );
+};
+
+interface ConfirmExtendModalProps {
+  open: boolean;
+  onClose: () => void;
+  name: string;
+  duration: string;
+  onConfirm: () => void;
+}
+
+const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
+  open,
+  onClose,
+  name,
+  duration,
+  onConfirm,
+}) => {
+  const {
+    calculateTotalCost,
+    getPriceBreakdownJSX,
+    paymentAssetSymbol,
+    duration: finalDuration,
+    setDuration,
+    handleConfirmRenewVOI,
+  } = useNameRegistration({
+    initialName: name,
+    initialDuration: parseInt(duration),
+  });
+  const { getExpiry } = useNameRegistry(name);
+  useEffect(() => {
+    setDuration(parseInt(duration));
+  }, [duration]);
+
+  const expiryDate = useMemo(() => {
+    const expiry = getExpiry();
+    if (!expiry) return null;
+    const newExpiry = new Date(expiry);
+    newExpiry.setFullYear(expiry.getFullYear() + parseInt(duration));
+    return newExpiry;
+  }, [duration]);
+
+  return (
+    <Modal open={open} onClose={onClose}>
+      <Box className="edit-modal">
+        <h2 className="text-2xl font-bold">Confirm Details</h2>
+        <Typography sx={{ mb: 3 }}>
+          Double check these details before confirming in your wallet.
+        </Typography>
+
+        <Box sx={{ mb: 3 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              mb: 2,
+              p: 2,
+              bgcolor: "background.paper",
+              borderRadius: 1,
+            }}
+          >
+            <Typography color="text.secondary">Name</Typography>
+            <Typography>{name}</Typography>
+          </Box>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              mb: 2,
+              p: 2,
+              bgcolor: "background.paper",
+              borderRadius: 1,
+            }}
+          >
+            <Typography color="text.secondary">Action</Typography>
+            <Typography>Extend registration</Typography>
+          </Box>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              mb: 2,
+              p: 2,
+              bgcolor: "background.paper",
+              borderRadius: 1,
+            }}
+          >
+            <Typography color="text.secondary">Duration</Typography>
+            <Box sx={{ textAlign: "right" }}>
+              <Typography>
+                {duration} year{parseInt(duration) !== 1 ? "s" : ""}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                New expiry:{" "}
+                {expiryDate?.toLocaleDateString("en-US", {
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </Typography>
+            </Box>
+          </Box>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              mb: 2,
+              p: 2,
+              bgcolor: "background.paper",
+              borderRadius: 1,
+            }}
+          >
+            <Typography color="text.secondary">Cost</Typography>
+            <Typography>
+              {calculateTotalCost().namePrice.toLocaleString()}{" "}
+              {paymentAssetSymbol} +{" "}
+              {calculateTotalCost().fees.toLocaleString()} VOI
+              <Tooltip title={getPriceBreakdownJSX()} arrow>
+                <IconButton size="small">
+                  <HelpOutlineIcon />
+                </IconButton>
+              </Tooltip>
+            </Typography>
+          </Box>
+        </Box>
+
+        <Box sx={{ display: "flex", gap: 2 }}>
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={onClose}
+            sx={{ flex: 1 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={handleConfirmRenewVOI}
+            sx={{ flex: 1 }}
+          >
+            Open Wallet
+          </Button>
+        </Box>
+      </Box>
+    </Modal>
+  );
+};
+
 const ProfilePage: React.FC = () => {
   const { activeAccount, signTransactions } = useWallet();
   const { name } = useParams<{ name: string }>();
   const { theme } = useTheme();
+  const { enqueueSnackbar } = useSnackbar();
 
   const selectedNetwork: NetworkType =
     (localStorage.getItem("selectedNetwork") as NetworkType) || "mainnet";
@@ -149,6 +519,10 @@ const ProfilePage: React.FC = () => {
   const [newUrl, setNewUrl] = React.useState<string | null>(null);
   const [resolvedName, setResolvedName] = React.useState<string | null>(null);
   const [isOwner, setIsOwner] = useState<boolean>(false);
+  const [isExtendModalOpen, setIsExtendModalOpen] = useState(false);
+  const [isConfirmExtendModalOpen, setIsConfirmExtendModalOpen] =
+    useState(false);
+  const [selectedDuration, setSelectedDuration] = useState("1");
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -305,11 +679,11 @@ const ProfilePage: React.FC = () => {
     }
   });
 
-  const handleNftSelect = (nft) => {
+  const handleNftSelect = (nft: NFTToken) => {
     setSelectedNftId(`nft-${nft.contractId}-${nft.tokenId}`);
     const metadata: NFTMetadata = JSON.parse(nft.metadata);
-    const imageUrl = metadata.image.startsWith('ipfs://')
-      ? `https://ipfs.io/ipfs/${metadata.image.replace('ipfs://', '')}`
+    const imageUrl = metadata.image.startsWith("ipfs://")
+      ? `https://ipfs.io/ipfs/${metadata.image.replace("ipfs://", "")}`
       : metadata.image;
     setProfileImage(imageUrl);
     setIsNftModalOpen(false);
@@ -323,8 +697,8 @@ const ProfilePage: React.FC = () => {
       if (selectedNft) {
         try {
           const metadata: NFTMetadata = JSON.parse(selectedNft.metadata);
-          const imageUrl = metadata.image.startsWith('ipfs://')
-            ? `https://ipfs.io/ipfs/${metadata.image.replace('ipfs://', '')}`
+          const imageUrl = metadata.image.startsWith("ipfs://")
+            ? `https://ipfs.io/ipfs/${metadata.image.replace("ipfs://", "")}`
             : metadata.image;
           setProfileImage(imageUrl);
           setSelectedNftId(null); // Reset selection
@@ -355,7 +729,7 @@ const ProfilePage: React.FC = () => {
       console.log("Building txns...");
       const doReclaim = owner !== activeAccount.address;
       const buildN = [];
-      if (doReclaim) {
+      if (doReclaim && name) {
         const label = name.split(".")[0];
         const reclaimR: any = await registrar.reclaim(label);
         buildN.push(reclaimR);
@@ -538,9 +912,194 @@ const ProfilePage: React.FC = () => {
     field.label.toLowerCase().includes(fieldSearchQuery.toLowerCase())
   );
 
-  console.log({
-    filteredNfts,
+  const handleExtend = async () => {
+    setIsExtendModalOpen(true);
+  };
+
+  const handleExtendConfirm = (duration: string) => {
+    setSelectedDuration(duration);
+    setIsExtendModalOpen(false);
+    setIsConfirmExtendModalOpen(true);
+  };
+
+  const {} = useNameRegistration({
+    initialName: name,
+    initialDuration: parseInt(selectedDuration),
   });
+  const handleFinalExtendConfirm = async () => {
+    setIsPendingTx(true);
+    try {
+      if (!activeAccount) {
+        enqueueSnackbar("Please connect your wallet to extend a name", {
+          variant: "error",
+        });
+        return;
+      }
+
+      const { algodClient, indexerClient } = getAlgorandClients();
+
+      const vns = {
+        registrar: 797609,
+        resolver: 797608,
+      };
+
+      const wVOI = {
+        tokenId: 828295, // en Voi
+        decimals: 6,
+      };
+
+      const ci = new CONTRACT(
+        vns.registrar,
+        algodClient,
+        indexerClient,
+        abi.custom,
+        {
+          addr: activeAccount.address,
+          sk: new Uint8Array(),
+        }
+      );
+
+      const builder = {
+        arc200: new CONTRACT(
+          wVOI.tokenId,
+          algodClient,
+          indexerClient,
+          abi.nt200,
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(),
+          },
+          true,
+          false,
+          true
+        ),
+        registrar: new CONTRACT(
+          vns.registrar,
+          algodClient,
+          indexerClient,
+          {
+            name: "registrar",
+            description: "Registrar",
+            methods: VNSRegistrarSpec.contract.methods,
+            events: [],
+          },
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(),
+          },
+          true,
+          false,
+          true
+        ),
+      };
+
+      let customR;
+      for (const p0 of [0, 28500]) {
+        const buildN = [];
+
+        // Create wVOI Balance for user if needed
+        if (p0 > 0) {
+          const txnO = (
+            await builder.arc200.createBalanceBox(activeAccount.address)
+          )?.obj;
+          buildN.push({
+            ...txnO,
+            payment: p0,
+            note: new TextEncoder().encode(
+              `envoi createBalanceBox ${getPaymentAmount()} VOI for ${name}.voi extension`
+            ),
+          });
+        }
+
+        // Deposit VOI (NET -> ARC200)
+        {
+          const txnO = (
+            await builder.arc200.deposit(
+              getPaymentAmount() * 10 ** wVOI.decimals
+            )
+          )?.obj;
+          buildN.push({
+            ...txnO,
+            payment: getPaymentAmount() * 10 ** wVOI.decimals,
+            note: new TextEncoder().encode(
+              `envoi deposit ${getPaymentAmount()} VOI for ${name}.voi extension`
+            ),
+          });
+        }
+
+        // Approve spending
+        {
+          const paramSpender = algosdk.getApplicationAddress(vns.registrar);
+          const paramAmount = getPaymentAmount() * 10 ** wVOI.decimals;
+          const txnO = (
+            await builder.arc200.arc200_approve(paramSpender, paramAmount)
+          )?.obj;
+          buildN.push({
+            ...txnO,
+            payment: 28501,
+            note: new TextEncoder().encode(
+              `envoi arc200_approve ${getPaymentAmount()} VOI spending for ${name}.voi extension`
+            ),
+          });
+        }
+
+        // Extend name
+        {
+          const paramNode = await namehash(`${name}.voi`);
+          const paramDuration = Number(selectedDuration) * 365 * 24 * 60 * 60; // Convert years to seconds
+          const txnO = (
+            await builder.registrar.extend(paramNode, paramDuration)
+          )?.obj;
+          buildN.push({
+            ...txnO,
+            payment: 336700,
+            note: new TextEncoder().encode(
+              `envoi registrar extend ${name}.voi for ${selectedDuration} years`
+            ),
+          });
+        }
+
+        ci.setFee(15000);
+        ci.setEnableGroupResourceSharing(true);
+        ci.setExtraTxns(buildN);
+
+        customR = await ci.custom();
+
+        if (customR.success) {
+          break;
+        }
+      }
+
+      if (!customR.success) {
+        throw new Error("Failed to extend name");
+      }
+
+      const stxns = await signTransactions(
+        customR.txns.map(
+          (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+        )
+      );
+
+      await algodClient.sendRawTransaction(stxns as Uint8Array[]).do();
+
+      // Refresh expiry date after successful extension
+      const registrar = new RegistrarService("mainnet");
+      const node = await namehash(name || "");
+      const tokenId = uint8ArrayToBigInt(node);
+      const newExpiryTimestamp = await registrar.expiration(tokenId);
+      setExpiry(new Date(Number(newExpiryTimestamp) * 1000));
+
+      enqueueSnackbar("Name extended successfully!", { variant: "success" });
+      setIsConfirmExtendModalOpen(false);
+    } catch (error) {
+      console.error("Error extending name:", error);
+      enqueueSnackbar("Failed to extend name. Please try again.", {
+        variant: "error",
+      });
+    } finally {
+      setIsPendingTx(false);
+    }
+  };
 
   return (
     <div
@@ -557,6 +1116,33 @@ const ProfilePage: React.FC = () => {
             {name?.charAt(0).toUpperCase()}
           </Avatar>
           <h1 className="profile-name">{name}</h1>
+          {isOwner && (
+            <Button
+              variant="contained"
+              onClick={handleExtend}
+              sx={{
+                position: "absolute",
+                right: "1rem",
+                top: "1rem",
+                bgcolor: "white",
+                color: "#8B5CF6",
+                "&:hover": {
+                  bgcolor: "#F5F3FF",
+                },
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                padding: "0.5rem 1rem",
+                borderRadius: "0.5rem",
+                fontWeight: "600",
+                fontSize: "0.875rem",
+                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+              }}
+            >
+              Extend
+              <FastForwardIcon />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -604,7 +1190,7 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
 
-          {expiry > 0 ? (
+          {expiry && new Date(expiry).getTime() > 0 ? (
             <div className="detail-row">
               <div className="detail-icon">
                 <TimerIcon />
@@ -992,8 +1578,11 @@ const ProfilePage: React.FC = () => {
             ) : (
               filteredNfts.map((nft) => {
                 const metadata: NFTMetadata = JSON.parse(nft.metadata);
-                const imageUrl = metadata.image.startsWith('ipfs://')
-                  ? `https://ipfs.io/ipfs/${metadata.image.replace('ipfs://', '')}`
+                const imageUrl = metadata.image.startsWith("ipfs://")
+                  ? `https://ipfs.io/ipfs/${metadata.image.replace(
+                      "ipfs://",
+                      ""
+                    )}`
                   : metadata.image;
                 return (
                   <div
@@ -1096,7 +1685,7 @@ const ProfilePage: React.FC = () => {
                   <ListItem
                     key={field.key}
                     onClick={() => handleAddField(field)}
-                    selected={isFieldActive}
+                    selected={!!isFieldActive}
                   >
                     <ListItemIcon>{field.icon}</ListItemIcon>
                     <ListItemText primary={field.label} />
@@ -1128,6 +1717,21 @@ const ProfilePage: React.FC = () => {
           </div>
         </Box>
       </Modal>
+
+      <ExtendModal
+        open={isExtendModalOpen}
+        onClose={() => setIsExtendModalOpen(false)}
+        name={name || ""}
+        onConfirm={handleExtendConfirm}
+      />
+
+      <ConfirmExtendModal
+        open={isConfirmExtendModalOpen}
+        onClose={() => setIsConfirmExtendModalOpen(false)}
+        name={name || ""}
+        duration={selectedDuration}
+        onConfirm={handleFinalExtendConfirm}
+      />
 
       <Snackbar
         open={openNotification}

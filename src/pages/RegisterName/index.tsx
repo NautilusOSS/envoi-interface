@@ -19,7 +19,7 @@ import { useParams } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
 
 // Add payment method constants
-const PAYMENT_RATES = {
+export const PAYMENT_RATES = {
   VOI: 2000, // 1000 VOI per year
   aUSDC: 5, // 10 USDC per year
   UNIT: 40, // 1000 UNIT per year
