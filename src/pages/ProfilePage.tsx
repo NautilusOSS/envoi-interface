@@ -21,7 +21,11 @@ import {
 } from "@mui/material";
 import { useTheme } from "@/contexts/ThemeContext";
 import { RegistrarService } from "@/services/registrar";
-import { namehash, uint8ArrayToBigInt } from "@/utils/namehash";
+import {
+  namehash,
+  stringToUint8Array,
+  uint8ArrayToBigInt,
+} from "@/utils/namehash";
 import { ResolverService } from "@/services/resolver";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import { CONTRACT, abi } from "ulujs";
@@ -349,6 +353,8 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
   duration,
   onConfirm,
 }) => {
+  const [isConfirming, setIsConfirming] = useState(false);
+
   const {
     calculateTotalCost,
     getPriceBreakdownJSX,
@@ -360,7 +366,9 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
     initialName: name,
     initialDuration: parseInt(duration),
   });
+
   const { getExpiry } = useNameRegistry(name);
+
   useEffect(() => {
     setDuration(parseInt(duration));
   }, [duration]);
@@ -372,6 +380,15 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
     newExpiry.setFullYear(expiry.getFullYear() + parseInt(duration));
     return newExpiry;
   }, [duration]);
+
+  const handleConfirm = async () => {
+    setIsConfirming(true);
+    try {
+      await handleConfirmRenewVOI();
+    } finally {
+      setIsConfirming(false);
+    }
+  };
 
   return (
     <Modal open={open} onClose={onClose}>
@@ -462,6 +479,7 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
             fullWidth
             variant="outlined"
             onClick={onClose}
+            disabled={isConfirming}
             sx={{ flex: 1 }}
           >
             Cancel
@@ -469,10 +487,18 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
           <Button
             fullWidth
             variant="contained"
-            onClick={handleConfirmRenewVOI}
+            onClick={handleConfirm}
+            disabled={isConfirming}
             sx={{ flex: 1 }}
           >
-            Open Wallet
+            {isConfirming ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CircularProgress size={20} color="inherit" />
+                Signing transaction...
+              </Box>
+            ) : (
+              'Confirm'
+            )}
           </Button>
         </Box>
       </Box>
@@ -616,7 +642,6 @@ const ProfilePage: React.FC = () => {
         //}
       });
       registrar.ownerOf(tokenId).then((owner) => {
-        console.log({ owner });
         if (owner != zeroAddress) {
           setOwner(owner);
         } else {
@@ -712,14 +737,6 @@ const ProfilePage: React.FC = () => {
 
   const handleSave = async () => {
     setIsPendingTx(true);
-    console.log({
-      twitter,
-      newTwitter,
-      github,
-      newGithub,
-      avatarText,
-      profileImage,
-    });
     try {
       if (!activeAccount) return;
       const resolver = new ResolverService("mainnet", activeAccount.address);
@@ -926,6 +943,7 @@ const ProfilePage: React.FC = () => {
     initialName: name,
     initialDuration: parseInt(selectedDuration),
   });
+
   const handleFinalExtendConfirm = async () => {
     setIsPendingTx(true);
     try {
@@ -993,6 +1011,8 @@ const ProfilePage: React.FC = () => {
         ),
       };
 
+      const paymentAmount = 1;
+
       let customR;
       for (const p0 of [0, 28500]) {
         const buildN = [];
@@ -1006,7 +1026,7 @@ const ProfilePage: React.FC = () => {
             ...txnO,
             payment: p0,
             note: new TextEncoder().encode(
-              `envoi createBalanceBox ${getPaymentAmount()} VOI for ${name}.voi extension`
+              `envoi createBalanceBox ${paymentAmount} VOI for ${name}.voi extension`
             ),
           });
         }
@@ -1014,15 +1034,13 @@ const ProfilePage: React.FC = () => {
         // Deposit VOI (NET -> ARC200)
         {
           const txnO = (
-            await builder.arc200.deposit(
-              getPaymentAmount() * 10 ** wVOI.decimals
-            )
+            await builder.arc200.deposit(paymentAmount * 10 ** wVOI.decimals)
           )?.obj;
           buildN.push({
             ...txnO,
-            payment: getPaymentAmount() * 10 ** wVOI.decimals,
+            payment: paymentAmount * 10 ** wVOI.decimals,
             note: new TextEncoder().encode(
-              `envoi deposit ${getPaymentAmount()} VOI for ${name}.voi extension`
+              `envoi deposit ${paymentAmount} VOI for ${name}.voi extension`
             ),
           });
         }
@@ -1030,7 +1048,7 @@ const ProfilePage: React.FC = () => {
         // Approve spending
         {
           const paramSpender = algosdk.getApplicationAddress(vns.registrar);
-          const paramAmount = getPaymentAmount() * 10 ** wVOI.decimals;
+          const paramAmount = paymentAmount * 10 ** wVOI.decimals;
           const txnO = (
             await builder.arc200.arc200_approve(paramSpender, paramAmount)
           )?.obj;
@@ -1038,18 +1056,16 @@ const ProfilePage: React.FC = () => {
             ...txnO,
             payment: 28501,
             note: new TextEncoder().encode(
-              `envoi arc200_approve ${getPaymentAmount()} VOI spending for ${name}.voi extension`
+              `envoi arc200_approve ${paymentAmount} VOI spending for ${name}.voi extension`
             ),
           });
         }
 
         // Extend name
         {
-          const paramNode = await namehash(`${name}.voi`);
+          const paramName = stringToUint8Array(name, 32);
           const paramDuration = Number(selectedDuration) * 365 * 24 * 60 * 60; // Convert years to seconds
-          const txnO = (
-            await builder.registrar.extend(paramNode, paramDuration)
-          )?.obj;
+          const txnO = (await builder.registrar.renew())?.obj;
           buildN.push({
             ...txnO,
             payment: 336700,

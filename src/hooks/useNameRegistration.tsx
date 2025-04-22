@@ -54,6 +54,7 @@ export const useNameRegistration = ({
     (state: RootState) => state.user.paymentMethod
   );
 
+  // TODO fetch these from the contract
   const priceLookup: Record<string, number> = {
     VOI: 2000,
     aUSDC: 5,
@@ -100,6 +101,7 @@ export const useNameRegistration = ({
       debouncedCheckAvailability.cancel();
     };
   }, [debouncedCheckAvailability]);
+
   useEffect(() => {
     const basePrice = getNamePrice(name, priceLookup[paymentAssetSymbol]);
     const totalPrice = basePrice * parseInt(duration.toString());
@@ -123,6 +125,7 @@ export const useNameRegistration = ({
       paymentAssetSymbol,
     };
   };
+
   const getPriceBreakdownJSX = () => {
     const basePrice = getNamePrice(name, priceLookup[paymentAssetSymbol]);
     return (
@@ -778,18 +781,28 @@ export const useNameRegistration = ({
       setError(null);
       const { algodClient, indexerClient } = getAlgorandClients();
 
-      const ci = new CONTRACT(797609, algodClient, indexerClient, abi.custom, {
-        addr: activeAccount.address,
-        sk: new Uint8Array(),
-      });
+      const ctcInfoRegistrar = 797609;
+      const ctcInfoResolver = 797608;
+      const ctcInfoEnVoi = 828295;
+
+      const ci = new CONTRACT(
+        ctcInfoRegistrar,
+        algodClient,
+        indexerClient,
+        abi.custom,
+        {
+          addr: activeAccount.address,
+          sk: new Uint8Array(),
+        }
+      );
 
       const vns = {
-        registrar: 797609,
-        resolver: 797608,
+        registrar: ctcInfoRegistrar,
+        resolver: ctcInfoResolver,
       };
 
       const wVOI = {
-        tokenId: 828295, // en Voi
+        tokenId: ctcInfoEnVoi,
         decimals: 6,
       };
 
@@ -880,7 +893,7 @@ export const useNameRegistration = ({
           const paramDuration = Number(duration) * 365 * 24 * 60 * 60; // Convert years to seconds
           const txnO = (
             await builder.registrar.renew(
-              fullName,
+              stringToUint8Array(name, 32),
               paramDuration
             )
           )?.obj;
@@ -898,7 +911,7 @@ export const useNameRegistration = ({
         ci.setExtraTxns(buildN);
 
         customR = await ci.custom();
-        console.log("customR", customR,buildN);
+        console.log("customR", customR, buildN);
 
         if (customR.success) {
           break;
