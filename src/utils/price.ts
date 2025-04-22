@@ -36,3 +36,5 @@ export const getNamePrice = (name: string, basePrice: number): number => {
       return basePrice;
   }
 };
+
+

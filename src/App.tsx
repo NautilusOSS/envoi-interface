@@ -17,6 +17,7 @@ import {
 import { ThemeProvider } from "./contexts/ThemeContext";
 import EnvoiLayout from "./layouts/EnvoiLayout";
 import ProfilePage from "./pages/ProfilePage";
+import { SnackbarProvider, enqueueSnackbar } from "notistack";
 
 // New component that uses the wallet hook
 const AppRoutes: React.FC = () => {
@@ -83,18 +84,20 @@ const App: React.FC = () => {
 
   return (
     <ThemeProvider>
-      <WalletProvider manager={walletManager}>
-        <QueryClientProvider client={queryClient}>
-          <Provider store={store}>
-            <PersistGate loading={null} persistor={persistor}>
-              <Router>
-                <AppRoutes />
-              </Router>
-            </PersistGate>
-          </Provider>
-          <ToastContainer />
-        </QueryClientProvider>
-      </WalletProvider>
+      <SnackbarProvider maxSnack={3}>
+        <WalletProvider manager={walletManager}>
+          <QueryClientProvider client={queryClient}>
+            <Provider store={store}>
+              <PersistGate loading={null} persistor={persistor}>
+                <Router>
+                  <AppRoutes />
+                </Router>
+              </PersistGate>
+            </Provider>
+            <ToastContainer />
+          </QueryClientProvider>
+        </WalletProvider>
+      </SnackbarProvider>
     </ThemeProvider>
   );
 };

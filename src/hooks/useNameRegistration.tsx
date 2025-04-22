@@ -36,6 +36,10 @@ export const useNameRegistration = ({
   const [name, setName] = useState(
     initialName ? initialName.split(".")[0] : ""
   );
+  useEffect(() => {
+    setName(initialName ? initialName.split(".")[0] : "");
+  }, [initialName]);
+
   const [nameError, setNameError] = useState("");
   const [duration, setDuration] = useState(initialDuration ?? 1);
   const [loading, setLoading] = useState(false);
@@ -63,7 +67,6 @@ export const useNameRegistration = ({
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.toLowerCase();
-
     const isValid = /^[a-z0-9-]*$/.test(value);
     if (isValid) {
       setName(value);
@@ -103,14 +106,14 @@ export const useNameRegistration = ({
   }, [debouncedCheckAvailability]);
 
   useEffect(() => {
+    debouncedCheckAvailability(name);
+  }, [name, debouncedCheckAvailability]);
+
+  useEffect(() => {
     const basePrice = getNamePrice(name, priceLookup[paymentAssetSymbol]);
     const totalPrice = basePrice * parseInt(duration.toString());
     setPrice(totalPrice);
   }, [name, duration, paymentAssetSymbol]);
-
-  useEffect(() => {
-    debouncedCheckAvailability(name);
-  }, [name, debouncedCheckAvailability]);
 
   const isReserved = `${name}.voi` in rsvps;
   const reservedOwner = isReserved ? rsvps[`${name}.voi`] : null;
@@ -134,7 +137,12 @@ export const useNameRegistration = ({
         <Typography variant="body2">
           Base Price: {basePrice} {paymentAssetSymbol}
         </Typography>
-        <Typography variant="body2">Duration: {duration} year(s)</Typography>
+        {duration === 1 && (
+          <Typography variant="body2">Duration: 1 year</Typography>
+        )}
+        {duration > 1 && (
+          <Typography variant="body2">Duration: {duration} year(s)</Typography>
+        )}
         <Typography variant="body2">
           Total: {price} {paymentAssetSymbol}
         </Typography>
@@ -142,6 +150,7 @@ export const useNameRegistration = ({
     );
   };
 
+  // TODO refactor
   const handleConfirmRegisterUNIT = async () => {
     if (!activeAccount) {
       enqueueSnackbar("Please connect your wallet to register a name", {
@@ -300,7 +309,6 @@ export const useNameRegistration = ({
         ci.setExtraTxns(buildN);
 
         customR = await ci.custom();
-        console.log({ customR });
         if (customR.success) {
           break;
         }
@@ -332,6 +340,7 @@ export const useNameRegistration = ({
     }
   };
 
+  // TODO refactor
   const handleConfirmRegisterAUSD = async () => {
     if (!activeAccount) {
       enqueueSnackbar("Please connect your wallet to register a name", {
@@ -929,9 +938,14 @@ export const useNameRegistration = ({
       );
 
       await algodClient.sendRawTransaction(stxns as Uint8Array[]).do();
+
       setSuccess(true);
       enqueueSnackbar("Name renewed successfully!", {
         variant: "success",
+        anchorOrigin: {
+          vertical: "top",
+          horizontal: "center",
+        },
       });
       setShowConfirmation(false);
     } catch (err) {

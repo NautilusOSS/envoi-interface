@@ -81,6 +81,7 @@ const RegisterName: React.FC = () => {
   const [isAvailable, setIsAvailable] = React.useState<boolean>(false);
   const [isChecking, setIsChecking] = React.useState<boolean>(false);
 
+  // TODO get price from registrar
   const priceLookup: Record<string, number> = {
     VOI: 2000,
     aUSDC: 5,
@@ -124,7 +125,7 @@ const RegisterName: React.FC = () => {
     const basePrice = getNamePrice(name, priceLookup[paymentAssetSymbol]);
     const totalPrice = basePrice * parseInt(duration.toString());
     setPrice(totalPrice);
-  }, [name, duration, paymentAssetSymbol]);
+  }, [name, duration, paymentAssetSymbol, showConfirmation]);
 
   const debouncedCheckAvailability = React.useMemo(
     () =>

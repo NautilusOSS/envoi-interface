@@ -152,15 +152,8 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
   onConfirm,
 }) => {
   const { theme } = useTheme();
-
-  const {
-    calculateTotalCost,
-    setDuration,
-    duration,
-    getPriceBreakdownJSX,
-    getPriceBreakdown,
-  } = useNameRegistration({ initialName: name });
-
+  const { calculateTotalCost, setDuration, duration, getPriceBreakdownJSX } =
+    useNameRegistration({ initialName: name });
   return (
     <Modal open={open} onClose={onClose}>
       <Box
@@ -291,7 +284,7 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
             align="center"
             sx={{ mt: 1, fontWeight: "bold" }}
           >
-            Total: {calculateTotalCost().total.toLocaleString()} VOI
+            Total: {calculateTotalCost(name).total.toLocaleString()} VOI
           </Typography>
         </Box>
 
@@ -385,6 +378,7 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
     setIsConfirming(true);
     try {
       await handleConfirmRenewVOI();
+      onClose();
     } finally {
       setIsConfirming(false);
     }
@@ -492,12 +486,12 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
             sx={{ flex: 1 }}
           >
             {isConfirming ? (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <CircularProgress size={20} color="inherit" />
                 Signing transaction...
               </Box>
             ) : (
-              'Confirm'
+              "Confirm"
             )}
           </Button>
         </Box>
