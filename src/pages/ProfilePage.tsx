@@ -1341,7 +1341,7 @@ const ProfilePage: React.FC = () => {
                   variant="outlined"
                   margin="normal"
                   value={newTwitter || ""}
-                  onChange={(e) => setNewTwitter(e.target.value)}
+                  onChange={e => setNewTwitter((e.target.value.includes("/") ? e.target.value.replace(/\/+$/, "").split("/").pop() : e.target.value.replace(/^@/, "")))}
                   InputLabelProps={{
                     shrink: true,
                     style: {
