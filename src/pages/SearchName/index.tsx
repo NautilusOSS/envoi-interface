@@ -270,7 +270,7 @@ const SearchName: React.FC = () => {
               label="Search names or addresses"
               variant="outlined"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => setSearchTerm(e.target.value.toLowerCase())}
               placeholder="Search for a .voi name"
               InputProps={{
                 sx: {
