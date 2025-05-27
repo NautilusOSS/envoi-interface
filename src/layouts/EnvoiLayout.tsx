@@ -210,6 +210,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
   );
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [allowNonVoiPayments, setAllowNonVoiPayments] = useState(false);
   const dispatch = useDispatch();
   const paymentAssetSymbol = useSelector(
     (state: RootState) => state.user.paymentMethod
@@ -1335,8 +1336,12 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
             }}
           >
             <MenuItem value="VOI">VOI</MenuItem>
-            {/*<MenuItem value="aUSDC">aUSDC</MenuItem>*/}
-            <MenuItem value="UNIT">UNIT</MenuItem>
+            {allowNonVoiPayments && (
+              <>
+                <MenuItem value="aUSDC">aUSDC</MenuItem>
+                <MenuItem value="UNIT">UNIT</MenuItem>
+              </>
+            )}
           </Select>
           <Box
             sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 3 }}
