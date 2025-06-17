@@ -36,7 +36,7 @@ const AppRoutes: React.FC = () => {
 const queryClient = new QueryClient();
 
 const App: React.FC = () => {
-  const { ALGO_SERVER } = getCurrentNodeEnv("mainnet");
+  const { ALGO_SERVER } = getCurrentNodeEnv();
 
   const walletConnectProjectId = "e7b04c22de006e0fc7cef5a00cb7fac9";
 
@@ -79,7 +79,7 @@ const App: React.FC = () => {
       port: "",
       token: "",
     },
-    network: NetworkId.MAINNET,
+    network: NetworkId.VOIMAIN,
   });
 
   return (
