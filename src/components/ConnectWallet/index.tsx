@@ -574,10 +574,17 @@ function BasicMenu() {
                 {wallet.isActive ? (
                   <Box
                     onClick={(e: any) => {
+                      console.log("disconnecting");
+                      console.log(wallet);
                       e.preventDefault();
-                      wallet.disconnect().then(() => {
-                        setAnchorEl(null);
-                      });
+                      wallet
+                        .disconnect()
+                        .then(() => {
+                          setAnchorEl(null);
+                        })
+                        .catch((error) => {
+                          console.error(error);
+                        });
                     }}
                   >
                     <DisconnectButton />

@@ -64,8 +64,8 @@ import { RootState } from "@/store/store";
 import { setPaymentMethod } from "@/store/userSlice";
 import CollectionsIcon from "@mui/icons-material/Collections";
 import CollectionsModal from "@/components/CollectionsModal";
-import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
-import StakingModal from '@/components/StakingModal';
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import StakingModal from "@/components/StakingModal";
 
 export const DEFAULT_PAYMENT_METHOD = "VOI";
 
@@ -183,8 +183,13 @@ const TransactionPendingModal: React.FC<TransactionPendingModalProps> = ({
 };
 
 const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
-  const { signTransactions, activeAccount, activeAddress, wallets } =
-    useWallet();
+  const {
+    signTransactions,
+    activeAccount,
+    activeAddress,
+    wallets,
+    activeWallet,
+  } = useWallet();
   const { displayName, isLoading } = useName(activeAccount?.address);
   const location = useLocation();
   //const [displayName, setDisplayName] = useState<string>("");
@@ -293,9 +298,8 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
   };
 
   const handleDisconnect = () => {
-    const kibisis = wallets?.find((w) => w.id === "kibisis");
-    if (kibisis) {
-      kibisis.disconnect();
+    if (activeWallet) {
+      activeWallet.disconnect();
     }
     handleDrawerClose();
   };
@@ -1377,7 +1381,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
         onClose={() => setCollectionsModalOpen(false)}
       />
 
-      <StakingModal 
+      <StakingModal
         open={stakingModalOpen}
         onClose={() => setStakingModalOpen(false)}
       />
