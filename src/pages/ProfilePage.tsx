@@ -47,7 +47,7 @@ import LinkIcon from "@mui/icons-material/Link";
 import { ARC72Service } from "@/services/arc72";
 import { zeroAddress } from "@/contants/accounts";
 import { useSnackbar } from "notistack";
-import { FastForwardIcon } from "lucide-react";
+import { FastForwardIcon, SendIcon } from "lucide-react";
 import CloseIcon from "@mui/icons-material/Close";
 import { getAlgorandClients } from "@/wallets";
 import algosdk from "algosdk";
@@ -56,6 +56,8 @@ import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { TRANSACTION_FEES } from "@/constants/fees";
 import { useNameRegistration } from "@/hooks/useNameRegistration";
 import { useNameRegistry } from "@/hooks/useNameRegistry";
+import { VnsRegistrarClient } from "@/clients/VNSRegistrarClient";
+
 type NetworkType = "mainnet" | "testnet";
 
 interface NFTMetadata {
@@ -500,6 +502,262 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
   );
 };
 
+interface TransferModalProps {
+  open: boolean;
+  onClose: () => void;
+  name: string;
+  onConfirm: (newOwner: string) => void;
+}
+
+const TransferModal: React.FC<TransferModalProps> = ({
+  open,
+  onClose,
+  name,
+  onConfirm,
+}) => {
+  const [newOwner, setNewOwner] = useState("");
+  const [isValidAddress, setIsValidAddress] = useState(false);
+
+  const validateAddress = (address: string) => {
+    try {
+      algosdk.decodeAddress(address);
+      setIsValidAddress(true);
+    } catch {
+      setIsValidAddress(false);
+    }
+  };
+
+  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const address = e.target.value;
+    setNewOwner(address);
+    validateAddress(address);
+  };
+
+  const handleConfirm = () => {
+    if (isValidAddress && newOwner.trim()) {
+      onConfirm(newOwner.trim());
+      setNewOwner("");
+      setIsValidAddress(false);
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose}>
+      <Box className="edit-modal">
+        <IconButton
+          onClick={onClose}
+          sx={{
+            position: "absolute",
+            right: 16,
+            top: 16,
+            color: "text.secondary",
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+
+        <Typography
+          variant="h6"
+          component="h2"
+          sx={{
+            mb: 3,
+            textAlign: "center",
+            fontSize: "1.25rem",
+            fontWeight: 500,
+            color: "#111827",
+          }}
+        >
+          Transfer {name}
+        </Typography>
+
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ mb: 3, textAlign: "center" }}
+        >
+          Transfer ownership of this name to another address. This action cannot be undone.
+        </Typography>
+
+        <TextField
+          fullWidth
+          label="New Owner Address"
+          placeholder="Enter Algorand address"
+          value={newOwner}
+          onChange={handleAddressChange}
+          error={newOwner.length > 0 && !isValidAddress}
+          helperText={
+            newOwner.length > 0 && !isValidAddress
+              ? "Please enter a valid Algorand address"
+              : ""
+          }
+          sx={{ mb: 3 }}
+        />
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 2,
+          }}
+        >
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={onClose}
+            sx={{
+              bgcolor: "grey.50",
+              border: "none",
+              color: "text.primary",
+              "&:hover": {
+                bgcolor: "grey.100",
+                border: "none",
+              },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={handleConfirm}
+            disabled={!isValidAddress || !newOwner.trim()}
+            sx={{
+              bgcolor: "error.main",
+              color: "white",
+              "&:hover": {
+                bgcolor: "error.dark",
+              },
+              "&:disabled": {
+                bgcolor: "grey.300",
+                color: "grey.500",
+              },
+            }}
+          >
+            Transfer
+          </Button>
+        </Box>
+      </Box>
+    </Modal>
+  );
+};
+
+interface ConfirmTransferModalProps {
+  open: boolean;
+  onClose: () => void;
+  name: string;
+  newOwner: string;
+  currentOwner: string;
+  onConfirm: () => void;
+}
+
+const ConfirmTransferModal: React.FC<ConfirmTransferModalProps> = ({
+  open,
+  onClose,
+  name,
+  newOwner,
+  currentOwner,
+  onConfirm,
+}) => {
+  const [isConfirming, setIsConfirming] = useState(false);
+
+  const handleConfirm = async () => {
+    setIsConfirming(true);
+    try {
+      await onConfirm();
+      onClose();
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose}>
+      <Box className="edit-modal">
+        <h2 className="text-2xl font-bold">Confirm Transfer</h2>
+        <Typography sx={{ mb: 3, color: "error.main" }}>
+          ⚠️ Warning: This action cannot be undone!
+        </Typography>
+
+        <Box sx={{ mb: 3 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              mb: 2,
+              p: 2,
+              bgcolor: "background.paper",
+              borderRadius: 1,
+            }}
+          >
+            <Typography color="text.secondary">Name</Typography>
+            <Typography>{name}</Typography>
+          </Box>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              mb: 2,
+              p: 2,
+              bgcolor: "background.paper",
+              borderRadius: 1,
+            }}
+          >
+            <Typography color="text.secondary">Current Owner</Typography>
+            <Typography>{currentOwner}</Typography>
+          </Box>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              mb: 2,
+              p: 2,
+              bgcolor: "background.paper",
+              borderRadius: 1,
+            }}
+          >
+            <Typography color="text.secondary">New Owner</Typography>
+            <Typography>{newOwner}</Typography>
+          </Box>
+        </Box>
+
+        <Box sx={{ display: "flex", gap: 2 }}>
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={onClose}
+            disabled={isConfirming}
+            sx={{ flex: 1 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={handleConfirm}
+            disabled={isConfirming}
+            sx={{ 
+              flex: 1,
+              bgcolor: "error.main",
+              "&:hover": {
+                bgcolor: "error.dark",
+              },
+            }}
+          >
+            {isConfirming ? (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <CircularProgress size={20} color="inherit" />
+                Transferring...
+              </Box>
+            ) : (
+              "Confirm Transfer"
+            )}
+          </Button>
+        </Box>
+      </Box>
+    </Modal>
+  );
+};
+
 const ProfilePage: React.FC = () => {
   const { activeAccount, signTransactions } = useWallet();
   const { name } = useParams<{ name: string }>();
@@ -543,6 +801,10 @@ const ProfilePage: React.FC = () => {
   const [isConfirmExtendModalOpen, setIsConfirmExtendModalOpen] =
     useState(false);
   const [selectedDuration, setSelectedDuration] = useState("1");
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isConfirmTransferModalOpen, setIsConfirmTransferModalOpen] =
+    useState(false);
+  const [newOwnerForTransfer, setNewOwnerForTransfer] = useState<string | null>(null);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -595,7 +857,8 @@ const ProfilePage: React.FC = () => {
     setLoading(true);
     try {
       const response = await fetch(
-        `https://mainnet-idx.nautilus.sh/nft-indexer/v1/tokens?owner=${address}&include=all`
+        //`https://mainnet-idx.nautilus.sh/nft-indexer/v1/tokens?owner=${address}&include=all`
+        `https://voi-mainnet-mimirapi.nftnavigator.xyz/nft-indexer/v1/tokens?owner=${address}&include=all`
       );
       const data = await response.json();
       setNfts(data.tokens);
@@ -1111,6 +1374,124 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const handleOpenTransferModal = () => {
+    setIsTransferModalOpen(true);
+  };
+
+  const handleCloseTransferModal = () => {
+    setIsTransferModalOpen(false);
+    setNewOwnerForTransfer(null);
+  };
+
+  const handleConfirmTransfer = async (newOwner: string) => {
+    setNewOwnerForTransfer(newOwner);
+    setIsConfirmTransferModalOpen(true);
+    setIsTransferModalOpen(false);
+  };
+
+  const handleFinalTransferConfirm = async () => {
+    setIsPendingTx(true);
+    try {
+      if (!activeAccount) {
+        enqueueSnackbar("Please connect your wallet to transfer a name", {
+          variant: "error",
+        });
+        return;
+      }
+
+      const { algodClient, indexerClient } = getAlgorandClients();
+
+      const vns = {
+        registrar: 797609,
+      };
+
+      const ci = new CONTRACT(
+        vns.registrar,
+        algodClient,
+        indexerClient,
+        abi.custom,
+        {
+          addr: activeAccount.address,
+          sk: new Uint8Array(),
+        }
+      );
+
+      const builder = {
+        registrar: new CONTRACT(
+          vns.registrar,
+          algodClient,
+          indexerClient,
+          {
+            name: "registrar",
+            description: "Registrar",
+            methods: VNSRegistrarSpec.contract.methods,
+            events: [],
+          },
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(),
+          },
+          true,
+          false,
+          true
+        ),
+      };
+
+      const buildN = [];
+
+      // Get the token ID for the name
+      const node = await namehash(name || "");
+      const tokenId = uint8ArrayToBigInt(node);
+
+      // Transfer the name
+      const txnO = await builder.registrar.arc72_transferFrom(
+        activeAccount.address,
+        newOwnerForTransfer || "",
+        tokenId
+      );
+      buildN.push({
+        ...txnO.obj,
+        payment: 28500,
+        note: new TextEncoder().encode(
+          `envoi arc72_transferFrom ${name}.voi from ${activeAccount.address} to ${newOwnerForTransfer}`
+        ),
+      });
+
+      ci.setFee(2000);
+      ci.setEnableGroupResourceSharing(true);
+      ci.setExtraTxns(buildN);
+
+      const customR = await ci.custom();
+
+      if (!customR.success) {
+        throw new Error("Failed to transfer name");
+      }
+
+      const stxns = await signTransactions(
+        customR.txns.map(
+          (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+        )
+      );
+
+      await algodClient.sendRawTransaction(stxns as Uint8Array[]).do();
+
+      // Refresh owner after successful transfer
+      const registrar = new RegistrarService("mainnet");
+      const newOwner = await registrar.ownerOf(tokenId);
+      setOwner(newOwner);
+
+      enqueueSnackbar("Name transferred successfully!", { variant: "success" });
+      setIsConfirmTransferModalOpen(false);
+    } catch (error) {
+      console.error("Error transferring name:", error);
+      enqueueSnackbar("Failed to transfer name. Please try again.", {
+        variant: "error",
+      });
+    } finally {
+      setIsPendingTx(false);
+    }
+  };
+
   return (
     <div
       className="profile-container"
@@ -1127,31 +1508,58 @@ const ProfilePage: React.FC = () => {
           </Avatar>
           <h1 className="profile-name">{name}</h1>
           {isOwner && (
-            <Button
-              variant="contained"
-              onClick={handleExtend}
-              sx={{
-                position: "absolute",
-                right: "1rem",
-                top: "1rem",
-                bgcolor: "white",
-                color: "#8B5CF6",
-                "&:hover": {
-                  bgcolor: "#F5F3FF",
-                },
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.5rem 1rem",
-                borderRadius: "0.5rem",
-                fontWeight: "600",
-                fontSize: "0.875rem",
-                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-              }}
-            >
-              Extend
-              <FastForwardIcon />
-            </Button>
+            <div style={{ 
+              position: "absolute", 
+              right: "1rem", 
+              top: "1rem", 
+              display: "flex", 
+              gap: "0.5rem" 
+            }}>
+              <Button
+                variant="contained"
+                onClick={handleExtend}
+                sx={{
+                  bgcolor: "white",
+                  color: "#8B5CF6",
+                  "&:hover": {
+                    bgcolor: "#F5F3FF",
+                  },
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.5rem 1rem",
+                  borderRadius: "0.5rem",
+                  fontWeight: "600",
+                  fontSize: "0.875rem",
+                  boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                }}
+              >
+                Extend
+                <FastForwardIcon />
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleOpenTransferModal}
+                sx={{
+                  bgcolor: "white",
+                  color: "#EF4444",
+                  "&:hover": {
+                    bgcolor: "#FEF2F2",
+                  },
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.5rem 1rem",
+                  borderRadius: "0.5rem",
+                  fontWeight: "600",
+                  fontSize: "0.875rem",
+                  boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                }}
+              >
+                Transfer
+                <SendIcon />
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -1741,6 +2149,22 @@ const ProfilePage: React.FC = () => {
         name={name || ""}
         duration={selectedDuration}
         onConfirm={handleFinalExtendConfirm}
+      />
+
+      <TransferModal
+        open={isTransferModalOpen}
+        onClose={handleCloseTransferModal}
+        name={name || ""}
+        onConfirm={handleConfirmTransfer}
+      />
+
+      <ConfirmTransferModal
+        open={isConfirmTransferModalOpen}
+        onClose={() => setIsConfirmTransferModalOpen(false)}
+        name={name || ""}
+        newOwner={newOwnerForTransfer || ""}
+        currentOwner={owner || ""}
+        onConfirm={handleFinalTransferConfirm}
       />
 
       <Snackbar
