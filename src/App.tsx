@@ -83,22 +83,22 @@ const App: React.FC = () => {
   });
 
   return (
-    <ThemeProvider>
-      <SnackbarProvider maxSnack={3}>
-        <WalletProvider manager={walletManager}>
-          <QueryClientProvider client={queryClient}>
-            <Provider store={store}>
-              <PersistGate loading={null} persistor={persistor}>
+    <Provider store={store}>
+      <PersistGate loading={null} persistor={persistor}>
+        <ThemeProvider>
+          <SnackbarProvider maxSnack={3}>
+            <WalletProvider manager={walletManager}>
+              <QueryClientProvider client={queryClient}>
                 <Router>
                   <AppRoutes />
                 </Router>
-              </PersistGate>
-            </Provider>
-            <ToastContainer />
-          </QueryClientProvider>
-        </WalletProvider>
-      </SnackbarProvider>
-    </ThemeProvider>
+                <ToastContainer />
+              </QueryClientProvider>
+            </WalletProvider>
+          </SnackbarProvider>
+        </ThemeProvider>
+      </PersistGate>
+    </Provider>
   );
 };
 

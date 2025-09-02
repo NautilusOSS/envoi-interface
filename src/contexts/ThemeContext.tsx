@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ThemeProvider as MuiThemeProvider, createTheme, Theme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState } from '../store/store';
+import { toggleTheme } from '../store/themeSlice';
 
 type ThemeMode = 'light' | 'dark';
 
@@ -16,14 +19,12 @@ const ThemeContext = createContext<ThemeContextType>({
   theme: createTheme(),
 });
 
-const THEME_MODE_KEY = 'theme-mode';
-
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Initialize theme from localStorage or default to 'light'
-  const [mode, setMode] = useState<ThemeMode>(() => {
-    const savedMode = localStorage.getItem(THEME_MODE_KEY);
-    return (savedMode as ThemeMode) || 'light';
-  });
+  const dispatch = useDispatch();
+  const isDarkTheme = useSelector((state: RootState) => state.theme.isDarkTheme);
+  
+  // Derive mode from Redux state
+  const mode: ThemeMode = isDarkTheme ? 'dark' : 'light';
 
   const theme = React.useMemo(
     () =>
@@ -45,12 +46,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [mode]
   );
 
-  const toggleTheme = () => {
-    setMode((prevMode) => {
-      const newMode = prevMode === 'light' ? 'dark' : 'light';
-      localStorage.setItem(THEME_MODE_KEY, newMode);
-      return newMode;
-    });
+  const handleToggleTheme = () => {
+    dispatch(toggleTheme());
   };
 
   // Apply theme class to document body
@@ -59,7 +56,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [mode]);
 
   return (
-    <ThemeContext.Provider value={{ mode, toggleTheme, theme }}>
+    <ThemeContext.Provider value={{ mode, toggleTheme: handleToggleTheme, theme }}>
       <MuiThemeProvider theme={theme}>
         <CssBaseline />
         {children}

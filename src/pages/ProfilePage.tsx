@@ -160,7 +160,25 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
     <Modal open={open} onClose={onClose}>
       <Box
         className="edit-modal"
-        sx={{ display: "flex", gap: 2, mb: 2, flexDirection: "column" }}
+        sx={{
+          bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+          border: `1px solid ${theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"}`,
+          borderRadius: "12px",
+          boxShadow: theme.palette.mode === "dark" 
+            ? "0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.4)"
+            : "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+          p: 3,
+          position: "relative",
+          minWidth: "400px",
+          maxWidth: "500px",
+          width: "90vw",
+          maxHeight: "90vh",
+          overflowY: "auto",
+          display: "flex", 
+          gap: 2, 
+          mb: 2, 
+          flexDirection: "column",
+        }}
       >
         <IconButton
           onClick={onClose}
@@ -168,7 +186,10 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
             position: "absolute",
             right: 16,
             top: 16,
-            color: "text.secondary",
+            color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+            "&:hover": {
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F3F4F6",
+            },
           }}
         >
           <CloseIcon />
@@ -181,8 +202,9 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
             mb: 3,
             textAlign: "center",
             fontSize: "1.25rem",
-            fontWeight: 500,
-            color: "#111827",
+            fontWeight: 600,
+            color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+            pt: 2,
           }}
         >
           Extend {name}
@@ -202,11 +224,11 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
               p: 0,
               borderRadius: "50%",
               border: "2px solid",
-              borderColor: "#E5E7EB",
-              color: "#374151",
+              borderColor: theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB",
+              color: theme.palette.mode === "dark" ? "#9CA3AF" : "#374151",
               "&:hover": {
-                borderColor: "#D1D5DB",
-                bgcolor: "#F9FAFB",
+                borderColor: theme.palette.mode === "dark" ? "#6B7280" : "#D1D5DB",
+                bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               },
             },
           }}
@@ -225,8 +247,8 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
             variant="h4"
             component="span"
             sx={{
-              color: "#6366F1",
-              fontWeight: 500,
+              color: theme.palette.mode === "dark" ? "#8B5CF6" : "#6366F1",
+              fontWeight: 600,
               minWidth: "120px",
               textAlign: "center",
               fontSize: "2rem",
@@ -245,10 +267,10 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
         <Box
           sx={{
             p: 2,
-            bgcolor: theme.palette.mode === "light" ? "#F9FAFB" : "#1F2937",
+            bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
             borderRadius: 1,
             border: "1px solid",
-            borderColor: theme.palette.mode === "light" ? "#E5E7EB" : "#374151",
+            borderColor: theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB",
           }}
         >
           <Box
@@ -260,33 +282,55 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
               mb: 1,
             }}
           >
-            <Typography variant="body2" color="text.secondary">
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+              }}
+            >
               Extension Cost
             </Typography>
             <Tooltip title={getPriceBreakdownJSX()} arrow>
-              <IconButton size="small">
+              <IconButton 
+                size="small"
+                sx={{
+                  color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                }}
+              >
                 <HelpOutlineIcon />
               </IconButton>
             </Tooltip>
           </Box>
-          <Typography variant="h6" color="text.primary" align="center">
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+              textAlign: "center",
+              fontWeight: 600,
+            }}
+          >
             {calculateTotalCost().namePrice.toLocaleString()} VOI
           </Typography>
           <Typography
             variant="caption"
-            color="text.secondary"
-            align="center"
-            display="block"
+            sx={{ 
+              color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+              textAlign: "center",
+              display: "block",
+            }}
           >
             Transaction Fees: {calculateTotalCost().fees.toLocaleString()} VOI
           </Typography>
           <Typography
             variant="body2"
-            color="text.primary"
-            align="center"
-            sx={{ mt: 1, fontWeight: "bold" }}
+            sx={{ 
+              mt: 1, 
+              fontWeight: "bold",
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+              textAlign: "center",
+            }}
           >
-            Total: {calculateTotalCost(name).total.toLocaleString()} VOI
+            Total: {calculateTotalCost().total.toLocaleString()} VOI
           </Typography>
         </Box>
 
@@ -302,12 +346,13 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
             variant="outlined"
             onClick={onClose}
             sx={{
-              bgcolor: "grey.50",
-              border: "none",
-              color: "text.primary",
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"}`,
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
+              fontWeight: 600,
               "&:hover": {
-                bgcolor: "grey.100",
-                border: "none",
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#F3F4F6",
+                borderColor: theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
               },
             }}
           >
@@ -318,10 +363,13 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
             variant="contained"
             onClick={() => onConfirm(duration)}
             sx={{
-              bgcolor: "primary.main",
-              color: "white",
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#6366F1",
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "white",
+              fontWeight: 600,
+              border: theme.palette.mode === "dark" ? "1px solid #4B5563" : "none",
               "&:hover": {
-                bgcolor: "primary.dark",
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#5B21B6",
+                borderColor: theme.palette.mode === "dark" ? "#6B7280" : "none",
               },
             }}
           >
@@ -348,6 +396,7 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
   duration,
   onConfirm,
 }) => {
+  const { theme } = useTheme();
   const [isConfirming, setIsConfirming] = useState(false);
 
   const {
@@ -388,9 +437,45 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
 
   return (
     <Modal open={open} onClose={onClose}>
-      <Box className="edit-modal">
-        <h2 className="text-2xl font-bold">Confirm Details</h2>
-        <Typography sx={{ mb: 3 }}>
+      <Box 
+        className="edit-modal"
+        sx={{
+          bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+          border: `1px solid ${theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"}`,
+          borderRadius: "12px",
+          boxShadow: theme.palette.mode === "dark" 
+            ? "0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.4)"
+            : "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+          p: 3,
+          position: "relative",
+          minWidth: "400px",
+          maxWidth: "500px",
+          width: "90vw",
+          maxHeight: "90vh",
+          overflowY: "auto",
+        }}
+      >
+        <Typography
+          variant="h6"
+          component="h2"
+          sx={{
+            mb: 3,
+            textAlign: "center",
+            fontSize: "1.5rem",
+            fontWeight: 600,
+            color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+          }}
+        >
+          Confirm Details
+        </Typography>
+        
+        <Typography 
+          sx={{ 
+            mb: 3,
+            color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+            textAlign: "center",
+          }}
+        >
           Double check these details before confirming in your wallet.
         </Typography>
 
@@ -401,12 +486,27 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
               justifyContent: "space-between",
               mb: 2,
               p: 2,
-              bgcolor: "background.paper",
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"}`,
             }}
           >
-            <Typography color="text.secondary">Name</Typography>
-            <Typography>{name}</Typography>
+            <Typography 
+              sx={{ 
+                color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                fontWeight: 500,
+              }}
+            >
+              Name
+            </Typography>
+            <Typography 
+              sx={{ 
+                color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                fontWeight: 600,
+              }}
+            >
+              {name}
+            </Typography>
           </Box>
           <Box
             sx={{
@@ -414,12 +514,27 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
               justifyContent: "space-between",
               mb: 2,
               p: 2,
-              bgcolor: "background.paper",
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"}`,
             }}
           >
-            <Typography color="text.secondary">Action</Typography>
-            <Typography>Extend registration</Typography>
+            <Typography 
+              sx={{ 
+                color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                fontWeight: 500,
+              }}
+            >
+              Action
+            </Typography>
+            <Typography 
+              sx={{ 
+                color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                fontWeight: 600,
+              }}
+            >
+              Extend registration
+            </Typography>
           </Box>
           <Box
             sx={{
@@ -427,16 +542,34 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
               justifyContent: "space-between",
               mb: 2,
               p: 2,
-              bgcolor: "background.paper",
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"}`,
             }}
           >
-            <Typography color="text.secondary">Duration</Typography>
+            <Typography 
+              sx={{ 
+                color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                fontWeight: 500,
+              }}
+            >
+              Duration
+            </Typography>
             <Box sx={{ textAlign: "right" }}>
-              <Typography>
+              <Typography 
+                sx={{ 
+                  color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                  fontWeight: 600,
+                }}
+              >
                 {duration} year{parseInt(duration) !== 1 ? "s" : ""}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                }}
+              >
                 New expiry:{" "}
                 {expiryDate?.toLocaleDateString("en-US", {
                   month: "long",
@@ -452,17 +585,35 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
               justifyContent: "space-between",
               mb: 2,
               p: 2,
-              bgcolor: "background.paper",
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"}`,
             }}
           >
-            <Typography color="text.secondary">Cost</Typography>
-            <Typography>
+            <Typography 
+              sx={{ 
+                color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                fontWeight: 500,
+              }}
+            >
+              Cost
+            </Typography>
+            <Typography 
+              sx={{ 
+                color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                fontWeight: 600,
+              }}
+            >
               {calculateTotalCost().namePrice.toLocaleString()}{" "}
               {paymentAssetSymbol} +{" "}
               {calculateTotalCost().fees.toLocaleString()} VOI
               <Tooltip title={getPriceBreakdownJSX()} arrow>
-                <IconButton size="small">
+                <IconButton 
+                  size="small"
+                  sx={{
+                    color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                  }}
+                >
                   <HelpOutlineIcon />
                 </IconButton>
               </Tooltip>
@@ -476,7 +627,22 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
             variant="outlined"
             onClick={onClose}
             disabled={isConfirming}
-            sx={{ flex: 1 }}
+            sx={{ 
+              flex: 1,
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"}`,
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
+              fontWeight: 600,
+              "&:hover": {
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#F3F4F6",
+                borderColor: theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+              },
+              "&:disabled": {
+                bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#F3F4F6",
+                borderColor: theme.palette.mode === "dark" ? "#374151" : "#E5E7EB",
+                color: theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+              },
+            }}
           >
             Cancel
           </Button>
@@ -485,7 +651,21 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
             variant="contained"
             onClick={handleConfirm}
             disabled={isConfirming}
-            sx={{ flex: 1 }}
+            sx={{ 
+              flex: 1,
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#6366F1",
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "white",
+              fontWeight: 600,
+              border: theme.palette.mode === "dark" ? "1px solid #4B5563" : "none",
+              "&:hover": {
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#5B21B6",
+                borderColor: theme.palette.mode === "dark" ? "#6B7280" : "none",
+              },
+              "&:disabled": {
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
+                color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+              },
+            }}
           >
             {isConfirming ? (
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -515,6 +695,7 @@ const TransferModal: React.FC<TransferModalProps> = ({
   name,
   onConfirm,
 }) => {
+  const { theme } = useTheme();
   const [newOwner, setNewOwner] = useState("");
   const [isValidAddress, setIsValidAddress] = useState(false);
 
@@ -543,14 +724,27 @@ const TransferModal: React.FC<TransferModalProps> = ({
 
   return (
     <Modal open={open} onClose={onClose}>
-      <Box className="edit-modal">
+      <Box 
+        className="edit-modal"
+        sx={{
+          bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+          border: `1px solid ${theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"}`,
+          borderRadius: "12px",
+          boxShadow: theme.palette.mode === "dark" 
+            ? "0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.4)"
+            : "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+        }}
+      >
         <IconButton
           onClick={onClose}
           sx={{
             position: "absolute",
             right: 16,
             top: 16,
-            color: "text.secondary",
+            color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+            "&:hover": {
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F3F4F6",
+            },
           }}
         >
           <CloseIcon />
@@ -563,8 +757,9 @@ const TransferModal: React.FC<TransferModalProps> = ({
             mb: 3,
             textAlign: "center",
             fontSize: "1.25rem",
-            fontWeight: 500,
-            color: "#111827",
+            fontWeight: 600,
+            color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+            pt: 2,
           }}
         >
           Transfer {name}
@@ -572,8 +767,12 @@ const TransferModal: React.FC<TransferModalProps> = ({
 
         <Typography
           variant="body2"
-          color="text.secondary"
-          sx={{ mb: 3, textAlign: "center" }}
+          sx={{ 
+            mb: 3, 
+            textAlign: "center",
+            color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+            lineHeight: 1.5,
+          }}
         >
           Transfer ownership of this name to another address. This action cannot be undone.
         </Typography>
@@ -590,7 +789,33 @@ const TransferModal: React.FC<TransferModalProps> = ({
               ? "Please enter a valid Algorand address"
               : ""
           }
-          sx={{ mb: 3 }}
+          sx={{ 
+            mb: 3,
+            "& .MuiOutlinedInput-root": {
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+              "& fieldset": {
+                borderColor: theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
+              },
+              "&:hover fieldset": {
+                borderColor: theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+              },
+              "&.Mui-focused fieldset": {
+                borderColor: theme.palette.mode === "dark" ? "#EF4444" : "#EF4444",
+              },
+            },
+            "& .MuiInputLabel-root": {
+              color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+              "&.Mui-focused": {
+                color: theme.palette.mode === "dark" ? "#EF4444" : "#EF4444",
+              },
+            },
+            "& .MuiInputBase-input": {
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+            },
+            "& .MuiFormHelperText-root": {
+              color: theme.palette.mode === "dark" ? "#EF4444" : "#EF4444",
+            },
+          }}
         />
 
         <Box
@@ -605,12 +830,13 @@ const TransferModal: React.FC<TransferModalProps> = ({
             variant="outlined"
             onClick={onClose}
             sx={{
-              bgcolor: "grey.50",
-              border: "none",
-              color: "text.primary",
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"}`,
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
+              fontWeight: 600,
               "&:hover": {
-                bgcolor: "grey.100",
-                border: "none",
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#F3F4F6",
+                borderColor: theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
               },
             }}
           >
@@ -622,14 +848,17 @@ const TransferModal: React.FC<TransferModalProps> = ({
             onClick={handleConfirm}
             disabled={!isValidAddress || !newOwner.trim()}
             sx={{
-              bgcolor: "error.main",
-              color: "white",
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#6366F1",
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "white",
+              fontWeight: 600,
+              border: theme.palette.mode === "dark" ? "1px solid #4B5563" : "none",
               "&:hover": {
-                bgcolor: "error.dark",
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#5B21B6",
+                borderColor: theme.palette.mode === "dark" ? "#6B7280" : "none",
               },
               "&:disabled": {
-                bgcolor: "grey.300",
-                color: "grey.500",
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
+                color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
               },
             }}
           >
@@ -658,6 +887,7 @@ const ConfirmTransferModal: React.FC<ConfirmTransferModalProps> = ({
   currentOwner,
   onConfirm,
 }) => {
+  const { theme } = useTheme();
   const [isConfirming, setIsConfirming] = useState(false);
 
   const handleConfirm = async () => {
@@ -672,11 +902,53 @@ const ConfirmTransferModal: React.FC<ConfirmTransferModalProps> = ({
 
   return (
     <Modal open={open} onClose={onClose}>
-      <Box className="edit-modal">
-        <h2 className="text-2xl font-bold">Confirm Transfer</h2>
-        <Typography sx={{ mb: 3, color: "error.main" }}>
-          ⚠️ Warning: This action cannot be undone!
+      <Box 
+        className="edit-modal"
+        sx={{
+          bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+          border: `1px solid ${theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"}`,
+          borderRadius: "12px",
+          boxShadow: theme.palette.mode === "dark" 
+            ? "0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.4)"
+            : "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+        }}
+      >
+        <Typography
+          variant="h6"
+          component="h2"
+          sx={{
+            mb: 3,
+            textAlign: "center",
+            fontSize: "1.5rem",
+            fontWeight: 600,
+            color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+          }}
+        >
+          Confirm Transfer
         </Typography>
+        
+        <Box
+          sx={{
+            mb: 3,
+            p: 2,
+            bgcolor: theme.palette.mode === "dark" ? "#374151" : "#FEF2F2",
+            border: `1px solid ${theme.palette.mode === "dark" ? "#EF4444" : "#FECACA"}`,
+            borderRadius: "8px",
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+          }}
+        >
+          <Typography 
+            sx={{ 
+              color: theme.palette.mode === "dark" ? "#FCA5A5" : "#DC2626",
+              fontWeight: 600,
+              fontSize: "1rem",
+            }}
+          >
+            ⚠️ Warning: This action cannot be undone!
+          </Typography>
+        </Box>
 
         <Box sx={{ mb: 3 }}>
           <Box
@@ -685,12 +957,27 @@ const ConfirmTransferModal: React.FC<ConfirmTransferModalProps> = ({
               justifyContent: "space-between",
               mb: 2,
               p: 2,
-              bgcolor: "background.paper",
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"}`,
             }}
           >
-            <Typography color="text.secondary">Name</Typography>
-            <Typography>{name}</Typography>
+            <Typography 
+              sx={{ 
+                color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                fontWeight: 500,
+              }}
+            >
+              Name
+            </Typography>
+            <Typography 
+              sx={{ 
+                color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                fontWeight: 600,
+              }}
+            >
+              {name}
+            </Typography>
           </Box>
           <Box
             sx={{
@@ -698,12 +985,29 @@ const ConfirmTransferModal: React.FC<ConfirmTransferModalProps> = ({
               justifyContent: "space-between",
               mb: 2,
               p: 2,
-              bgcolor: "background.paper",
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"}`,
             }}
           >
-            <Typography color="text.secondary">Current Owner</Typography>
-            <Typography>{currentOwner}</Typography>
+            <Typography 
+              sx={{ 
+                color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                fontWeight: 500,
+              }}
+            >
+              Current Owner
+            </Typography>
+            <Typography 
+              sx={{ 
+                color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                fontWeight: 600,
+                fontFamily: "monospace",
+                fontSize: "0.875rem",
+              }}
+            >
+              {currentOwner}
+            </Typography>
           </Box>
           <Box
             sx={{
@@ -711,12 +1015,29 @@ const ConfirmTransferModal: React.FC<ConfirmTransferModalProps> = ({
               justifyContent: "space-between",
               mb: 2,
               p: 2,
-              bgcolor: "background.paper",
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"}`,
             }}
           >
-            <Typography color="text.secondary">New Owner</Typography>
-            <Typography>{newOwner}</Typography>
+            <Typography 
+              sx={{ 
+                color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                fontWeight: 500,
+              }}
+            >
+              New Owner
+            </Typography>
+            <Typography 
+              sx={{ 
+                color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                fontWeight: 600,
+                fontFamily: "monospace",
+                fontSize: "0.875rem",
+              }}
+            >
+              {newOwner}
+            </Typography>
           </Box>
         </Box>
 
@@ -726,7 +1047,22 @@ const ConfirmTransferModal: React.FC<ConfirmTransferModalProps> = ({
             variant="outlined"
             onClick={onClose}
             disabled={isConfirming}
-            sx={{ flex: 1 }}
+            sx={{ 
+              flex: 1,
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"}`,
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
+              fontWeight: 600,
+              "&:hover": {
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#F3F4F6",
+                borderColor: theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+              },
+              "&:disabled": {
+                bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#F3F4F6",
+                borderColor: theme.palette.mode === "dark" ? "#374151" : "#E5E7EB",
+                color: theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+              },
+            }}
           >
             Cancel
           </Button>
@@ -737,9 +1073,15 @@ const ConfirmTransferModal: React.FC<ConfirmTransferModalProps> = ({
             disabled={isConfirming}
             sx={{ 
               flex: 1,
-              bgcolor: "error.main",
+              bgcolor: "#EF4444",
+              color: "white",
+              fontWeight: 600,
               "&:hover": {
-                bgcolor: "error.dark",
+                bgcolor: "#DC2626",
+              },
+              "&:disabled": {
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
+                color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
               },
             }}
           >
@@ -1519,10 +1861,10 @@ const ProfilePage: React.FC = () => {
                 variant="contained"
                 onClick={handleExtend}
                 sx={{
-                  bgcolor: "white",
-                  color: "#8B5CF6",
+                  bgcolor: theme.palette.mode === "dark" ? "#374151" : "white",
+                  color: theme.palette.mode === "dark" ? "#F9FAFB" : "#8B5CF6",
                   "&:hover": {
-                    bgcolor: "#F5F3FF",
+                    bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#F5F3FF",
                   },
                   display: "flex",
                   alignItems: "center",
@@ -1531,7 +1873,10 @@ const ProfilePage: React.FC = () => {
                   borderRadius: "0.5rem",
                   fontWeight: "600",
                   fontSize: "0.875rem",
-                  boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                  boxShadow: theme.palette.mode === "dark" 
+                    ? "0 2px 4px rgba(0, 0, 0, 0.3)" 
+                    : "0 2px 4px rgba(0, 0, 0, 0.1)",
+                  border: theme.palette.mode === "dark" ? "1px solid #4B5563" : "none",
                 }}
               >
                 Extend
@@ -1541,10 +1886,10 @@ const ProfilePage: React.FC = () => {
                 variant="contained"
                 onClick={handleOpenTransferModal}
                 sx={{
-                  bgcolor: "white",
-                  color: "#EF4444",
+                  bgcolor: theme.palette.mode === "dark" ? "#374151" : "white",
+                  color: theme.palette.mode === "dark" ? "#F9FAFB" : "#EF4444",
                   "&:hover": {
-                    bgcolor: "#FEF2F2",
+                    bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#FEF2F2",
                   },
                   display: "flex",
                   alignItems: "center",
@@ -1553,7 +1898,10 @@ const ProfilePage: React.FC = () => {
                   borderRadius: "0.5rem",
                   fontWeight: "600",
                   fontSize: "0.875rem",
-                  boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                  boxShadow: theme.palette.mode === "dark" 
+                    ? "0 2px 4px rgba(0, 0, 0, 0.3)" 
+                    : "0 2px 4px rgba(0, 0, 0, 0.1)",
+                  border: theme.palette.mode === "dark" ? "1px solid #4B5563" : "none",
                 }}
               >
                 Transfer

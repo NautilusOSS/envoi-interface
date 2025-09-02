@@ -1127,7 +1127,7 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
                       primary={wallet.metadata?.name || wallet.id}
                       sx={{
                         "& .MuiListItemText-primary": {
-                          color: "#1F2937",
+                          color: mode === "light" ? "#1F2937" : "#F9FAFB",
                           fontWeight: 500,
                         },
                       }}
