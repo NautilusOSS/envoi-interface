@@ -1679,6 +1679,11 @@ const ProfilePage: React.FC = () => {
           setPaymentTokenSymbol("");
         } else {
           const paymentToken = Number(getPaymentTokenR.returnValue);
+          if (paymentToken === 0) {
+            setPaymentToken(0);
+            setPaymentTokenDecimals(0);
+            setPaymentTokenSymbol("");
+          }
           setPaymentToken(paymentToken);
           const ciArc200 = new CONTRACT(
             paymentToken,
@@ -1693,12 +1698,13 @@ const ProfilePage: React.FC = () => {
           );
           const getPaymentTokenDecimalsR = await ciArc200.arc200_decimals();
           if (!getPaymentTokenDecimalsR.success) {
-            throw new Error("Failed to get payment token decimals");
+            setPaymentTokenDecimals(0);
+            //throw new Error("Failed to get payment token decimals");
           }
           setPaymentTokenDecimals(Number(getPaymentTokenDecimalsR.returnValue));
           const getPaymentTokenSymbolR = await ciArc200.arc200_symbol();
           if (!getPaymentTokenSymbolR.success) {
-            throw new Error("Failed to get payment token symbol");
+            setPaymentTokenSymbol("");
           }
           setPaymentTokenSymbol(getPaymentTokenSymbolR.returnValue);
         }
@@ -1798,7 +1804,7 @@ const ProfilePage: React.FC = () => {
   }, [isNftModalOpen, owner]);
 
   useEffect(() => {
-    if (!activeAccount) return;
+    if (!activeAccount || !name || !parentAppId) return;
     (async () => {
       const node = await namehash(name || "");
       const tokenId = uint8ArrayToBigInt(node);
@@ -1808,6 +1814,7 @@ const ProfilePage: React.FC = () => {
         parentAppId
       );
       const owner = await arc72.ownerOf(tokenId);
+      setOwner(owner);
       setIsOwner(owner === activeAccount.address);
     })();
   }, [name, activeAccount, parentAppId]);
@@ -1824,11 +1831,12 @@ const ProfilePage: React.FC = () => {
     namehash(name || "").then((nameHash) => {
       const tokenId = uint8ArrayToBigInt(nameHash);
       registrar.expiration(tokenId).then((expiryTimestamp) => {
-        const expiryTimestampNumber = Number(expiryTimestamp);
-        //if (expiryTimestampNumber) {
-        setExpiry(new Date(expiryTimestampNumber * 1000));
-        //}
+        if (expiryTimestamp !== false) {
+          const expiryTimestampNumber = Number(expiryTimestamp);
+          setExpiry(new Date(expiryTimestampNumber * 1000));
+        }
       });
+      /*
       registrar.ownerOf(tokenId).then((owner) => {
         if (owner != zeroAddress) {
           setOwner(owner);
@@ -1838,6 +1846,7 @@ const ProfilePage: React.FC = () => {
           });
         }
       });
+      */
     });
     resolver.name(name || "").then((resolvedName: string | null) => {
       setResolvedName(resolvedName);
@@ -1895,9 +1904,9 @@ const ProfilePage: React.FC = () => {
   const handleNftSelect = (nft: NFTToken) => {
     setSelectedNftId(`nft-${nft.contractId}-${nft.tokenId}`);
     const metadata: NFTMetadata = JSON.parse(nft.metadata);
-    const imageUrl = metadata.image.startsWith("ipfs://")
-      ? `https://ipfs.io/ipfs/${metadata.image.replace("ipfs://", "")}`
-      : metadata.image;
+    const imageUrl = metadata?.image?.startsWith("ipfs://")
+      ? `https://ipfs.io/ipfs/${metadata?.image?.replace("ipfs://", "")}`
+      : metadata?.image;
     setProfileImage(imageUrl);
     setIsNftModalOpen(false);
   };
@@ -1910,9 +1919,9 @@ const ProfilePage: React.FC = () => {
       if (selectedNft) {
         try {
           const metadata: NFTMetadata = JSON.parse(selectedNft.metadata);
-          const imageUrl = metadata.image.startsWith("ipfs://")
-            ? `https://ipfs.io/ipfs/${metadata.image.replace("ipfs://", "")}`
-            : metadata.image;
+          const imageUrl = metadata?.image?.startsWith("ipfs://")
+            ? `https://ipfs.io/ipfs/${metadata?.image?.replace("ipfs://", "")}`
+            : metadata?.image;
           setProfileImage(imageUrl);
           setSelectedNftId(null); // Reset selection
         } catch (e) {
@@ -3345,8 +3354,8 @@ const ProfilePage: React.FC = () => {
             ) : (
               filteredNfts.map((nft) => {
                 const metadata: NFTMetadata = JSON.parse(nft.metadata);
-                const imageUrl = metadata.image.startsWith("ipfs://")
-                  ? `https://ipfs.io/ipfs/${metadata.image.replace(
+                const imageUrl = metadata?.image?.startsWith("ipfs://")
+                  ? `https://ipfs.io/ipfs/${metadata?.image?.replace(
                       "ipfs://",
                       ""
                     )}`
