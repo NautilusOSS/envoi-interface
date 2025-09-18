@@ -28,6 +28,10 @@ export const routes: Route[] = [
     Component: RegisterName,
   },
   {
+    path: "/register/:name/:subname",
+    Component: RegisterName,
+  },
+  {
     path: "/my-names",
     Component: MyNames,
   },

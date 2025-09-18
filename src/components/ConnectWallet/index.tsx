@@ -460,6 +460,22 @@ function BasicMenu() {
   const { activeAccount, wallets } = useWallet();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
+
+  // Debug wallet state
+  React.useEffect(() => {
+    console.log("Wallet Debug Info:");
+    console.log("Active Account:", activeAccount);
+    console.log("Wallets:", wallets);
+    wallets?.forEach((wallet, index) => {
+      console.log(`Wallet ${index}:`, {
+        id: wallet.id,
+        name: wallet.metadata.name,
+        isActive: wallet.isActive,
+        accounts: wallet.accounts,
+        accountsLength: wallet.accounts.length,
+      });
+    });
+  }, [activeAccount, wallets]);
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
   };
@@ -575,7 +591,9 @@ function BasicMenu() {
                   <Box
                     onClick={(e: any) => {
                       console.log("disconnecting");
-                      console.log(wallet);
+                      console.log("Wallet state:", wallet);
+                      console.log("Wallet isActive:", wallet.isActive);
+                      console.log("Wallet accounts:", wallet.accounts);
                       e.preventDefault();
                       wallet
                         .disconnect()
@@ -630,6 +648,42 @@ function BasicMenu() {
               )}
             </ProviderContainer>
           ))}
+
+          {/* Fallback disconnect button if there's an active account but no active wallet */}
+          {activeAccount && !wallets?.some((w) => w.isActive) && (
+            <ProviderContainer
+              className={`${
+                isDarkTheme ? "dark" : ""
+              } !bg-secondary !text-primary`}
+            >
+              <ProviderIconContainer>
+                <ProviderName>
+                  <ProviderNameLabel
+                    className={`${
+                      isDarkTheme ? "dark" : ""
+                    } !bg-secondary !text-primary`}
+                  >
+                    Disconnect Wallet
+                  </ProviderNameLabel>
+                </ProviderName>
+                <Box
+                  onClick={(e: any) => {
+                    console.log("Fallback disconnect clicked");
+                    // Try to disconnect all wallets
+                    wallets?.forEach((wallet) => {
+                      if (wallet.accounts.length > 0) {
+                        wallet.disconnect().catch(console.error);
+                      }
+                    });
+                    setAnchorEl(null);
+                  }}
+                >
+                  <DisconnectButton />
+                </Box>
+              </ProviderIconContainer>
+            </ProviderContainer>
+          )}
+
           <Divider />
           <Box>
             <Typography variant="body2" className="text-right">

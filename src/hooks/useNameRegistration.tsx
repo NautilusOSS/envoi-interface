@@ -26,13 +26,25 @@ export interface PriceBreakdown {
   paymentAssetSymbol: string;
 }
 
+export interface UseNameRegistrationProps {
+  initialName?: string;
+  initialDuration?: number;
+  initialParentName?: string;
+  initialParentAppId?: number;
+  initialPaymentToken?: number;
+  initialPaymentTokenDecimals?: number;
+  initialPaymentTokenSymbol?: string;
+}
+
 export const useNameRegistration = ({
   initialName,
   initialDuration,
-}: {
-  initialName?: string;
-  initialDuration?: number;
-}) => {
+  initialParentName,
+  initialParentAppId,
+  initialPaymentToken,
+  initialPaymentTokenDecimals,
+  initialPaymentTokenSymbol,
+}: UseNameRegistrationProps) => {
   const [name, setName] = useState(
     initialName ? initialName.split(".")[0] : ""
   );
@@ -59,11 +71,12 @@ export const useNameRegistration = ({
   );
 
   // TODO fetch these from the contract
-  const priceLookup: Record<string, number> = {
-    VOI: 2000,
-    aUSDC: 5,
-    UNIT: 50,
-  };
+  // const priceLookup: Record<string, number> = {
+  //   VOI: 2000,
+  //   aUSDC: 5,
+  //   UNIT: 50,
+  // };
+  const unitPrice = 2000;
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.toLowerCase();
@@ -110,7 +123,7 @@ export const useNameRegistration = ({
   }, [name, debouncedCheckAvailability]);
 
   useEffect(() => {
-    const basePrice = getNamePrice(name, priceLookup[paymentAssetSymbol]);
+    const basePrice = getNamePrice(name, unitPrice);
     const totalPrice = basePrice * parseInt(duration.toString());
     setPrice(totalPrice);
   }, [name, duration, paymentAssetSymbol]);
@@ -120,7 +133,7 @@ export const useNameRegistration = ({
   const isReservedOwner = activeAccount?.address === reservedOwner;
 
   const getPriceBreakdown = (): PriceBreakdown => {
-    const basePrice = getNamePrice(name, priceLookup[paymentAssetSymbol]);
+    const basePrice = getNamePrice(name, unitPrice);
     return {
       basePrice,
       duration,
@@ -130,7 +143,7 @@ export const useNameRegistration = ({
   };
 
   const getPriceBreakdownJSX = () => {
-    const basePrice = getNamePrice(name, priceLookup[paymentAssetSymbol]);
+    const basePrice = getNamePrice(name, price);
     return (
       <Box>
         <Typography variant="body2">Cost Breakdown:</Typography>
@@ -552,7 +565,14 @@ export const useNameRegistration = ({
     }
   };
 
-  const handleConfirmRegisterVOI = async () => {
+  const handleConfirmRegisterVOI = async (
+    name: string,
+    parentName: string,
+    registrarAppId: number,
+    paymentTokenAppId: number,
+    paymentTokenDecimals: number,
+    paymentTokenSymbol: string
+  ) => {
     if (!activeAccount) {
       enqueueSnackbar("Please connect your wallet to register a name", {
         variant: "error",
@@ -560,38 +580,44 @@ export const useNameRegistration = ({
       return;
     }
 
-    const fullName = `${name}.voi`;
-    const reservedOwner = rsvps[fullName];
+    const fullName = `${name}.${parentName}`;
 
-    // Check if name is reserved and prevent registration if not the reserved owner
-    if (reservedOwner && reservedOwner !== activeAccount.address) {
-      enqueueSnackbar(`${fullName} is reserved and cannot be registered`, {
-        variant: "error",
-        anchorOrigin: {
-          vertical: "top",
-          horizontal: "center",
-        },
-      });
-      return;
-    }
+    // const reservedOwner = rsvps[fullName];
+    // // Check if name is reserved and prevent registration if not the reserved owner
+    // if (reservedOwner && reservedOwner !== activeAccount.address) {
+    //   enqueueSnackbar(`${fullName} is reserved and cannot be registered`, {
+    //     variant: "error",
+    //     anchorOrigin: {
+    //       vertical: "top",
+    //       horizontal: "center",
+    //     },
+    //   });
+    //   return;
+    // }
 
     try {
       setLoading(true);
       setError(null);
       const { algodClient, indexerClient } = getAlgorandClients();
 
-      const ci = new CONTRACT(797609, algodClient, indexerClient, abi.custom, {
-        addr: activeAccount.address,
-        sk: new Uint8Array(),
-      });
+      const ci = new CONTRACT(
+        initialParentAppId,
+        algodClient,
+        indexerClient,
+        abi.custom,
+        {
+          addr: activeAccount.address,
+          sk: new Uint8Array(),
+        }
+      );
 
       const vns = {
-        registrar: 797609,
+        registrar: initialParentAppId,
         resolver: 797608,
       };
 
       const wVOI = {
-        tokenId: 828295, // en Voi
+        tokenId: initialPaymentToken, // en Voi
         decimals: 6,
       };
 
@@ -775,7 +801,15 @@ export const useNameRegistration = ({
     }
   };
 
-  const handleConfirmRenewVOI = async () => {
+  // TODO remove VOI
+  const handleConfirmRenewVOI = async (
+    name: string,
+    parentName: string,
+    registrarAppId: number,
+    paymentTokenAppId: number,
+    paymentTokenDecimals: number,
+    paymentTokenSymbol: string
+  ) => {
     if (!activeAccount) {
       enqueueSnackbar("Please connect your wallet to renew a name", {
         variant: "error",
@@ -783,16 +817,14 @@ export const useNameRegistration = ({
       return;
     }
 
-    const fullName = `${name}.voi`;
-
     try {
       setLoading(true);
       setError(null);
       const { algodClient, indexerClient } = getAlgorandClients();
 
-      const ctcInfoRegistrar = 797609;
+      const ctcInfoRegistrar = registrarAppId ?? 0;
       const ctcInfoResolver = 797608;
-      const ctcInfoEnVoi = 828295;
+      const ctcInfoEnVoi = paymentTokenAppId ?? 0;
 
       const ci = new CONTRACT(
         ctcInfoRegistrar,
@@ -810,14 +842,14 @@ export const useNameRegistration = ({
         resolver: ctcInfoResolver,
       };
 
-      const wVOI = {
+      const tok = {
         tokenId: ctcInfoEnVoi,
-        decimals: 6,
+        decimals: paymentTokenDecimals ?? 0,
       };
 
       const builder = {
         arc200: new CONTRACT(
-          wVOI.tokenId,
+          tok.tokenId,
           algodClient,
           indexerClient,
           abi.nt200,
@@ -850,7 +882,13 @@ export const useNameRegistration = ({
       };
 
       let customR;
-      for (const p0 of [0, 28500]) {
+      for (const p of [
+        [0, 0], // no createBalanceBox and no deposit
+        //[0, 1], // no createBalanceBox and deposit
+        // createBalanceBox and no deposit does not make sense
+        //[1, 1], // createBalanceBox and deposit
+      ]) {
+        const [p0, p1] = p;
         const buildN = [];
 
         // Create wVOI Balance for user if needed
@@ -860,23 +898,23 @@ export const useNameRegistration = ({
           )?.obj;
           buildN.push({
             ...txnO,
-            payment: p0,
+            payment: 28500,
             note: new TextEncoder().encode(
-              `envoi createBalanceBox ${price} ${paymentAssetSymbol} for ${name}.voi renewal`
+              `envoi createBalanceBox $${paymentTokenSymbol} for ${name} renewal`
             ),
           });
         }
 
         // Deposit VOI (NET -> ARC200)
-        {
+        if (p1 > 0) {
           const txnO = (
-            await builder.arc200.deposit(price * 10 ** wVOI.decimals)
+            await builder.arc200.deposit(price * 10 ** tok.decimals)
           )?.obj;
           buildN.push({
             ...txnO,
-            payment: price * 10 ** wVOI.decimals,
+            payment: price * 10 ** tok.decimals,
             note: new TextEncoder().encode(
-              `envoi deposit ${price} ${paymentAssetSymbol} for ${name}.voi renewal`
+              `envoi deposit ${price} ${paymentTokenSymbol} for ${name} renewal`
             ),
           });
         }
@@ -884,7 +922,7 @@ export const useNameRegistration = ({
         // Approve spending
         {
           const paramSpender = algosdk.getApplicationAddress(vns.registrar);
-          const paramAmount = price * 1e6;
+          const paramAmount = price * 10 ** tok.decimals;
           const txnO = (
             await builder.arc200.arc200_approve(paramSpender, paramAmount)
           )?.obj;
@@ -892,17 +930,34 @@ export const useNameRegistration = ({
             ...txnO,
             payment: 28501,
             note: new TextEncoder().encode(
-              `envoi arc200_approve ${price} ${paymentAssetSymbol} spending for ${name}.voi renewal`
+              `envoi arc200_approve ${price} ${paymentTokenSymbol} spending for ${name} renewal`
             ),
           });
         }
+
+        // arc200 transfer from user to registrar
+        // {
+        //   const txnO = (
+        //     await builder.arc200.arc200_transfer(
+        //       algosdk.getApplicationAddress(vns.registrar),
+        //       0
+        //     )
+        //   )?.obj;
+        //   buildN.push({
+        //     ...txnO,
+        //     payment: 28502,
+        //     note: new TextEncoder().encode(
+        //       `envoi arc200 transfer 0 ${paymentTokenSymbol} to ${name} renewal`
+        //     ),
+        //   });
+        // }
 
         // Renew name
         {
           const paramDuration = Number(duration) * 365 * 24 * 60 * 60; // Convert years to seconds
           const txnO = (
             await builder.registrar.renew(
-              stringToUint8Array(name, 32),
+              stringToUint8Array(`${name.split(".")[0]}`, 32),
               paramDuration
             )
           )?.obj;
@@ -910,7 +965,7 @@ export const useNameRegistration = ({
             ...txnO,
             payment: 336700,
             note: new TextEncoder().encode(
-              `envoi registrar renew ${name}.voi for ${duration} years`
+              `envoi registrar renew ${name} for ${duration} years`
             ),
           });
         }
@@ -959,10 +1014,24 @@ export const useNameRegistration = ({
     }
   };
 
-  const handleConfirmRegister = async () => {
+  const handleConfirmRegister = async (
+    name: string,
+    parentName: string,
+    parentAppId: number,
+    paymentToken: number,
+    paymentTokenDecimals: number,
+    paymentTokenSymbol: string
+  ) => {
     switch (paymentAssetSymbol) {
       case "VOI":
-        return handleConfirmRegisterVOI();
+        return handleConfirmRegisterVOI(
+          name,
+          parentName,
+          parentAppId,
+          paymentToken,
+          paymentTokenDecimals,
+          paymentTokenSymbol
+        );
       case "UNIT":
         return handleConfirmRegisterUNIT();
       default:

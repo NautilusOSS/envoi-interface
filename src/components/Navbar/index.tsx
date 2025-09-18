@@ -5,7 +5,7 @@ import DarkLogo from "/src/static/logo-dark.svg";
 import { RootState } from "../../store/store";
 import { useSelector } from "react-redux";
 import ThemeSelector from "../ThemeSelector";
-import { Button, Stack, Tooltip, CircularProgress } from "@mui/material";
+import { Button, Stack, Tooltip, CircularProgress, Box } from "@mui/material";
 import { useCopyToClipboard } from "usehooks-ts";
 import { toast } from "react-toastify";
 import ConnectWallet from "../ConnectWallet";
@@ -38,6 +38,7 @@ import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import { useOwnedStakingContract } from "@/hooks/staking";
 import { useOwnedARC72Token } from "@/hooks/arc72";
 import { getStakingWithdrawableAmount } from "@/utils/staking";
+import SearchInput from "../SearchInput";
 
 const AccountIcon = () => {
   return (
@@ -202,7 +203,7 @@ const Navbar: React.FC = () => {
       );
       ci.setFee(2000);
       const withdrawR = await ci.withdraw(
-        balanceData?.returnValue || BigInt(0)
+        (balanceData?.success && balanceData?.returnValue) || BigInt(0)
       );
       if (!withdrawR.success) return;
 
@@ -264,8 +265,17 @@ const Navbar: React.FC = () => {
               gap: "24px",
             }}
           >
+            {/* Global Search */}
+            <Box sx={{ display: { xs: "none", md: "block" } }}>
+              <SearchInput
+                variant="navbar"
+                placeholder="Search names, addresses..."
+                fullWidth={false}
+              />
+            </Box>
+            
             <NavLinks>
-              {navlinks.map((item, key) =>
+              {navlinks.map((item: { label: string; href: string }, key: number) =>
                 linkLabels[location.pathname] === item.label ? (
                   <ActiveNavLink
                     key={`${key}_${item?.label}`}

@@ -40,6 +40,8 @@ import LightModeIcon from "@mui/icons-material/LightMode";
 import { useTheme } from "../contexts/ThemeContext";
 import PersonIcon from "@mui/icons-material/Person";
 import EditIcon from "@mui/icons-material/Edit";
+import { useGlobalSearchShortcut } from "../hooks/useKeyboardShortcut";
+import GlobalSearchModal from "../components/GlobalSearchModal";
 import { CONTRACT, abi } from "ulujs";
 import { getAlgorandClients } from "@/wallets";
 import { APP_SPEC as ReverseRegistrarSpec } from "@/clients/ReverseRegistrarClient";
@@ -221,8 +223,14 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
   );
   const [collectionsModalOpen, setCollectionsModalOpen] = useState(false);
   const [stakingModalOpen, setStakingModalOpen] = useState(false);
+  const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
 
   const { balance, loading } = useVoiBalance(activeAddress, selectedNetwork);
+
+  // Global search keyboard shortcut
+  useGlobalSearchShortcut(() => {
+    setGlobalSearchOpen(true);
+  });
 
   useEffect(() => {
     const fetchBalance = async () => {
@@ -840,17 +848,6 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
                   >
                     <SettingsIcon />
                   </IconButton>
-                  <IconButton
-                    onClick={handleDisconnect}
-                    sx={{
-                      color: "#8B5CF6",
-                      "&:hover": {
-                        backgroundColor: "rgba(139, 92, 246, 0.04)",
-                      },
-                    }}
-                  >
-                    <PowerSettingsNewIcon />
-                  </IconButton>
                 </Stack>
 
                 <ListItem
@@ -1096,6 +1093,15 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
                   >
                     {selectedNetwork === "mainnet" ? "Mainnet" : "Testnet"}
                   </Typography>
+                  {/* Add disconnect button here */}
+                  <IconButton
+                    onClick={handleDisconnect}
+                    sx={{
+                      color: "#8B5CF6",
+                    }}
+                  >
+                    <PowerSettingsNewIcon />
+                  </IconButton>
                 </Stack>
               </Stack>
             </>
@@ -1384,6 +1390,11 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
       <StakingModal
         open={stakingModalOpen}
         onClose={() => setStakingModalOpen(false)}
+      />
+
+      <GlobalSearchModal
+        open={globalSearchOpen}
+        onClose={() => setGlobalSearchOpen(false)}
       />
 
       <Box

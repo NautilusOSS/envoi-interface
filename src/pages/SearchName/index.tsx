@@ -27,7 +27,7 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { useNavigate } from "react-router-dom";
 import { getNamePrice } from "../../utils/price";
 import { rsvps } from "../../constants/rsvps";
-import { RegistryService } from "@/services/registry";
+import SearchService, { SearchResult } from "../../services/SearchService";
 import { debounce } from 'lodash';
 
 type NameStatus = "Registered" | "Available" | "Grace Period" | "Reserved";
@@ -88,86 +88,64 @@ const SearchName: React.FC = () => {
   const [toastMessage, setToastMessage] = useState("");
   const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Initialize SearchService
+  const searchService = SearchService.getInstance();
 
   useEffect(() => {
     if (searchTerm.length > 0) {
-      const searchTermWithVoi = searchTerm.endsWith('.voi') 
-        ? searchTerm 
-        : `${searchTerm}.voi`;
-      
-      const checkNameAvailability = async () => {
+      const performSearch = async () => {
         setIsChecking(true);
         setShowSuggestions(false);
+        setError(null);
 
         try {
-          // First check if name is reserved
-          const isReserved = searchTermWithVoi in rsvps;
-          const ownerAddress = isReserved ? rsvps[searchTermWithVoi] : null;
+          // Use SearchService to get results
+          const results = await searchService.search(searchTerm);
+          
+          // Convert SearchService results to our display format
+          const displayResults = results.map(result => {
+            // Check if name is reserved
+            const isReserved = result.title in rsvps;
+            const ownerAddress = isReserved ? rsvps[result.title] : result.owner;
+            
+            let status: NameStatus;
+            if (isReserved) {
+              status = "Reserved";
+            } else if (result.status === "registered") {
+              status = "Registered";
+            } else if (result.status === "available") {
+              status = "Available";
+            } else {
+              status = "Available"; // Default fallback
+            }
 
-          if (isReserved) {
-            const suggestions: NameSuggestion[] = [
-              {
-                name: searchTermWithVoi,
-                status: "Reserved",
-                owner: ownerAddress
-              },
-              {
-                name: `my${searchTerm}.voi`,
-                status: "Available",
-                price: getNamePrice(`my${searchTerm}`),
-              },
-              {
-                name: `${searchTerm}123.voi`,
-                status: "Available",
-                price: getNamePrice(`${searchTerm}123`),
-              },
-            ];
-            setSuggestions(suggestions);
-            setShowSuggestions(true);
-            return;
-          }
+            return {
+              name: result.title,
+              status,
+              owner: ownerAddress,
+              price: result.price,
+            };
+          });
 
-          // If not reserved, check registration status
-          const registry = new RegistryService("mainnet");
-          const owner = await registry.ownerOf(searchTermWithVoi);
-          const isRegistered = owner && owner !== "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5HFKQ";
-
-          const suggestions: NameSuggestion[] = [
-            {
-              name: searchTermWithVoi,
-              status: isRegistered ? "Registered" : "Available",
-              price: isRegistered ? undefined : getNamePrice(searchTerm),
-              owner: isRegistered ? owner : undefined
-            },
-            {
-              name: `my${searchTerm}.voi`,
-              status: "Available",
-              price: getNamePrice(`my${searchTerm}`),
-            },
-            {
-              name: `${searchTerm}123.voi`,
-              status: "Available",
-              price: getNamePrice(`${searchTerm}123`),
-            },
-          ];
-          setSuggestions(suggestions);
+          setSuggestions(displayResults);
           setShowSuggestions(true);
         } catch (error) {
-          console.error('Error checking name availability:', error);
-          setError('Failed to check name availability');
+          console.error('Error performing search:', error);
+          setError('Failed to search names');
         } finally {
           setIsChecking(false);
         }
       };
 
-      // Debounce the availability check
-      const timeoutId = setTimeout(checkNameAvailability, 500);
+      // Debounce the search
+      const timeoutId = setTimeout(performSearch, 500);
       return () => clearTimeout(timeoutId);
     } else {
       setSuggestions([]);
       setShowSuggestions(false);
     }
-  }, [searchTerm]);
+  }, [searchTerm, searchService]);
 
   const renderTitle = () => {
     if (isMobile) {
@@ -207,8 +185,18 @@ const SearchName: React.FC = () => {
     if (suggestion.status === "Available") {
       setSearchTerm(suggestion.name);
       setShowSuggestions(false);
-      const baseName = suggestion.name.replace(".voi", "");
-      navigate(`/register/${baseName}`);
+      
+      // Handle different domain types
+      if (suggestion.name.endsWith('.founder.voi')) {
+        // For .founder.voi names: navigate to /register/founder.voi/subname
+        const parts = suggestion.name.split('.');
+        const subname = parts[0]; // e.g., "bagman" from "bagman.founder.voi"
+        navigate(`/register/founder.voi/${subname}`);
+      } else if (suggestion.name.endsWith('.voi')) {
+        // For .voi names: navigate to /register/name
+        const baseName = suggestion.name.replace(".voi", "");
+        navigate(`/register/${baseName}`);
+      }
     }
   };
 
@@ -403,8 +391,7 @@ const SearchName: React.FC = () => {
                                 suggestion.status === "Available"
                                   ? "#8B5CF6"
                                   : "text.secondary",
-                              opacity:
-                                suggestion.status === "Not Supported" ? 0 : 1,
+                              opacity: 1,
                             }}
                           />
                         </Box>

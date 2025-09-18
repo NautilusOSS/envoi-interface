@@ -1,4 +1,9 @@
-export const navlinks = [
+interface NavLink {
+  label: string;
+  href: string;
+}
+
+export const navlinks: NavLink[] = [
   {
     label: "Listings",
     href: "/listing",

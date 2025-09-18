@@ -47,16 +47,17 @@ import LinkIcon from "@mui/icons-material/Link";
 import { ARC72Service } from "@/services/arc72";
 import { zeroAddress } from "@/contants/accounts";
 import { useSnackbar } from "notistack";
-import { FastForwardIcon, SendIcon } from "lucide-react";
+import { FastForwardIcon, SendIcon, PlusIcon } from "lucide-react";
 import CloseIcon from "@mui/icons-material/Close";
 import { getAlgorandClients } from "@/wallets";
 import algosdk from "algosdk";
-import { APP_SPEC as VNSRegistrarSpec } from "@/clients/VNSRegistrarClient";
+import { APP_SPEC as VNSRegistrarSpec } from "../clients/VNSRegistrarClient";
+import { APP_SPEC as VNSRegistrySpec } from "@/clients/VNSRegistryClient";
+import { APP_SPEC as VNSPublicResolverSpec } from "@/clients/VNSPublicResolverClient";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { TRANSACTION_FEES } from "@/constants/fees";
 import { useNameRegistration } from "@/hooks/useNameRegistration";
 import { useNameRegistry } from "@/hooks/useNameRegistry";
-import { VnsRegistrarClient } from "@/clients/VNSRegistrarClient";
 
 type NetworkType = "mainnet" | "testnet";
 
@@ -145,6 +146,7 @@ interface ExtendModalProps {
   onClose: () => void;
   name: string;
   onConfirm: (duration: string) => void;
+  paymentTokenSymbol: string;
 }
 
 const ExtendModal: React.FC<ExtendModalProps> = ({
@@ -152,6 +154,7 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
   onClose,
   name,
   onConfirm,
+  paymentTokenSymbol,
 }) => {
   const { theme } = useTheme();
   const { calculateTotalCost, setDuration, duration, getPriceBreakdownJSX } =
@@ -162,11 +165,14 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
         className="edit-modal"
         sx={{
           bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
-          border: `1px solid ${theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"}`,
+          border: `1px solid ${
+            theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+          }`,
           borderRadius: "12px",
-          boxShadow: theme.palette.mode === "dark" 
-            ? "0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.4)"
-            : "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.4)"
+              : "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
           p: 3,
           position: "relative",
           minWidth: "400px",
@@ -174,9 +180,9 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
           width: "90vw",
           maxHeight: "90vh",
           overflowY: "auto",
-          display: "flex", 
-          gap: 2, 
-          mb: 2, 
+          display: "flex",
+          gap: 2,
+          mb: 2,
           flexDirection: "column",
         }}
       >
@@ -224,10 +230,12 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
               p: 0,
               borderRadius: "50%",
               border: "2px solid",
-              borderColor: theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB",
+              borderColor:
+                theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB",
               color: theme.palette.mode === "dark" ? "#9CA3AF" : "#374151",
               "&:hover": {
-                borderColor: theme.palette.mode === "dark" ? "#6B7280" : "#D1D5DB",
+                borderColor:
+                  theme.palette.mode === "dark" ? "#6B7280" : "#D1D5DB",
                 bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               },
             },
@@ -235,11 +243,7 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
         >
           <Button
             variant="outlined"
-            onClick={() =>
-              setDuration((prev) =>
-                parseInt(prev) > 1 ? String(parseInt(prev) - 1) : "1"
-              )
-            }
+            onClick={() => setDuration((prev) => (prev > 1 ? prev - 1 : 1))}
           >
             -
           </Button>
@@ -254,11 +258,11 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
               fontSize: "2rem",
             }}
           >
-            {duration} year{parseInt(duration) !== 1 ? "s" : ""}
+            {duration} year{duration !== 1 ? "s" : ""}
           </Typography>
           <Button
             variant="outlined"
-            onClick={() => setDuration((prev) => String(parseInt(prev) + 1))}
+            onClick={() => setDuration((prev) => prev + 1)}
           >
             +
           </Button>
@@ -282,16 +286,16 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
               mb: 1,
             }}
           >
-            <Typography 
-              variant="body2" 
-              sx={{ 
+            <Typography
+              variant="body2"
+              sx={{
                 color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
               }}
             >
               Extension Cost
             </Typography>
             <Tooltip title={getPriceBreakdownJSX()} arrow>
-              <IconButton 
+              <IconButton
                 size="small"
                 sx={{
                   color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
@@ -301,19 +305,20 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
               </IconButton>
             </Tooltip>
           </Box>
-          <Typography 
-            variant="h6" 
-            sx={{ 
+          <Typography
+            variant="h6"
+            sx={{
               color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
               textAlign: "center",
               fontWeight: 600,
             }}
           >
-            {calculateTotalCost().namePrice.toLocaleString()} VOI
+            {calculateTotalCost().namePrice.toLocaleString()}{" "}
+            {paymentTokenSymbol}
           </Typography>
           <Typography
             variant="caption"
-            sx={{ 
+            sx={{
               color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
               textAlign: "center",
               display: "block",
@@ -323,14 +328,17 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
           </Typography>
           <Typography
             variant="body2"
-            sx={{ 
-              mt: 1, 
+            sx={{
+              mt: 1,
               fontWeight: "bold",
               color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
               textAlign: "center",
             }}
           >
-            Total: {calculateTotalCost().total.toLocaleString()} VOI
+            Total:{" "}
+            {paymentTokenSymbol === "VOI"
+              ? `${calculateTotalCost().total.toLocaleString()} VOI`
+              : `${calculateTotalCost().namePrice.toLocaleString()} ${paymentTokenSymbol} + ${calculateTotalCost().fees.toLocaleString()} VOI`}
           </Typography>
         </Box>
 
@@ -347,12 +355,15 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
             onClick={onClose}
             sx={{
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
-              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"}`,
+              border: `1px solid ${
+                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
+              }`,
               color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
               fontWeight: 600,
               "&:hover": {
                 bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#F3F4F6",
-                borderColor: theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+                borderColor:
+                  theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
               },
             }}
           >
@@ -361,12 +372,13 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
           <Button
             fullWidth
             variant="contained"
-            onClick={() => onConfirm(duration)}
+            onClick={() => onConfirm(String(duration))}
             sx={{
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#6366F1",
               color: theme.palette.mode === "dark" ? "#F9FAFB" : "white",
               fontWeight: 600,
-              border: theme.palette.mode === "dark" ? "1px solid #4B5563" : "none",
+              border:
+                theme.palette.mode === "dark" ? "1px solid #4B5563" : "none",
               "&:hover": {
                 bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#5B21B6",
                 borderColor: theme.palette.mode === "dark" ? "#6B7280" : "none",
@@ -387,12 +399,22 @@ interface ConfirmExtendModalProps {
   name: string;
   duration: string;
   onConfirm: () => void;
+  parentName: string;
+  parentAppId: number;
+  paymentToken: number;
+  paymentTokenDecimals: number;
+  paymentTokenSymbol: string;
 }
 
 const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
   open,
   onClose,
   name,
+  parentName,
+  parentAppId,
+  paymentToken,
+  paymentTokenDecimals,
+  paymentTokenSymbol,
   duration,
   onConfirm,
 }) => {
@@ -409,13 +431,20 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
   } = useNameRegistration({
     initialName: name,
     initialDuration: parseInt(duration),
+    initialParentName: parentName,
+    initialParentAppId: parentAppId,
+    initialPaymentToken: paymentToken,
+    initialPaymentTokenDecimals: paymentTokenDecimals,
+    initialPaymentTokenSymbol: paymentTokenSymbol,
   });
+
+  console.log("name", name);
 
   const { getExpiry } = useNameRegistry(name);
 
   useEffect(() => {
     setDuration(parseInt(duration));
-  }, [duration]);
+  }, [duration, setDuration]);
 
   const expiryDate = useMemo(() => {
     const expiry = getExpiry();
@@ -428,7 +457,14 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
   const handleConfirm = async () => {
     setIsConfirming(true);
     try {
-      await handleConfirmRenewVOI();
+      await handleConfirmRenewVOI(
+        name,
+        parentName,
+        parentAppId,
+        paymentToken,
+        paymentTokenDecimals,
+        paymentTokenSymbol
+      );
       onClose();
     } finally {
       setIsConfirming(false);
@@ -437,15 +473,18 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
 
   return (
     <Modal open={open} onClose={onClose}>
-      <Box 
+      <Box
         className="edit-modal"
         sx={{
           bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
-          border: `1px solid ${theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"}`,
+          border: `1px solid ${
+            theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+          }`,
           borderRadius: "12px",
-          boxShadow: theme.palette.mode === "dark" 
-            ? "0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.4)"
-            : "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.4)"
+              : "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
           p: 3,
           position: "relative",
           minWidth: "400px",
@@ -468,9 +507,9 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
         >
           Confirm Details
         </Typography>
-        
-        <Typography 
-          sx={{ 
+
+        <Typography
+          sx={{
             mb: 3,
             color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
             textAlign: "center",
@@ -488,19 +527,21 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
               p: 2,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
-              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"}`,
+              border: `1px solid ${
+                theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+              }`,
             }}
           >
-            <Typography 
-              sx={{ 
+            <Typography
+              sx={{
                 color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
                 fontWeight: 500,
               }}
             >
               Name
             </Typography>
-            <Typography 
-              sx={{ 
+            <Typography
+              sx={{
                 color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
                 fontWeight: 600,
               }}
@@ -516,19 +557,21 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
               p: 2,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
-              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"}`,
+              border: `1px solid ${
+                theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+              }`,
             }}
           >
-            <Typography 
-              sx={{ 
+            <Typography
+              sx={{
                 color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
                 fontWeight: 500,
               }}
             >
               Action
             </Typography>
-            <Typography 
-              sx={{ 
+            <Typography
+              sx={{
                 color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
                 fontWeight: 600,
               }}
@@ -544,11 +587,13 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
               p: 2,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
-              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"}`,
+              border: `1px solid ${
+                theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+              }`,
             }}
           >
-            <Typography 
-              sx={{ 
+            <Typography
+              sx={{
                 color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
                 fontWeight: 500,
               }}
@@ -556,17 +601,17 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
               Duration
             </Typography>
             <Box sx={{ textAlign: "right" }}>
-              <Typography 
-                sx={{ 
+              <Typography
+                sx={{
                   color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
                   fontWeight: 600,
                 }}
               >
                 {duration} year{parseInt(duration) !== 1 ? "s" : ""}
               </Typography>
-              <Typography 
-                variant="caption" 
-                sx={{ 
+              <Typography
+                variant="caption"
+                sx={{
                   color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
                 }}
               >
@@ -587,31 +632,34 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
               p: 2,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
-              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"}`,
+              border: `1px solid ${
+                theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+              }`,
             }}
           >
-            <Typography 
-              sx={{ 
+            <Typography
+              sx={{
                 color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
                 fontWeight: 500,
               }}
             >
               Cost
             </Typography>
-            <Typography 
-              sx={{ 
+            <Typography
+              sx={{
                 color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
                 fontWeight: 600,
               }}
             >
               {calculateTotalCost().namePrice.toLocaleString()}{" "}
-              {paymentAssetSymbol} +{" "}
+              {paymentTokenSymbol} +{" "}
               {calculateTotalCost().fees.toLocaleString()} VOI
               <Tooltip title={getPriceBreakdownJSX()} arrow>
-                <IconButton 
+                <IconButton
                   size="small"
                   sx={{
-                    color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                    color:
+                      theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
                   }}
                 >
                   <HelpOutlineIcon />
@@ -627,19 +675,23 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
             variant="outlined"
             onClick={onClose}
             disabled={isConfirming}
-            sx={{ 
+            sx={{
               flex: 1,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
-              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"}`,
+              border: `1px solid ${
+                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
+              }`,
               color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
               fontWeight: 600,
               "&:hover": {
                 bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#F3F4F6",
-                borderColor: theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+                borderColor:
+                  theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
               },
               "&:disabled": {
                 bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#F3F4F6",
-                borderColor: theme.palette.mode === "dark" ? "#374151" : "#E5E7EB",
+                borderColor:
+                  theme.palette.mode === "dark" ? "#374151" : "#E5E7EB",
                 color: theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
               },
             }}
@@ -651,12 +703,13 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
             variant="contained"
             onClick={handleConfirm}
             disabled={isConfirming}
-            sx={{ 
+            sx={{
               flex: 1,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#6366F1",
               color: theme.palette.mode === "dark" ? "#F9FAFB" : "white",
               fontWeight: 600,
-              border: theme.palette.mode === "dark" ? "1px solid #4B5563" : "none",
+              border:
+                theme.palette.mode === "dark" ? "1px solid #4B5563" : "none",
               "&:hover": {
                 bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#5B21B6",
                 borderColor: theme.palette.mode === "dark" ? "#6B7280" : "none",
@@ -724,15 +777,18 @@ const TransferModal: React.FC<TransferModalProps> = ({
 
   return (
     <Modal open={open} onClose={onClose}>
-      <Box 
+      <Box
         className="edit-modal"
         sx={{
           bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
-          border: `1px solid ${theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"}`,
+          border: `1px solid ${
+            theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+          }`,
           borderRadius: "12px",
-          boxShadow: theme.palette.mode === "dark" 
-            ? "0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.4)"
-            : "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.4)"
+              : "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
         }}
       >
         <IconButton
@@ -767,14 +823,15 @@ const TransferModal: React.FC<TransferModalProps> = ({
 
         <Typography
           variant="body2"
-          sx={{ 
-            mb: 3, 
+          sx={{
+            mb: 3,
             textAlign: "center",
             color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
             lineHeight: 1.5,
           }}
         >
-          Transfer ownership of this name to another address. This action cannot be undone.
+          Transfer ownership of this name to another address. This action cannot
+          be undone.
         </Typography>
 
         <TextField
@@ -789,18 +846,21 @@ const TransferModal: React.FC<TransferModalProps> = ({
               ? "Please enter a valid Algorand address"
               : ""
           }
-          sx={{ 
+          sx={{
             mb: 3,
             "& .MuiOutlinedInput-root": {
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               "& fieldset": {
-                borderColor: theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
+                borderColor:
+                  theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
               },
               "&:hover fieldset": {
-                borderColor: theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+                borderColor:
+                  theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
               },
               "&.Mui-focused fieldset": {
-                borderColor: theme.palette.mode === "dark" ? "#EF4444" : "#EF4444",
+                borderColor:
+                  theme.palette.mode === "dark" ? "#EF4444" : "#EF4444",
               },
             },
             "& .MuiInputLabel-root": {
@@ -831,12 +891,15 @@ const TransferModal: React.FC<TransferModalProps> = ({
             onClick={onClose}
             sx={{
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
-              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"}`,
+              border: `1px solid ${
+                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
+              }`,
               color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
               fontWeight: 600,
               "&:hover": {
                 bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#F3F4F6",
-                borderColor: theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+                borderColor:
+                  theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
               },
             }}
           >
@@ -851,7 +914,8 @@ const TransferModal: React.FC<TransferModalProps> = ({
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#6366F1",
               color: theme.palette.mode === "dark" ? "#F9FAFB" : "white",
               fontWeight: 600,
-              border: theme.palette.mode === "dark" ? "1px solid #4B5563" : "none",
+              border:
+                theme.palette.mode === "dark" ? "1px solid #4B5563" : "none",
               "&:hover": {
                 bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#5B21B6",
                 borderColor: theme.palette.mode === "dark" ? "#6B7280" : "none",
@@ -863,6 +927,143 @@ const TransferModal: React.FC<TransferModalProps> = ({
             }}
           >
             Transfer
+          </Button>
+        </Box>
+      </Box>
+    </Modal>
+  );
+};
+
+interface ConfirmSetDefaultModalProps {
+  open: boolean;
+  onClose: () => void;
+  name: string;
+  onConfirm: () => void;
+}
+
+const ConfirmSetDefaultModal: React.FC<ConfirmSetDefaultModalProps> = ({
+  open,
+  onClose,
+  name,
+  onConfirm,
+}) => {
+  const { theme } = useTheme();
+  const [isConfirming, setIsConfirming] = useState(false);
+
+  const handleConfirm = async () => {
+    setIsConfirming(true);
+    try {
+      await onConfirm();
+      onClose();
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose}>
+      <Box
+        className="edit-modal"
+        sx={{
+          bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+          border: `1px solid ${
+            theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+          }`,
+          borderRadius: "12px",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.4)"
+              : "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+          p: 3,
+          position: "relative",
+          minWidth: "400px",
+          maxWidth: "500px",
+          width: "90vw",
+          maxHeight: "90vh",
+          overflowY: "auto",
+        }}
+      >
+        <Typography
+          variant="h6"
+          component="h2"
+          sx={{
+            mb: 3,
+            textAlign: "center",
+            fontSize: "1.5rem",
+            fontWeight: 600,
+            color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+          }}
+        >
+          Set as Default Name
+        </Typography>
+
+        <Typography
+          sx={{
+            mb: 3,
+            color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+            textAlign: "center",
+          }}
+        >
+          Are you sure you want to set <strong>{name}</strong> as your default
+          name? This will make it your primary identity across the platform.
+        </Typography>
+
+        <Box sx={{ display: "flex", gap: 2 }}>
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={onClose}
+            disabled={isConfirming}
+            sx={{
+              flex: 1,
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+              border: `1px solid ${
+                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
+              }`,
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
+              fontWeight: 600,
+              "&:hover": {
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#F3F4F6",
+                borderColor:
+                  theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+              },
+              "&:disabled": {
+                bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#F3F4F6",
+                borderColor:
+                  theme.palette.mode === "dark" ? "#374151" : "#E5E7EB",
+                color: theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+              },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={handleConfirm}
+            disabled={isConfirming}
+            sx={{
+              flex: 1,
+              bgcolor: "#10B981",
+              color: "white",
+              fontWeight: 600,
+              "&:hover": {
+                bgcolor: "#059669",
+              },
+              "&:disabled": {
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
+                color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+              },
+            }}
+          >
+            {isConfirming ? (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <CircularProgress size={20} color="inherit" />
+                Setting...
+              </Box>
+            ) : (
+              "Set as Default"
+            )}
           </Button>
         </Box>
       </Box>
@@ -902,15 +1103,18 @@ const ConfirmTransferModal: React.FC<ConfirmTransferModalProps> = ({
 
   return (
     <Modal open={open} onClose={onClose}>
-      <Box 
+      <Box
         className="edit-modal"
         sx={{
           bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
-          border: `1px solid ${theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"}`,
+          border: `1px solid ${
+            theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+          }`,
           borderRadius: "12px",
-          boxShadow: theme.palette.mode === "dark" 
-            ? "0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.4)"
-            : "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.4)"
+              : "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
         }}
       >
         <Typography
@@ -926,21 +1130,23 @@ const ConfirmTransferModal: React.FC<ConfirmTransferModalProps> = ({
         >
           Confirm Transfer
         </Typography>
-        
+
         <Box
           sx={{
             mb: 3,
             p: 2,
             bgcolor: theme.palette.mode === "dark" ? "#374151" : "#FEF2F2",
-            border: `1px solid ${theme.palette.mode === "dark" ? "#EF4444" : "#FECACA"}`,
+            border: `1px solid ${
+              theme.palette.mode === "dark" ? "#EF4444" : "#FECACA"
+            }`,
             borderRadius: "8px",
             display: "flex",
             alignItems: "center",
             gap: 1,
           }}
         >
-          <Typography 
-            sx={{ 
+          <Typography
+            sx={{
               color: theme.palette.mode === "dark" ? "#FCA5A5" : "#DC2626",
               fontWeight: 600,
               fontSize: "1rem",
@@ -959,19 +1165,21 @@ const ConfirmTransferModal: React.FC<ConfirmTransferModalProps> = ({
               p: 2,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
-              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"}`,
+              border: `1px solid ${
+                theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+              }`,
             }}
           >
-            <Typography 
-              sx={{ 
+            <Typography
+              sx={{
                 color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
                 fontWeight: 500,
               }}
             >
               Name
             </Typography>
-            <Typography 
-              sx={{ 
+            <Typography
+              sx={{
                 color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
                 fontWeight: 600,
               }}
@@ -987,19 +1195,21 @@ const ConfirmTransferModal: React.FC<ConfirmTransferModalProps> = ({
               p: 2,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
-              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"}`,
+              border: `1px solid ${
+                theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+              }`,
             }}
           >
-            <Typography 
-              sx={{ 
+            <Typography
+              sx={{
                 color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
                 fontWeight: 500,
               }}
             >
               Current Owner
             </Typography>
-            <Typography 
-              sx={{ 
+            <Typography
+              sx={{
                 color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
                 fontWeight: 600,
                 fontFamily: "monospace",
@@ -1017,19 +1227,21 @@ const ConfirmTransferModal: React.FC<ConfirmTransferModalProps> = ({
               p: 2,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
-              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"}`,
+              border: `1px solid ${
+                theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+              }`,
             }}
           >
-            <Typography 
-              sx={{ 
+            <Typography
+              sx={{
                 color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
                 fontWeight: 500,
               }}
             >
               New Owner
             </Typography>
-            <Typography 
-              sx={{ 
+            <Typography
+              sx={{
                 color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
                 fontWeight: 600,
                 fontFamily: "monospace",
@@ -1047,19 +1259,23 @@ const ConfirmTransferModal: React.FC<ConfirmTransferModalProps> = ({
             variant="outlined"
             onClick={onClose}
             disabled={isConfirming}
-            sx={{ 
+            sx={{
               flex: 1,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
-              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"}`,
+              border: `1px solid ${
+                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
+              }`,
               color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
               fontWeight: 600,
               "&:hover": {
                 bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#F3F4F6",
-                borderColor: theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+                borderColor:
+                  theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
               },
               "&:disabled": {
                 bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#F3F4F6",
-                borderColor: theme.palette.mode === "dark" ? "#374151" : "#E5E7EB",
+                borderColor:
+                  theme.palette.mode === "dark" ? "#374151" : "#E5E7EB",
                 color: theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
               },
             }}
@@ -1071,7 +1287,7 @@ const ConfirmTransferModal: React.FC<ConfirmTransferModalProps> = ({
             variant="contained"
             onClick={handleConfirm}
             disabled={isConfirming}
-            sx={{ 
+            sx={{
               flex: 1,
               bgcolor: "#EF4444",
               color: "white",
@@ -1092,6 +1308,249 @@ const ConfirmTransferModal: React.FC<ConfirmTransferModalProps> = ({
               </Box>
             ) : (
               "Confirm Transfer"
+            )}
+          </Button>
+        </Box>
+      </Box>
+    </Modal>
+  );
+};
+
+interface MintModalProps {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  mintToAddress: string;
+  setMintToAddress: (address: string) => void;
+  profileName: string;
+  isPendingTx: boolean;
+}
+
+const MintModal: React.FC<MintModalProps> = ({
+  open,
+  onClose,
+  onConfirm,
+  mintToAddress,
+  setMintToAddress,
+  profileName,
+  isPendingTx,
+}) => {
+  const { theme } = useTheme();
+  const [isValidAddress, setIsValidAddress] = useState(false);
+
+  const validateAddress = (address: string) => {
+    try {
+      algosdk.decodeAddress(address);
+      setIsValidAddress(true);
+    } catch {
+      setIsValidAddress(false);
+    }
+  };
+
+  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const address = e.target.value;
+    setMintToAddress(address);
+    validateAddress(address);
+  };
+
+  const handleConfirm = () => {
+    if (isValidAddress && mintToAddress.trim() && profileName.trim()) {
+      onConfirm();
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose}>
+      <Box
+        className="edit-modal"
+        sx={{
+          bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+          border: `1px solid ${
+            theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+          }`,
+          borderRadius: "12px",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.4)"
+              : "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+          p: 3,
+          position: "relative",
+          minWidth: "400px",
+          maxWidth: "500px",
+          width: "90vw",
+          maxHeight: "90vh",
+          overflowY: "auto",
+        }}
+      >
+        <IconButton
+          onClick={onClose}
+          sx={{
+            position: "absolute",
+            right: 16,
+            top: 16,
+            color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+            "&:hover": {
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F3F4F6",
+            },
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+
+        <Typography
+          variant="h6"
+          component="h2"
+          sx={{
+            mb: 3,
+            textAlign: "center",
+            fontSize: "1.25rem",
+            fontWeight: 600,
+            color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+            pt: 2,
+          }}
+        >
+          Mint {profileName}
+        </Typography>
+
+        <Typography
+          variant="body2"
+          sx={{
+            mb: 3,
+            textAlign: "center",
+            color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+            lineHeight: 1.5,
+          }}
+        >
+          Mint <strong>{profileName}</strong> NFT to the specified address. This
+          action requires controller permissions.
+        </Typography>
+
+        <TextField
+          fullWidth
+          label="Name to Mint"
+          value={profileName}
+          disabled
+          sx={{
+            mb: 3,
+            "& .MuiOutlinedInput-root": {
+              bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#F3F4F6",
+              "& fieldset": {
+                borderColor:
+                  theme.palette.mode === "dark" ? "#374151" : "#D1D5DB",
+              },
+            },
+            "& .MuiInputLabel-root": {
+              color: theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+            },
+            "& .MuiInputBase-input": {
+              color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+            },
+          }}
+        />
+
+        <TextField
+          fullWidth
+          label="Recipient Address"
+          placeholder="Enter Algorand address"
+          value={mintToAddress}
+          onChange={handleAddressChange}
+          error={mintToAddress.length > 0 && !isValidAddress}
+          helperText={
+            mintToAddress.length > 0 && !isValidAddress
+              ? "Please enter a valid Algorand address"
+              : ""
+          }
+          sx={{
+            mb: 3,
+            "& .MuiOutlinedInput-root": {
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+              "& fieldset": {
+                borderColor:
+                  theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
+              },
+              "&:hover fieldset": {
+                borderColor:
+                  theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+              },
+              "&.Mui-focused fieldset": {
+                borderColor:
+                  theme.palette.mode === "dark" ? "#10B981" : "#10B981",
+              },
+            },
+            "& .MuiInputLabel-root": {
+              color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+              "&.Mui-focused": {
+                color: theme.palette.mode === "dark" ? "#10B981" : "#10B981",
+              },
+            },
+            "& .MuiInputBase-input": {
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+            },
+            "& .MuiFormHelperText-root": {
+              color: theme.palette.mode === "dark" ? "#10B981" : "#10B981",
+            },
+          }}
+        />
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 2,
+          }}
+        >
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={onClose}
+            disabled={isPendingTx}
+            sx={{
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+              border: `1px solid ${
+                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
+              }`,
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
+              fontWeight: 600,
+              "&:hover": {
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#F3F4F6",
+                borderColor:
+                  theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+              },
+              "&:disabled": {
+                bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#F3F4F6",
+                borderColor:
+                  theme.palette.mode === "dark" ? "#374151" : "#E5E7EB",
+                color: theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+              },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={handleConfirm}
+            disabled={!isValidAddress || !mintToAddress.trim() || isPendingTx}
+            sx={{
+              bgcolor: "#10B981",
+              color: "white",
+              fontWeight: 600,
+              "&:hover": {
+                bgcolor: "#059669",
+              },
+              "&:disabled": {
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
+                color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+              },
+            }}
+          >
+            {isPendingTx ? (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <CircularProgress size={20} color="inherit" />
+                Minting...
+              </Box>
+            ) : (
+              "Mint"
             )}
           </Button>
         </Box>
@@ -1146,7 +1605,129 @@ const ProfilePage: React.FC = () => {
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isConfirmTransferModalOpen, setIsConfirmTransferModalOpen] =
     useState(false);
-  const [newOwnerForTransfer, setNewOwnerForTransfer] = useState<string | null>(null);
+  const [newOwnerForTransfer, setNewOwnerForTransfer] = useState<string | null>(
+    null
+  );
+  const [isSetDefaultModalOpen, setIsSetDefaultModalOpen] = useState(false);
+  const [parentName, setParentName] = useState<string>("voi");
+  const [parentAppId, setParentAppId] = useState<number>(797609);
+  const [paymentToken, setPaymentToken] = useState<number>(828295);
+  const [paymentTokenDecimals, setPaymentTokenDecimals] = useState<number>(6);
+  const [paymentTokenSymbol, setPaymentTokenSymbol] = useState<string>("VOI");
+
+  const [isController, setIsController] = useState<boolean>(false);
+  const [isMintModalOpen, setIsMintModalOpen] = useState(false);
+  const [mintToAddress, setMintToAddress] = useState<string>("");
+
+  useEffect(() => {
+    if (name) {
+      const parentName = name.split(".").slice(1).join(".");
+      setParentName(parentName);
+      (async () => {
+        const { algodClient, indexerClient } = getAlgorandClients();
+        const ci = new CONTRACT(
+          Number(797607),
+          algodClient,
+          indexerClient,
+          { ...VNSRegistrySpec.contract, events: [] },
+          {
+            addr:
+              activeAccount?.address || algosdk.getApplicationAddress(797607),
+            sk: new Uint8Array(),
+          }
+        );
+        const ownerOfR = await ci.ownerOf(await namehash(parentName));
+        const nodeOwner = ownerOfR.returnValue;
+
+        console.log("nodeOwner", nodeOwner);
+
+        const accInfo = await indexerClient
+          .searchForTransactions()
+          .address(nodeOwner)
+          .do();
+        const applicationTransaction = accInfo.transactions.find(
+          (txn: any) =>
+            txn["tx-type"] === "appl" &&
+            algosdk.getApplicationAddress(
+              txn["application-transaction"]["application-id"]
+            ) === nodeOwner
+        );
+        if (!applicationTransaction) {
+          setParentAppId(0);
+        }
+        const appId =
+          applicationTransaction["application-transaction"]["application-id"];
+        setParentAppId(appId);
+
+        console.log("appId", appId);
+
+        const ciRegistrar = new CONTRACT(
+          appId,
+          algodClient,
+          indexerClient,
+          { ...VNSRegistrarSpec.contract, events: [] },
+          {
+            addr:
+              activeAccount?.address || algosdk.getApplicationAddress(appId),
+            sk: new Uint8Array(),
+          }
+        );
+        const getPaymentTokenR = await ciRegistrar.get_payment_token();
+        if (!getPaymentTokenR.success) {
+          setPaymentToken(0);
+          setPaymentTokenDecimals(0);
+          setPaymentTokenSymbol("");
+        } else {
+          const paymentToken = Number(getPaymentTokenR.returnValue);
+          setPaymentToken(paymentToken);
+          const ciArc200 = new CONTRACT(
+            paymentToken,
+            algodClient,
+            indexerClient,
+            abi.nt200,
+            {
+              addr:
+                activeAccount?.address || algosdk.getApplicationAddress(appId),
+              sk: new Uint8Array(),
+            }
+          );
+          const getPaymentTokenDecimalsR = await ciArc200.arc200_decimals();
+          if (!getPaymentTokenDecimalsR.success) {
+            throw new Error("Failed to get payment token decimals");
+          }
+          setPaymentTokenDecimals(Number(getPaymentTokenDecimalsR.returnValue));
+          const getPaymentTokenSymbolR = await ciArc200.arc200_symbol();
+          if (!getPaymentTokenSymbolR.success) {
+            throw new Error("Failed to get payment token symbol");
+          }
+          setPaymentTokenSymbol(getPaymentTokenSymbolR.returnValue);
+        }
+      })();
+    }
+  }, [name]);
+
+  useEffect(() => {
+    if (parentAppId) {
+      (async () => {
+        const { algodClient, indexerClient } = getAlgorandClients();
+        const ci = new CONTRACT(
+          parentAppId,
+          algodClient,
+          indexerClient,
+          { ...VNSRegistrarSpec.contract, events: [] },
+          {
+            addr:
+              activeAccount?.address ||
+              algosdk.getApplicationAddress(parentAppId),
+            sk: new Uint8Array(),
+          }
+        );
+        const isControllerR = await ci.is_controller(activeAccount?.address);
+        setIsController(isControllerR.returnValue);
+        console.log("isController", isControllerR.returnValue);
+      })();
+    }
+  }, [parentAppId]);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -1221,15 +1802,23 @@ const ProfilePage: React.FC = () => {
     (async () => {
       const node = await namehash(name || "");
       const tokenId = uint8ArrayToBigInt(node);
-      const arc72 = new ARC72Service("mainnet", activeAccount.address, 797609);
+      const arc72 = new ARC72Service(
+        "mainnet",
+        activeAccount.address,
+        parentAppId
+      );
       const owner = await arc72.ownerOf(tokenId);
       setIsOwner(owner === activeAccount.address);
     })();
-  }, [name, activeAccount]);
+  }, [name, activeAccount, parentAppId]);
 
   useEffect(() => {
     const registry = new RegistryService("mainnet");
-    const registrar = new RegistrarService("mainnet");
+    const registrar = new RegistrarService(
+      "mainnet",
+      activeAccount?.address,
+      parentAppId
+    );
     const resolver = new ResolverService("mainnet");
 
     namehash(name || "").then((nameHash) => {
@@ -1352,7 +1941,7 @@ const ProfilePage: React.FC = () => {
       }
       let avatarUpdated = false;
       if (profileImage !== avatarText) {
-        if (profileImage) {
+        if (profileImage && name) {
           const setTextR: any = await resolver.setText(
             name,
             "avatar",
@@ -1363,7 +1952,7 @@ const ProfilePage: React.FC = () => {
         }
       }
       let twitterUpdated = false;
-      if (twitter !== newTwitter) {
+      if (twitter !== newTwitter && name) {
         const setTextR: any = await resolver.setText(
           name,
           "com.twitter",
@@ -1373,7 +1962,7 @@ const ProfilePage: React.FC = () => {
         twitterUpdated = true;
       }
       let githubUpdated = false;
-      if (github !== newGithub) {
+      if (github !== newGithub && name) {
         const setTextR: any = await resolver.setText(
           name,
           "com.github",
@@ -1384,14 +1973,14 @@ const ProfilePage: React.FC = () => {
       }
 
       let urlUpdated = false;
-      if (url !== newUrl) {
+      if (url !== newUrl && name) {
         const setTextR: any = await resolver.setText(name, "url", newUrl || "");
         buildN.push(setTextR);
         urlUpdated = true;
       }
 
       let locationUpdated = false;
-      if (location !== newLocation) {
+      if (location !== newLocation && name) {
         const setTextR: any = await resolver.setText(
           name,
           "location",
@@ -1544,6 +2133,12 @@ const ProfilePage: React.FC = () => {
   });
 
   const handleFinalExtendConfirm = async () => {
+    if (!name) {
+      enqueueSnackbar("Please enter a name to extend", {
+        variant: "error",
+      });
+      return;
+    }
     setIsPendingTx(true);
     try {
       if (!activeAccount) {
@@ -1556,13 +2151,14 @@ const ProfilePage: React.FC = () => {
       const { algodClient, indexerClient } = getAlgorandClients();
 
       const vns = {
-        registrar: 797609,
+        registrar: parentAppId,
         resolver: 797608,
       };
 
-      const wVOI = {
-        tokenId: 828295, // en Voi
-        decimals: 6,
+      const tok = {
+        tokenId: paymentToken,
+        decimals: paymentTokenDecimals,
+        symbol: paymentTokenSymbol,
       };
 
       const ci = new CONTRACT(
@@ -1578,7 +2174,7 @@ const ProfilePage: React.FC = () => {
 
       const builder = {
         arc200: new CONTRACT(
-          wVOI.tokenId,
+          tok.tokenId,
           algodClient,
           indexerClient,
           abi.nt200,
@@ -1613,7 +2209,12 @@ const ProfilePage: React.FC = () => {
       const paymentAmount = 1;
 
       let customR;
-      for (const p0 of [0, 28500]) {
+      for (const p of [
+        [0, 0],
+        [0, 1],
+        [1, 1],
+      ]) {
+        const [p0, p1] = p;
         const buildN = [];
 
         // Create wVOI Balance for user if needed
@@ -1623,21 +2224,21 @@ const ProfilePage: React.FC = () => {
           )?.obj;
           buildN.push({
             ...txnO,
-            payment: p0,
+            payment: 28500,
             note: new TextEncoder().encode(
-              `envoi createBalanceBox ${paymentAmount} VOI for ${name}.voi extension`
+              `envoi createBalanceBox ${paymentAmount} VOI for ${name}.${parentName} extension`
             ),
           });
         }
 
         // Deposit VOI (NET -> ARC200)
-        {
+        if (p1 > 0) {
           const txnO = (
-            await builder.arc200.deposit(paymentAmount * 10 ** wVOI.decimals)
+            await builder.arc200.deposit(paymentAmount * 10 ** tok.decimals)
           )?.obj;
           buildN.push({
             ...txnO,
-            payment: paymentAmount * 10 ** wVOI.decimals,
+            payment: paymentAmount * 10 ** tok.decimals,
             note: new TextEncoder().encode(
               `envoi deposit ${paymentAmount} VOI for ${name}.voi extension`
             ),
@@ -1647,7 +2248,7 @@ const ProfilePage: React.FC = () => {
         // Approve spending
         {
           const paramSpender = algosdk.getApplicationAddress(vns.registrar);
-          const paramAmount = paymentAmount * 10 ** wVOI.decimals;
+          const paramAmount = paymentAmount * 10 ** tok.decimals;
           const txnO = (
             await builder.arc200.arc200_approve(paramSpender, paramAmount)
           )?.obj;
@@ -1661,18 +2262,19 @@ const ProfilePage: React.FC = () => {
         }
 
         // Extend name
-        {
-          const paramName = stringToUint8Array(name, 32);
-          const paramDuration = Number(selectedDuration) * 365 * 24 * 60 * 60; // Convert years to seconds
-          const txnO = (await builder.registrar.renew())?.obj;
-          buildN.push({
-            ...txnO,
-            payment: 336700,
-            note: new TextEncoder().encode(
-              `envoi registrar extend ${name}.voi for ${selectedDuration} years`
-            ),
-          });
-        }
+        // {
+        //   const label = name.split(".")[0];
+        //   const paramName = stringToUint8Array(label, 32);
+        //   const paramDuration = Number(selectedDuration) * 365 * 24 * 60 * 60; // Convert years to seconds
+        //   const txnO = (await builder.registrar.renew())?.obj;
+        //   buildN.push({
+        //     ...txnO,
+        //     payment: 336700,
+        //     note: new TextEncoder().encode(
+        //       `envoi registrar extend ${name}.${parentName} for ${selectedDuration} years`
+        //     ),
+        //   });
+        // }
 
         ci.setFee(15000);
         ci.setEnableGroupResourceSharing(true);
@@ -1744,7 +2346,7 @@ const ProfilePage: React.FC = () => {
       const { algodClient, indexerClient } = getAlgorandClients();
 
       const vns = {
-        registrar: 797609,
+        registrar: parentAppId,
       };
 
       const ci = new CONTRACT(
@@ -1834,6 +2436,336 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const handleSetAsDefault = async () => {
+    setIsPendingTx(true);
+    try {
+      if (!activeAccount) {
+        enqueueSnackbar("Please connect your wallet to set default name", {
+          variant: "error",
+        });
+        return;
+      }
+
+      const { algodClient, indexerClient } = getAlgorandClients();
+
+      const vns = {
+        registry: 797607,
+        resolver: 797608,
+        registrar: parentAppId,
+        reverseRegistrar: 797610,
+      };
+
+      const ci = new CONTRACT(
+        vns.reverseRegistrar,
+        algodClient,
+        indexerClient,
+        abi.custom,
+        {
+          addr:
+            activeAccount.address ||
+            algosdk.getApplicationAddress(vns.reverseRegistrar),
+          sk: new Uint8Array(),
+        }
+      );
+
+      const ciResolver = new CONTRACT(
+        vns.resolver,
+        algodClient,
+        indexerClient,
+        abi.custom,
+        {
+          addr:
+            activeAccount.address ||
+            algosdk.getApplicationAddress(vns.resolver),
+          sk: new Uint8Array(),
+        }
+      );
+
+      const ciRegistry = new CONTRACT(
+        vns.registry,
+        algodClient,
+        indexerClient,
+        { ...VNSRegistrySpec.contract, events: [] },
+        {
+          addr:
+            activeAccount.address ||
+            algosdk.getApplicationAddress(vns.registry),
+          sk: new Uint8Array(),
+        }
+      );
+
+      const builder = {
+        registry: new CONTRACT(
+          vns.registry,
+          algodClient,
+          indexerClient,
+          {
+            name: "registry",
+            description: "Registry",
+            methods: VNSRegistrySpec.contract.methods,
+            events: [],
+          },
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(),
+          },
+          true,
+          false,
+          true
+        ),
+        registrar: new CONTRACT(
+          vns.registrar,
+          algodClient,
+          indexerClient,
+          { ...VNSRegistrarSpec.contract, events: [] },
+          { addr: activeAccount.address, sk: new Uint8Array() },
+          true,
+          false,
+          true
+        ),
+        resolver: new CONTRACT(
+          vns.resolver,
+          algodClient,
+          indexerClient,
+          {
+            name: "resolver",
+            description: "Resolver",
+            methods: VNSPublicResolverSpec.contract.methods,
+            events: [],
+          },
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(),
+          },
+          true,
+          false,
+          true
+        ),
+      };
+
+      const nodeOwnerR = await ciRegistry.ownerOf(await namehash(name || ""));
+      if (!nodeOwnerR.success) {
+        throw new Error("Failed to get owner of node");
+      }
+      const nodeOwner = nodeOwnerR.returnValue;
+
+      const buildN = [];
+
+      // Check if reverse node exists, if not create it
+      {
+        const node = await namehash(`${activeAccount.address}.addr.reverse`);
+        const ownerOfR = await builder.registry.ownerOf(node);
+        if (!ownerOfR.success || ownerOfR.returnValue === zeroAddress) {
+          const txnO = (
+            await builder.registry.register(
+              await namehash("addr.reverse"),
+              stringToUint8Array(activeAccount.address, 32)
+            )
+          )?.obj;
+          buildN.push({
+            ...txnO,
+            payment: 28500,
+            note: new TextEncoder().encode(
+              `envoi register ${activeAccount.address}.addr.reverse`
+            ),
+          });
+        }
+      }
+
+      // Set name with resolver
+      {
+        const txnO = (
+          await builder.resolver.setName(
+            await namehash(`${activeAccount.address}.addr.reverse`),
+            stringToUint8Array(`${name}`)
+          )
+        )?.obj;
+        buildN.push({
+          ...txnO,
+          note: new TextEncoder().encode(
+            `envoi resolver setName ${activeAccount.address}.addr.reverse ${name}`
+          ),
+        });
+      }
+
+      // reclaim name
+      {
+        const subname = name?.split(".")[0] || "";
+        const txnO = (
+          await builder.registrar.reclaim(stringToUint8Array(subname, 32))
+        )?.obj;
+        buildN.push({
+          ...txnO,
+          note: new TextEncoder().encode(`envoi registrar reclaim ${name}`),
+        });
+      }
+
+      // set record name in resolver
+      {
+        const paramNode = await namehash(`${name}`);
+        const paramName = stringToUint8Array(`${name}`, 256);
+        const txnO = (await builder.resolver.setName(paramNode, paramName))
+          ?.obj;
+        buildN.push({
+          ...txnO,
+          payment: 336701,
+          note: new TextEncoder().encode(`envoi resolver setName ${name}`),
+        });
+      }
+
+      ci.setBeaconId(vns.reverseRegistrar);
+      ci.setFee(2000);
+      ci.setEnableGroupResourceSharing(true);
+      ci.setExtraTxns(buildN);
+
+      const customR = await ci.custom();
+
+      console.log("customR", customR);
+
+      if (!customR.success) {
+        throw new Error("Failed to set default name");
+      }
+
+      const stxns = await signTransactions(
+        customR.txns.map((t: string) => {
+          return new Uint8Array(Buffer.from(t, "base64"));
+        })
+      );
+
+      await algodClient.sendRawTransaction(stxns as Uint8Array[]).do();
+
+      enqueueSnackbar(`${name} has been set as your default name!`, {
+        variant: "success",
+      });
+      setIsSetDefaultModalOpen(false);
+    } catch (error) {
+      console.error("Error setting default name:", error);
+      enqueueSnackbar("Failed to set default name. Please try again.", {
+        variant: "error",
+      });
+    } finally {
+      setIsPendingTx(false);
+    }
+  };
+
+  const handleMint = async () => {
+    setIsPendingTx(true);
+    try {
+      if (!activeAccount) {
+        enqueueSnackbar("Please connect your wallet to mint a name", {
+          variant: "error",
+        });
+        return;
+      }
+
+      if (!mintToAddress.trim()) {
+        enqueueSnackbar("Please enter a recipient address", {
+          variant: "error",
+        });
+        return;
+      }
+
+      if (!name) {
+        enqueueSnackbar("Please enter a name to mint", {
+          variant: "error",
+        });
+        return;
+      }
+
+      // Validate address
+      try {
+        algosdk.decodeAddress(mintToAddress);
+      } catch {
+        enqueueSnackbar("Please enter a valid Algorand address", {
+          variant: "error",
+        });
+        return;
+      }
+
+      const { algodClient, indexerClient } = getAlgorandClients();
+
+      const ci = new CONTRACT(
+        parentAppId,
+        algodClient,
+        indexerClient,
+        abi.custom,
+        {
+          addr: activeAccount.address,
+          sk: new Uint8Array(),
+        }
+      );
+
+      const builder = {
+        registrar: new CONTRACT(
+          parentAppId,
+          algodClient,
+          indexerClient,
+          {
+            name: "registrar",
+            description: "Registrar",
+            methods: VNSRegistrarSpec.contract.methods,
+            events: [],
+          },
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(),
+          },
+          true,
+          false,
+          true
+        ),
+      };
+
+      const buildN = [];
+
+      // Mint the name
+      const txnO = await builder.registrar.mint(
+        mintToAddress,
+        stringToUint8Array(name?.split(".")[0] || "", 32)
+      );
+      buildN.push({
+        ...txnO.obj,
+        payment: 28500,
+        note: new TextEncoder().encode(
+          `envoi mint ${name} to ${mintToAddress}`
+        ),
+      });
+
+      ci.setFee(15000);
+      ci.setEnableGroupResourceSharing(true);
+      ci.setExtraTxns(buildN);
+
+      const customR = await ci.custom();
+
+      console.log("customR", customR);
+
+      if (!customR.success) {
+        throw new Error("Failed to mint name");
+      }
+
+      const stxns = await signTransactions(
+        customR.txns.map(
+          (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+        )
+      );
+
+      await algodClient.sendRawTransaction(stxns as Uint8Array[]).do();
+
+      enqueueSnackbar(`Successfully minted ${name}!`, {
+        variant: "success",
+      });
+      setIsMintModalOpen(false);
+      setMintToAddress("");
+    } catch (error) {
+      console.error("Error minting name:", error);
+      enqueueSnackbar("Failed to mint name. Please try again.", {
+        variant: "error",
+      });
+    } finally {
+      setIsPendingTx(false);
+    }
+  };
+
   return (
     <div
       className="profile-container"
@@ -1849,64 +2781,118 @@ const ProfilePage: React.FC = () => {
             {name?.charAt(0).toUpperCase()}
           </Avatar>
           <h1 className="profile-name">{name}</h1>
-          {isOwner && (
-            <div style={{ 
-              position: "absolute", 
-              right: "1rem", 
-              top: "1rem", 
-              display: "flex", 
-              gap: "0.5rem" 
-            }}>
-              <Button
-                variant="contained"
-                onClick={handleExtend}
-                sx={{
-                  bgcolor: theme.palette.mode === "dark" ? "#374151" : "white",
-                  color: theme.palette.mode === "dark" ? "#F9FAFB" : "#8B5CF6",
-                  "&:hover": {
-                    bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#F5F3FF",
-                  },
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  padding: "0.5rem 1rem",
-                  borderRadius: "0.5rem",
-                  fontWeight: "600",
-                  fontSize: "0.875rem",
-                  boxShadow: theme.palette.mode === "dark" 
-                    ? "0 2px 4px rgba(0, 0, 0, 0.3)" 
-                    : "0 2px 4px rgba(0, 0, 0, 0.1)",
-                  border: theme.palette.mode === "dark" ? "1px solid #4B5563" : "none",
-                }}
-              >
-                Extend
-                <FastForwardIcon />
-              </Button>
-              <Button
-                variant="contained"
-                onClick={handleOpenTransferModal}
-                sx={{
-                  bgcolor: theme.palette.mode === "dark" ? "#374151" : "white",
-                  color: theme.palette.mode === "dark" ? "#F9FAFB" : "#EF4444",
-                  "&:hover": {
-                    bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#FEF2F2",
-                  },
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  padding: "0.5rem 1rem",
-                  borderRadius: "0.5rem",
-                  fontWeight: "600",
-                  fontSize: "0.875rem",
-                  boxShadow: theme.palette.mode === "dark" 
-                    ? "0 2px 4px rgba(0, 0, 0, 0.3)" 
-                    : "0 2px 4px rgba(0, 0, 0, 0.1)",
-                  border: theme.palette.mode === "dark" ? "1px solid #4B5563" : "none",
-                }}
-              >
-                Transfer
-                <SendIcon />
-              </Button>
+          {(isOwner || isController) && (
+            <div
+              style={{
+                position: "absolute",
+                right: "1rem",
+                top: "1rem",
+                display: "flex",
+                gap: "0.5rem",
+              }}
+            >
+              {isController && (
+                <Button
+                  variant="contained"
+                  onClick={() => setIsMintModalOpen(true)}
+                  sx={{
+                    bgcolor:
+                      theme.palette.mode === "dark" ? "#374151" : "white",
+                    color:
+                      theme.palette.mode === "dark" ? "#F9FAFB" : "#10B981",
+                    "&:hover": {
+                      bgcolor:
+                        theme.palette.mode === "dark" ? "#4B5563" : "#F0FDF4",
+                    },
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    padding: "0.5rem 1rem",
+                    borderRadius: "0.5rem",
+                    fontWeight: "600",
+                    fontSize: "0.875rem",
+                    boxShadow:
+                      theme.palette.mode === "dark"
+                        ? "0 2px 4px rgba(0, 0, 0, 0.3)"
+                        : "0 2px 4px rgba(0, 0, 0, 0.1)",
+                    border:
+                      theme.palette.mode === "dark"
+                        ? "1px solid #4B5563"
+                        : "none",
+                  }}
+                >
+                  Mint
+                  <PlusIcon />
+                </Button>
+              )}
+              {isOwner && (
+                <>
+                  <Button
+                    variant="contained"
+                    onClick={handleExtend}
+                    sx={{
+                      bgcolor:
+                        theme.palette.mode === "dark" ? "#374151" : "white",
+                      color:
+                        theme.palette.mode === "dark" ? "#F9FAFB" : "#8B5CF6",
+                      "&:hover": {
+                        bgcolor:
+                          theme.palette.mode === "dark" ? "#4B5563" : "#F5F3FF",
+                      },
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      padding: "0.5rem 1rem",
+                      borderRadius: "0.5rem",
+                      fontWeight: "600",
+                      fontSize: "0.875rem",
+                      boxShadow:
+                        theme.palette.mode === "dark"
+                          ? "0 2px 4px rgba(0, 0, 0, 0.3)"
+                          : "0 2px 4px rgba(0, 0, 0, 0.1)",
+                      border:
+                        theme.palette.mode === "dark"
+                          ? "1px solid #4B5563"
+                          : "none",
+                    }}
+                  >
+                    Extend
+                    <FastForwardIcon />
+                  </Button>
+                  <Button
+                    variant="contained"
+                    onClick={handleOpenTransferModal}
+                    sx={{
+                      bgcolor:
+                        theme.palette.mode === "dark" ? "#374151" : "white",
+                      color:
+                        theme.palette.mode === "dark" ? "#F9FAFB" : "#EF4444",
+                      "&:hover": {
+                        bgcolor:
+                          theme.palette.mode === "dark" ? "#4B5563" : "#FEF2F2",
+                      },
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      padding: "0.5rem 1rem",
+                      borderRadius: "0.5rem",
+                      fontWeight: "600",
+                      fontSize: "0.875rem",
+                      boxShadow:
+                        theme.palette.mode === "dark"
+                          ? "0 2px 4px rgba(0, 0, 0, 0.3)"
+                          : "0 2px 4px rgba(0, 0, 0, 0.1)",
+                      border:
+                        theme.palette.mode === "dark"
+                          ? "1px solid #4B5563"
+                          : "none",
+                    }}
+                  >
+                    Transfer
+                    <SendIcon />
+                  </Button>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -2045,12 +3031,20 @@ const ProfilePage: React.FC = () => {
 
           <div className="detail-divider">
             {isOwner && (
-              <button
-                className="edit-profile-button"
-                onClick={handleOpenEditModal}
-              >
-                Edit Profile
-              </button>
+              <>
+                <button
+                  className="set-default-button"
+                  onClick={() => setIsSetDefaultModalOpen(true)}
+                >
+                  Set as Default
+                </button>
+                <button
+                  className="edit-profile-button"
+                  onClick={handleOpenEditModal}
+                >
+                  Edit Profile
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -2097,7 +3091,14 @@ const ProfilePage: React.FC = () => {
                   variant="outlined"
                   margin="normal"
                   value={newTwitter || ""}
-                  onChange={e => setNewTwitter((e.target.value.includes("/") ? e.target.value.replace(/\/+$/, "").split("/").pop() : e.target.value.replace(/^@/, "")))}
+                  onChange={(e) =>
+                    setNewTwitter(
+                      e.target.value.includes("/")
+                        ? e.target.value.replace(/\/+$/, "").split("/").pop() ||
+                            ""
+                        : e.target.value.replace(/^@/, "")
+                    )
+                  }
                   InputLabelProps={{
                     shrink: true,
                     style: {
@@ -2489,14 +3490,20 @@ const ProfilePage: React.FC = () => {
         onClose={() => setIsExtendModalOpen(false)}
         name={name || ""}
         onConfirm={handleExtendConfirm}
+        paymentTokenSymbol={paymentTokenSymbol}
       />
 
       <ConfirmExtendModal
         open={isConfirmExtendModalOpen}
         onClose={() => setIsConfirmExtendModalOpen(false)}
-        name={name || ""}
         duration={selectedDuration}
         onConfirm={handleFinalExtendConfirm}
+        name={name || ""}
+        parentName={parentName}
+        parentAppId={parentAppId}
+        paymentToken={paymentToken}
+        paymentTokenDecimals={paymentTokenDecimals}
+        paymentTokenSymbol={paymentTokenSymbol}
       />
 
       <TransferModal
@@ -2513,6 +3520,23 @@ const ProfilePage: React.FC = () => {
         newOwner={newOwnerForTransfer || ""}
         currentOwner={owner || ""}
         onConfirm={handleFinalTransferConfirm}
+      />
+
+      <ConfirmSetDefaultModal
+        open={isSetDefaultModalOpen}
+        onClose={() => setIsSetDefaultModalOpen(false)}
+        name={name || ""}
+        onConfirm={handleSetAsDefault}
+      />
+
+      <MintModal
+        open={isMintModalOpen}
+        onClose={() => setIsMintModalOpen(false)}
+        onConfirm={handleMint}
+        mintToAddress={mintToAddress}
+        setMintToAddress={setMintToAddress}
+        profileName={name || ""}
+        isPendingTx={isPendingTx}
       />
 
       <Snackbar
