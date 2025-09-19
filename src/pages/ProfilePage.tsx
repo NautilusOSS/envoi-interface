@@ -58,6 +58,7 @@ import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { TRANSACTION_FEES } from "@/constants/fees";
 import { useNameRegistration } from "@/hooks/useNameRegistration";
 import { useNameRegistry } from "@/hooks/useNameRegistry";
+import { stripTrailingZeroBytes } from "@/utils/string";
 
 type NetworkType = "mainnet" | "testnet";
 
@@ -2465,14 +2466,20 @@ const ProfilePage: React.FC = () => {
       };
 
       const ci = new CONTRACT(
-        vns.reverseRegistrar,
+        parentAppId,
         algodClient,
         indexerClient,
         abi.custom,
+        { addr: activeAccount.address, sk: new Uint8Array() }
+      );
+
+      const ciReverseRegistrar = new CONTRACT(
+        vns.reverseRegistrar,
+        algodClient,
+        indexerClient,
+        { ...VNSRegistrarSpec.contract, events: [] },
         {
-          addr:
-            activeAccount.address ||
-            algosdk.getApplicationAddress(vns.reverseRegistrar),
+          addr: activeAccount.address,
           sk: new Uint8Array(),
         }
       );
@@ -2481,11 +2488,9 @@ const ProfilePage: React.FC = () => {
         vns.resolver,
         algodClient,
         indexerClient,
-        abi.custom,
+        { ...VNSPublicResolverSpec.contract, events: [] },
         {
-          addr:
-            activeAccount.address ||
-            algosdk.getApplicationAddress(vns.resolver),
+          addr: activeAccount.address,
           sk: new Uint8Array(),
         }
       );
@@ -2496,9 +2501,7 @@ const ProfilePage: React.FC = () => {
         indexerClient,
         { ...VNSRegistrySpec.contract, events: [] },
         {
-          addr:
-            activeAccount.address ||
-            algosdk.getApplicationAddress(vns.registry),
+          addr: activeAccount.address,
           sk: new Uint8Array(),
         }
       );
@@ -2532,6 +2535,16 @@ const ProfilePage: React.FC = () => {
           false,
           true
         ),
+        reverseRegistrar: new CONTRACT(
+          vns.reverseRegistrar,
+          algodClient,
+          indexerClient,
+          { ...VNSRegistrarSpec.contract, events: [] },
+          { addr: activeAccount.address, sk: new Uint8Array() },
+          true,
+          false,
+          true
+        ),
         resolver: new CONTRACT(
           vns.resolver,
           algodClient,
@@ -2552,23 +2565,24 @@ const ProfilePage: React.FC = () => {
         ),
       };
 
-      const nodeOwnerR = await ciRegistry.ownerOf(await namehash(name || ""));
-      if (!nodeOwnerR.success) {
-        throw new Error("Failed to get owner of node");
-      }
-      const nodeOwner = nodeOwnerR.returnValue;
+      // -----------------------------------------
 
       const buildN = [];
 
       // Check if reverse node exists, if not create it
       {
         const node = await namehash(`${activeAccount.address}.addr.reverse`);
-        const ownerOfR = await builder.registry.ownerOf(node);
-        if (!ownerOfR.success || ownerOfR.returnValue === zeroAddress) {
+        const ownerOfR = await ciRegistry.ownerOf(node);
+        if (!ownerOfR.success) {
+          throw new Error("Failed to get owner of reverse address node");
+        }
+        const reverNodeOwner = ownerOfR.returnValue;
+        if (!ownerOfR.success || reverNodeOwner === zeroAddress) {
           const txnO = (
-            await builder.registry.register(
-              await namehash("addr.reverse"),
-              stringToUint8Array(activeAccount.address, 32)
+            await builder.reverseRegistrar.register(
+              algosdk.decodeAddress(activeAccount.address).publicKey,
+              activeAccount.address,
+              0
             )
           )?.obj;
           buildN.push({
@@ -2583,6 +2597,16 @@ const ProfilePage: React.FC = () => {
 
       // Set name with resolver
       {
+        const nameR = await ciResolver.name(
+          await namehash(`${activeAccount.address}.addr.reverse`)
+        );
+        if (!nameR.success) {
+          throw new Error("Failed to get name of reverse address node");
+        }
+        console.log(
+          `name(${activeAccount.address}.addr.reverse)`,
+          stripTrailingZeroBytes(nameR.returnValue)
+        );
         const txnO = (
           await builder.resolver.setName(
             await namehash(`${activeAccount.address}.addr.reverse`),
@@ -2599,30 +2623,45 @@ const ProfilePage: React.FC = () => {
 
       // reclaim name
       {
-        const subname = name?.split(".")[0] || "";
-        const txnO = (
-          await builder.registrar.reclaim(stringToUint8Array(subname, 32))
-        )?.obj;
-        buildN.push({
-          ...txnO,
-          note: new TextEncoder().encode(`envoi registrar reclaim ${name}`),
-        });
+        const nodeOwnerR = await ciRegistry.ownerOf(await namehash(name || ""));
+        if (!nodeOwnerR.success) {
+          throw new Error("Failed to get owner of node");
+        }
+        const nodeOwner = nodeOwnerR.returnValue;
+        if (nodeOwner !== activeAccount.address) {
+          const subname = name?.split(".")[0] || "";
+          alert(subname);
+          const txnO = (
+            await builder.registrar.reclaim(stringToUint8Array(subname, 32))
+          )?.obj;
+          buildN.push({
+            ...txnO,
+            note: new TextEncoder().encode(`envoi registrar reclaim ${name}`),
+          });
+        }
       }
 
       // set record name in resolver
       {
         const paramNode = await namehash(`${name}`);
         const paramName = stringToUint8Array(`${name}`, 256);
-        const txnO = (await builder.resolver.setName(paramNode, paramName))
-          ?.obj;
-        buildN.push({
-          ...txnO,
-          payment: 336701,
-          note: new TextEncoder().encode(`envoi resolver setName ${name}`),
-        });
+        const nameR = await ciResolver.name(await namehash(`${name}`));
+        if (!nameR.success) {
+          throw new Error("Failed to get name of node");
+        }
+        const nameN = stripTrailingZeroBytes(nameR.returnValue);
+        if (nameN !== name) {
+          const txnO = (await builder.resolver.setName(paramNode, paramName))
+            ?.obj;
+          buildN.push({
+            ...txnO,
+            payment: 336701,
+            note: new TextEncoder().encode(`envoi resolver setName ${name}`),
+          });
+        }
       }
 
-      ci.setBeaconId(vns.reverseRegistrar);
+      //ci.setBeaconId(vns.reverseRegistrar);
       ci.setFee(2000);
       ci.setEnableGroupResourceSharing(true);
       ci.setExtraTxns(buildN);

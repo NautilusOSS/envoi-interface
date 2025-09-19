@@ -212,3 +212,4 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ open, onClose }) 
 };
 
 export default GlobalSearchModal;
+

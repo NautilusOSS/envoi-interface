@@ -58,3 +58,4 @@ export const useGlobalSearchShortcut = (onOpenSearch: () => void) => {
 };
 
 export default useKeyboardShortcut;
+
