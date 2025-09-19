@@ -2630,7 +2630,6 @@ const ProfilePage: React.FC = () => {
         const nodeOwner = nodeOwnerR.returnValue;
         if (nodeOwner !== activeAccount.address) {
           const subname = name?.split(".")[0] || "";
-          alert(subname);
           const txnO = (
             await builder.registrar.reclaim(stringToUint8Array(subname, 32))
           )?.obj;
