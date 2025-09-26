@@ -1196,7 +1196,28 @@ const RegisterName: React.FC = () => {
 
               {success && (
                 <Alert severity="success" sx={{ mt: 2 }}>
-                  Successfully registered {name}.voi!
+                  <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
+                    Successfully registered {name}.voi!
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    To enable GitHub URL registration, set your GitHub profile's "Website/blog" field to:
+                  </Typography>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      fontFamily: 'monospace', 
+                      backgroundColor: 'rgba(0,0,0,0.1)', 
+                      padding: '4px 8px', 
+                      borderRadius: '4px',
+                      display: 'inline-block',
+                      mb: 1
+                    }}
+                  >
+                    https://envoi.sh/{name}.voi
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+                    This allows the GitHub API to verify your Envoi profile ownership.
+                  </Typography>
                 </Alert>
               )}
 
