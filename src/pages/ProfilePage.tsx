@@ -1600,8 +1600,12 @@ const ProfilePage: React.FC = () => {
   const [avatarText, setAvatarText] = React.useState<string | null>(null);
   const [twitter, setTwitter] = React.useState<string | null>(null);
   const [newTwitter, setNewTwitter] = React.useState<string | null>(null);
-  const [githubValidationStatus, setGithubValidationStatus] = React.useState<'idle' | 'validating' | 'valid' | 'invalid'>('idle');
-  const [githubContributions, setGithubContributions] = React.useState<any[]>([]);
+  const [githubValidationStatus, setGithubValidationStatus] = React.useState<
+    "idle" | "validating" | "valid" | "invalid"
+  >("idle");
+  const [githubContributions, setGithubContributions] = React.useState<any[]>(
+    []
+  );
   const [showContributions, setShowContributions] = React.useState(false);
   const [github, setGithub] = React.useState<string | null>(null);
   const [newGithub, setNewGithub] = React.useState<string | null>(null);
@@ -1835,119 +1839,125 @@ const ProfilePage: React.FC = () => {
   };
 
   const validateGithubUsername = async (username: string) => {
-    if (!username || username.trim() === '') {
-      setGithubValidationStatus('idle');
+    if (!username || username.trim() === "") {
+      setGithubValidationStatus("idle");
       return;
     }
 
-    setGithubValidationStatus('validating');
-    
+    setGithubValidationStatus("validating");
+
     try {
       // Clean the username (remove @ and trim)
-      const cleanUsername = username.replace(/^@/, '').trim();
-      
+      const cleanUsername = username.replace(/^@/, "").trim();
+
       // Use GitHub API to check if the user exists
-      const response = await fetch(`https://api.github.com/users/${cleanUsername}`);
-      
+      const response = await fetch(
+        `https://api.github.com/users/${cleanUsername}`
+      );
+
       if (response.ok) {
         const userData = await response.json();
         // GitHub user exists and is valid
-        setGithubValidationStatus('valid');
+        setGithubValidationStatus("valid");
       } else {
-        setGithubValidationStatus('invalid');
+        setGithubValidationStatus("invalid");
       }
     } catch (error) {
-      console.error('Error validating GitHub username:', error);
-      setGithubValidationStatus('invalid');
+      console.error("Error validating GitHub username:", error);
+      setGithubValidationStatus("invalid");
     }
   };
 
   const verifyGithubProfile = async (username: string): Promise<boolean> => {
-    if (!username || username.trim() === '' || !name) {
+    if (!username || username.trim() === "" || !name) {
       return false;
     }
 
     try {
       // Clean the username (remove @ and trim)
-      const cleanUsername = username.replace(/^@/, '').trim();
-      
+      const cleanUsername = username.replace(/^@/, "").trim();
+
       // Use GitHub API to check if the user exists and has the correct website
-      const response = await fetch(`https://api.github.com/users/${cleanUsername}`);
-      
+      const response = await fetch(
+        `https://api.github.com/users/${cleanUsername}`
+      );
+
       if (response.ok) {
         const userData = await response.json();
         const expectedUrl = `https://app.envoi.sh/#/${name}`;
-        
+
         // Debug logging
-        console.log('GitHub API response:', userData);
-        console.log('Expected URL:', expectedUrl);
-        console.log('Actual blog field:', userData.blog);
-        
+        console.log("GitHub API response:", userData);
+        console.log("Expected URL:", expectedUrl);
+        console.log("Actual blog field:", userData.blog);
+
         // Check if the user's website/blog field matches the Envoi profile
-        const isMatch = userData.blog === expectedUrl || userData.blog === expectedUrl + '.voi';
-        console.log('Verification result:', isMatch);
-        
+        const isMatch =
+          userData.blog === expectedUrl ||
+          userData.blog === expectedUrl + ".voi";
+        console.log("Verification result:", isMatch);
+
         return isMatch;
       }
-      
+
       return false;
     } catch (error) {
-      console.error('Error verifying GitHub profile:', error);
+      console.error("Error verifying GitHub profile:", error);
       return false;
     }
   };
 
   const fetchGithubContributions = async (username: string) => {
-    if (!username || username.trim() === '') {
+    if (!username || username.trim() === "") {
       return;
     }
 
     try {
-      const cleanUsername = username.replace(/^@/, '').trim();
+      const cleanUsername = username.replace(/^@/, "").trim();
       const allEvents: any[] = [];
       let page = 1;
       const perPage = 100;
       const maxPages = 10; // Limit to prevent excessive API calls
-      
+
       // Calculate cutoff date (90 days ago)
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - 90);
-      
+
       while (page <= maxPages) {
         const response = await fetch(
           `https://api.github.com/users/${cleanUsername}/events/public?per_page=${perPage}&page=${page}`
         );
-        
+
         if (!response.ok) break;
-        
+
         const events = await response.json();
         if (events.length === 0) break; // No more events
-        
+
         // Filter events to only include those within the last 90 days
         const recentEvents = events.filter((event: any) => {
           const eventDate = new Date(event.created_at);
           return eventDate >= cutoffDate;
         });
-        
+
         allEvents.push(...recentEvents);
-        
+
         // If we got fewer events than requested, we've reached the end
         if (events.length < perPage) break;
-        
+
         // If the oldest event in this batch is older than 90 days, we can stop
         const oldestEvent = events[events.length - 1];
         const oldestEventDate = new Date(oldestEvent.created_at);
         if (oldestEventDate < cutoffDate) break;
-        
+
         page++;
       }
-      
+
       console.log(`Fetched ${allEvents.length} events across ${page} pages`);
-      console.log('Sample events:', allEvents.slice(0, 3));
-      
+      console.log("Sample events:", allEvents.slice(0, 3));
+
       // Process events to create contribution data
       const contributions = allEvents.reduce((acc: any, event: any) => {
-        const date = new Date(event.created_at).toISOString().split('T')[0];
+        const date = new Date(event.created_at).toISOString().split("T")[0];
         if (!acc[date]) {
           acc[date] = 0;
         }
@@ -1955,43 +1965,45 @@ const ProfilePage: React.FC = () => {
         return acc;
       }, {});
 
-      console.log('Contribution data:', contributions);
+      console.log("Contribution data:", contributions);
 
       // Convert to array format for heatmap
-      const contributionArray = Object.entries(contributions).map(([date, count]) => ({
-        date,
-        count: count as number
-      }));
+      const contributionArray = Object.entries(contributions).map(
+        ([date, count]) => ({
+          date,
+          count: count as number,
+        })
+      );
 
-      console.log('Contribution array:', contributionArray);
+      console.log("Contribution array:", contributionArray);
 
       setGithubContributions(contributionArray);
       setShowContributions(true);
     } catch (error) {
-      console.error('Error fetching GitHub contributions:', error);
+      console.error("Error fetching GitHub contributions:", error);
     }
   };
 
   const ContributionHeatmap = ({ contributions }: { contributions: any[] }) => {
     const getIntensityColor = (count: number) => {
-      if (count === 0) return '#ebedf0';
-      if (count === 1) return '#c6e48b';
-      if (count === 2) return '#7bc96f';
-      if (count === 3) return '#239a3b';
-      if (count === 4) return '#196127';
-      return '#0d4429'; // Darker green for 5+ contributions
+      if (count === 0) return "#ebedf0";
+      if (count === 1) return "#c6e48b";
+      if (count === 2) return "#7bc96f";
+      if (count === 3) return "#239a3b";
+      if (count === 4) return "#196127";
+      return "#0d4429"; // Darker green for 5+ contributions
     };
 
     const generateLast90Days = () => {
       const days = [];
       const today = new Date();
-      
+
       for (let i = 89; i >= 0; i--) {
         const date = new Date(today);
         date.setDate(date.getDate() - i);
-        days.push(date.toISOString().split('T')[0]);
+        days.push(date.toISOString().split("T")[0]);
       }
-      
+
       return days;
     };
 
@@ -2001,43 +2013,56 @@ const ProfilePage: React.FC = () => {
       return acc;
     }, {} as any);
 
-    console.log('Last 90 days generated:', last90Days.slice(0, 10), '...', last90Days.slice(-10));
-    console.log('Contribution map:', contributionMap);
-    console.log('Total contributions:', contributions.length);
+    console.log(
+      "Last 90 days generated:",
+      last90Days.slice(0, 10),
+      "...",
+      last90Days.slice(-10)
+    );
+    console.log("Contribution map:", contributionMap);
+    console.log("Total contributions:", contributions.length);
 
     return (
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(18, 1fr)', 
-        gridTemplateRows: 'repeat(5, 1fr)',
-        gap: '2px',
-        maxWidth: '540px',
-        height: '150px',
-        margin: '16px 0'
-      }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(18, 1fr)",
+          gridTemplateRows: "repeat(5, 1fr)",
+          gap: "2px",
+          maxWidth: "540px",
+          height: "150px",
+          margin: "16px 0",
+        }}
+      >
         {last90Days.map((date, index) => {
           const count = contributionMap[date] || 0;
           const dateObj = new Date(date);
-          const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
-          const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
+          const dayName = dateObj.toLocaleDateString("en-US", {
+            weekday: "short",
+          });
+          const monthName = dateObj.toLocaleDateString("en-US", {
+            month: "short",
+          });
           const dayNumber = dateObj.getDate();
           const year = dateObj.getFullYear();
-          
+
           return (
             <Tooltip
               key={date}
-              title={`${dayName}, ${monthName} ${dayNumber}, ${year}: ${count} contribution${count !== 1 ? 's' : ''}`}
+              title={`${dayName}, ${monthName} ${dayNumber}, ${year}: ${count} contribution${
+                count !== 1 ? "s" : ""
+              }`}
               arrow
               placement="top"
             >
               <div
                 style={{
-                  width: '12px',
-                  height: '12px',
+                  width: "12px",
+                  height: "12px",
                   backgroundColor: getIntensityColor(count),
-                  borderRadius: '2px',
-                  cursor: 'pointer',
-                  position: 'relative'
+                  borderRadius: "2px",
+                  cursor: "pointer",
+                  position: "relative",
                 }}
               />
             </Tooltip>
@@ -2059,7 +2084,7 @@ const ProfilePage: React.FC = () => {
       if (newGithub) {
         validateGithubUsername(newGithub);
       } else {
-        setGithubValidationStatus('idle');
+        setGithubValidationStatus("idle");
       }
     }, 500);
 
@@ -2068,7 +2093,7 @@ const ProfilePage: React.FC = () => {
 
   // Fetch contributions when GitHub is verified
   useEffect(() => {
-    if (github && githubValidationStatus === 'valid') {
+    if (github && githubValidationStatus === "valid") {
       fetchGithubContributions(github);
     }
   }, [github, githubValidationStatus]);
@@ -2079,46 +2104,50 @@ const ProfilePage: React.FC = () => {
       // Check if GitHub is verified by checking the profile
       const checkAndFetchContributions = async () => {
         try {
-          const cleanUsername = github.replace(/^@/, '').trim();
-          const response = await fetch(`https://api.github.com/users/${cleanUsername}`);
-          
+          const cleanUsername = github.replace(/^@/, "").trim();
+          const response = await fetch(
+            `https://api.github.com/users/${cleanUsername}`
+          );
+
           if (response.ok) {
             const userData = await response.json();
             const expectedUrl = `https://app.envoi.sh/#/${name}`;
-            
+
             // Check if the user's website/blog field matches the Envoi profile
-            const isVerified = userData.blog === expectedUrl || userData.blog === expectedUrl + '.voi';
-            
+            const isVerified =
+              userData.blog === expectedUrl ||
+              userData.blog === expectedUrl + ".voi";
+
             if (isVerified) {
-              setGithubValidationStatus('valid');
+              setGithubValidationStatus("valid");
               fetchGithubContributions(github);
             } else {
-              setGithubValidationStatus('invalid');
+              setGithubValidationStatus("invalid");
             }
           }
         } catch (error) {
-          console.error('Error checking GitHub verification on load:', error);
-          setGithubValidationStatus('invalid');
+          console.error("Error checking GitHub verification on load:", error);
+          setGithubValidationStatus("invalid");
         }
       };
-      
+
       checkAndFetchContributions();
     }
   }, [github, name, showContributions]);
 
   useEffect(() => {
-    if (!activeAccount || !name || !parentAppId) return;
+    if (!name || !parentAppId) return;
     (async () => {
       const node = await namehash(name || "");
       const tokenId = uint8ArrayToBigInt(node);
       const arc72 = new ARC72Service(
         "mainnet",
-        activeAccount.address,
+        activeAccount?.address,
         parentAppId
       );
       const owner = await arc72.ownerOf(tokenId);
       setOwner(owner);
-      setIsOwner(owner === activeAccount.address);
+      setIsOwner(owner === activeAccount?.address);
     })();
   }, [name, activeAccount, parentAppId]);
 
@@ -2169,9 +2198,11 @@ const ProfilePage: React.FC = () => {
     resolver.text(name || "", "bio").then((bio: string | null) => {
       setBio(bio);
     });
-    resolver.text(name || "", "background").then((background: string | null) => {
-      setBackground(background);
-    });
+    resolver
+      .text(name || "", "background")
+      .then((background: string | null) => {
+        setBackground(background);
+      });
     resolver.text(name || "", "banner").then((banner: string | null) => {
       setBanner(banner);
     });
@@ -2200,18 +2231,18 @@ const ProfilePage: React.FC = () => {
 
   const getBackgroundStyle = (backgroundValue: string | null) => {
     if (!backgroundValue) return {};
-    
+
     // Check if it's a color (starts with # and has 8 hex characters)
-    if (backgroundValue.startsWith('#') && backgroundValue.length === 9) {
+    if (backgroundValue.startsWith("#") && backgroundValue.length === 9) {
       return { backgroundColor: backgroundValue };
     }
-    
+
     // Otherwise treat as URL
-    return { 
+    return {
       backgroundImage: `url(${backgroundValue})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat'
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
     };
   };
 
@@ -2266,7 +2297,7 @@ const ProfilePage: React.FC = () => {
     if (!url) return "";
     const trimmed = url.trim();
     if (!trimmed) return "";
-    
+
     // Add https:// if no protocol is specified
     if (!trimmed.match(/^https?:\/\//)) {
       return `https://${trimmed}`;
@@ -2280,7 +2311,7 @@ const ProfilePage: React.FC = () => {
       if (!activeAccount) return;
 
       // Check if GitHub field is being updated and verify ownership
-      if (github !== newGithub && newGithub && newGithub.trim() !== '') {
+      if (github !== newGithub && newGithub && newGithub.trim() !== "") {
         const isVerified = await verifyGithubProfile(newGithub);
         if (!isVerified) {
           enqueueSnackbar(
@@ -2369,12 +2400,12 @@ const ProfilePage: React.FC = () => {
       let backgroundUpdated = false;
       if (background !== newBackground && name) {
         let backgroundValue = (newBackground || "").trim();
-        
+
         // Auto-add 'ff' to 6-character hex colors (e.g., #d5bba3 -> #d5bba3ff)
-        if (backgroundValue.startsWith('#') && backgroundValue.length === 7) {
-          backgroundValue = backgroundValue + 'ff';
+        if (backgroundValue.startsWith("#") && backgroundValue.length === 7) {
+          backgroundValue = backgroundValue + "ff";
         }
-        
+
         const setTextR: any = await resolver.setText(
           name,
           "background",
@@ -2387,12 +2418,12 @@ const ProfilePage: React.FC = () => {
       let bannerUpdated = false;
       if (banner !== newBanner && name) {
         let bannerValue = (newBanner || "").trim();
-        
+
         // Auto-add 'ff' to 6-character hex colors (e.g., #d5bba3 -> #d5bba3ff)
-        if (bannerValue.startsWith('#') && bannerValue.length === 7) {
-          bannerValue = bannerValue + 'ff';
+        if (bannerValue.startsWith("#") && bannerValue.length === 7) {
+          bannerValue = bannerValue + "ff";
         }
-        
+
         const setTextR: any = await resolver.setText(
           name,
           "banner",
@@ -2572,20 +2603,20 @@ const ProfilePage: React.FC = () => {
   );
 
   // Console log for inspection - always visible
-  console.log('=== PROFILE FIELDS DEBUG ===');
-  console.log('AVAILABLE_FIELDS:', AVAILABLE_FIELDS);
-  console.log('Current Field Values:', {
+  console.log("=== PROFILE FIELDS DEBUG ===");
+  console.log("AVAILABLE_FIELDS:", AVAILABLE_FIELDS);
+  console.log("Current Field Values:", {
     twitter,
     github,
     location,
     url,
     bio,
     background,
-    banner
+    banner,
   });
-  console.log('Field Search Query:', fieldSearchQuery);
-  console.log('Filtered Fields:', filteredFields);
-  console.log('=== END DEBUG ===');
+  console.log("Field Search Query:", fieldSearchQuery);
+  console.log("Filtered Fields:", filteredFields);
+  console.log("=== END DEBUG ===");
 
   const handleExtend = async () => {
     setIsExtendModalOpen(true);
@@ -3276,42 +3307,50 @@ const ProfilePage: React.FC = () => {
   return (
     <div
       className="profile-container"
-      style={{ 
-        minHeight: "100vh", 
-        overflowY: "auto", 
+      style={{
+        minHeight: "100vh",
+        overflowY: "auto",
         paddingBottom: "4rem",
-        backgroundColor: background && background.startsWith('#') && background.length === 9 
-          ? background 
-          : undefined,
-        backgroundImage: background && !background.startsWith('#') 
-          ? `url(${background})` 
-          : undefined,
-        backgroundSize: background && !background.startsWith('#') ? 'cover' : undefined,
-        backgroundPosition: background && !background.startsWith('#') ? 'center' : undefined,
-        backgroundRepeat: background && !background.startsWith('#') ? 'no-repeat' : undefined
+        backgroundColor:
+          background && background.startsWith("#") && background.length === 9
+            ? background
+            : undefined,
+        backgroundImage:
+          background && !background.startsWith("#")
+            ? `url(${background})`
+            : undefined,
+        backgroundSize:
+          background && !background.startsWith("#") ? "cover" : undefined,
+        backgroundPosition:
+          background && !background.startsWith("#") ? "center" : undefined,
+        backgroundRepeat:
+          background && !background.startsWith("#") ? "no-repeat" : undefined,
       }}
     >
-      <div 
+      <div
         style={{
-          minHeight: '280px',
-          width: '100%',
-          padding: '2rem',
-          paddingBottom: '4rem',
-          position: 'relative',
-          backgroundColor: banner && banner.startsWith('#') && banner.length === 9 
-            ? banner 
-            : undefined,
-          backgroundImage: banner && !banner.startsWith('#') 
-            ? `url(${banner})` 
-            : undefined,
-          backgroundSize: banner && !banner.startsWith('#') ? 'cover' : undefined,
-          backgroundPosition: banner && !banner.startsWith('#') ? 'center' : undefined,
-          backgroundRepeat: banner && !banner.startsWith('#') ? 'no-repeat' : undefined,
-          background: banner 
-            ? (banner.startsWith('#') && banner.length === 9 
-                ? banner 
-                : `url(${banner})`)
-            : 'var(--banner-gradient)'
+          minHeight: "280px",
+          width: "100%",
+          padding: "2rem",
+          paddingBottom: "4rem",
+          position: "relative",
+          backgroundColor:
+            banner && banner.startsWith("#") && banner.length === 9
+              ? banner
+              : undefined,
+          backgroundImage:
+            banner && !banner.startsWith("#") ? `url(${banner})` : undefined,
+          backgroundSize:
+            banner && !banner.startsWith("#") ? "cover" : undefined,
+          backgroundPosition:
+            banner && !banner.startsWith("#") ? "center" : undefined,
+          backgroundRepeat:
+            banner && !banner.startsWith("#") ? "no-repeat" : undefined,
+          background: banner
+            ? banner.startsWith("#") && banner.length === 9
+              ? banner
+              : `url(${banner})`
+            : "var(--banner-gradient)",
         }}
       >
         <div className="banner-content">
@@ -3441,185 +3480,297 @@ const ProfilePage: React.FC = () => {
       </div>
 
       {/* Social Network Style Profile Layout */}
-      <div className="profile-content" style={{
-        maxWidth: '800px',
-        margin: '0 auto',
-        padding: '2rem 1rem 4rem 1rem'
-      }}>
+      <div
+        className="profile-content"
+        style={{
+          maxWidth: "800px",
+          margin: "0 auto",
+          padding: "2rem 1rem 4rem 1rem",
+        }}
+      >
         {/* Check if there are any visible sections */}
         {(() => {
-          const hasVisibleSections = bio || twitter || github || url || location || (showContributions && githubContributions.length > 0);
-          
+          const hasVisibleSections =
+            bio ||
+            twitter ||
+            github ||
+            url ||
+            location ||
+            (showContributions && githubContributions.length > 0);
+
           if (hasVisibleSections) {
             return (
               <>
                 {/* Bio Section */}
                 {bio && (
-                  <div style={{
-                    backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : '#FFFFFF',
-                    borderRadius: '12px',
-                    padding: '1.5rem',
-                    marginBottom: '1rem',
-                    boxShadow: theme.palette.mode === 'dark' 
-                      ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-                      : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                    border: theme.palette.mode === 'dark' ? '1px solid #374151' : '1px solid #E5E7EB'
-                  }}>
-                    <Typography variant="body1" sx={{
-                      color: theme.palette.mode === 'dark' ? '#F9FAFB' : '#111827',
-                      lineHeight: 1.6,
-                      fontSize: '1rem'
-                    }}>
+                  <div
+                    style={{
+                      backgroundColor:
+                        theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+                      borderRadius: "12px",
+                      padding: "1.5rem",
+                      marginBottom: "1rem",
+                      boxShadow:
+                        theme.palette.mode === "dark"
+                          ? "0 4px 6px -1px rgba(0, 0, 0, 0.3)"
+                          : "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                      border:
+                        theme.palette.mode === "dark"
+                          ? "1px solid #374151"
+                          : "1px solid #E5E7EB",
+                    }}
+                  >
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        color:
+                          theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                        lineHeight: 1.6,
+                        fontSize: "1rem",
+                      }}
+                    >
                       {bio}
                     </Typography>
-              </div>
+                  </div>
                 )}
 
                 {/* Social Links Section */}
-                <div style={{
-                  backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : '#FFFFFF',
-                  borderRadius: '12px',
-                  padding: '1.5rem',
-                  marginBottom: '1rem',
-                  boxShadow: theme.palette.mode === 'dark' 
-                    ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-                    : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                  border: theme.palette.mode === 'dark' ? '1px solid #374151' : '1px solid #E5E7EB'
-                }}>
-                  <Typography variant="h6" sx={{
-                    color: theme.palette.mode === 'dark' ? '#F9FAFB' : '#111827',
-                    marginBottom: '1rem',
-                    fontWeight: 600
-                  }}>
+                <div
+                  style={{
+                    backgroundColor:
+                      theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+                    borderRadius: "12px",
+                    padding: "1.5rem",
+                    marginBottom: "1rem",
+                    boxShadow:
+                      theme.palette.mode === "dark"
+                        ? "0 4px 6px -1px rgba(0, 0, 0, 0.3)"
+                        : "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                    border:
+                      theme.palette.mode === "dark"
+                        ? "1px solid #374151"
+                        : "1px solid #E5E7EB",
+                  }}
+                >
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color:
+                        theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                      marginBottom: "1rem",
+                      fontWeight: 600,
+                    }}
+                  >
                     Links
                   </Typography>
-                  
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-          {twitter && (
-                  <a
-                    href={`https://twitter.com/${twitter.replace(" ", "")}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+
+                  <div
+                    style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}
+                  >
+                    {twitter && (
+                      <a
+                        href={`https://twitter.com/${twitter.replace(" ", "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.75rem 1rem',
-                          backgroundColor: theme.palette.mode === 'dark' ? '#374151' : '#F3F4F6',
-                          borderRadius: '8px',
-                          textDecoration: 'none',
-                          color: theme.palette.mode === 'dark' ? '#F9FAFB' : '#111827',
-                          transition: 'all 0.2s',
-                          border: theme.palette.mode === 'dark' ? '1px solid #4B5563' : '1px solid #E5E7EB'
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                          padding: "0.75rem 1rem",
+                          backgroundColor:
+                            theme.palette.mode === "dark"
+                              ? "#374151"
+                              : "#F3F4F6",
+                          borderRadius: "8px",
+                          textDecoration: "none",
+                          color:
+                            theme.palette.mode === "dark"
+                              ? "#F9FAFB"
+                              : "#111827",
+                          transition: "all 0.2s",
+                          border:
+                            theme.palette.mode === "dark"
+                              ? "1px solid #4B5563"
+                              : "1px solid #E5E7EB",
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = theme.palette.mode === 'dark' ? '#4B5563' : '#E5E7EB';
+                          e.currentTarget.style.backgroundColor =
+                            theme.palette.mode === "dark"
+                              ? "#4B5563"
+                              : "#E5E7EB";
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = theme.palette.mode === 'dark' ? '#374151' : '#F3F4F6';
+                          e.currentTarget.style.backgroundColor =
+                            theme.palette.mode === "dark"
+                              ? "#374151"
+                              : "#F3F4F6";
                         }}
                       >
-                        <TwitterIcon sx={{ color: '#1DA1F2' }} />
+                        <TwitterIcon sx={{ color: "#1DA1F2" }} />
                         <span>@{twitter.replace(" ", "")}</span>
                       </a>
-          )}
+                    )}
 
-          {github && (
-                  <a
-                    href={`https://github.com/${github}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    {github && (
+                      <a
+                        href={`https://github.com/${github}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.75rem 1rem',
-                          backgroundColor: theme.palette.mode === 'dark' ? '#374151' : '#F3F4F6',
-                          borderRadius: '8px',
-                          textDecoration: 'none',
-                          color: theme.palette.mode === 'dark' ? '#F9FAFB' : '#111827',
-                          transition: 'all 0.2s',
-                          border: theme.palette.mode === 'dark' ? '1px solid #4B5563' : '1px solid #E5E7EB'
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                          padding: "0.75rem 1rem",
+                          backgroundColor:
+                            theme.palette.mode === "dark"
+                              ? "#374151"
+                              : "#F3F4F6",
+                          borderRadius: "8px",
+                          textDecoration: "none",
+                          color:
+                            theme.palette.mode === "dark"
+                              ? "#F9FAFB"
+                              : "#111827",
+                          transition: "all 0.2s",
+                          border:
+                            theme.palette.mode === "dark"
+                              ? "1px solid #4B5563"
+                              : "1px solid #E5E7EB",
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = theme.palette.mode === 'dark' ? '#4B5563' : '#E5E7EB';
+                          e.currentTarget.style.backgroundColor =
+                            theme.palette.mode === "dark"
+                              ? "#4B5563"
+                              : "#E5E7EB";
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = theme.palette.mode === 'dark' ? '#374151' : '#F3F4F6';
+                          e.currentTarget.style.backgroundColor =
+                            theme.palette.mode === "dark"
+                              ? "#374151"
+                              : "#F3F4F6";
                         }}
                       >
-                        <GitHubIcon sx={{ color: theme.palette.mode === 'dark' ? '#F9FAFB' : '#111827' }} />
+                        <GitHubIcon
+                          sx={{
+                            color:
+                              theme.palette.mode === "dark"
+                                ? "#F9FAFB"
+                                : "#111827",
+                          }}
+                        />
                         <span>@{github}</span>
                       </a>
-          )}
+                    )}
 
-          {url && (
-                  <a
-                    href={formatUrlForDisplay(url)}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    {url && (
+                      <a
+                        href={formatUrlForDisplay(url)}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.75rem 1rem',
-                          backgroundColor: theme.palette.mode === 'dark' ? '#374151' : '#F3F4F6',
-                          borderRadius: '8px',
-                          textDecoration: 'none',
-                          color: theme.palette.mode === 'dark' ? '#F9FAFB' : '#111827',
-                          transition: 'all 0.2s',
-                          border: theme.palette.mode === 'dark' ? '1px solid #4B5563' : '1px solid #E5E7EB'
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                          padding: "0.75rem 1rem",
+                          backgroundColor:
+                            theme.palette.mode === "dark"
+                              ? "#374151"
+                              : "#F3F4F6",
+                          borderRadius: "8px",
+                          textDecoration: "none",
+                          color:
+                            theme.palette.mode === "dark"
+                              ? "#F9FAFB"
+                              : "#111827",
+                          transition: "all 0.2s",
+                          border:
+                            theme.palette.mode === "dark"
+                              ? "1px solid #4B5563"
+                              : "1px solid #E5E7EB",
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = theme.palette.mode === 'dark' ? '#4B5563' : '#E5E7EB';
+                          e.currentTarget.style.backgroundColor =
+                            theme.palette.mode === "dark"
+                              ? "#4B5563"
+                              : "#E5E7EB";
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = theme.palette.mode === 'dark' ? '#374151' : '#F3F4F6';
+                          e.currentTarget.style.backgroundColor =
+                            theme.palette.mode === "dark"
+                              ? "#374151"
+                              : "#F3F4F6";
                         }}
                       >
-                        <LinkIcon sx={{ color: '#3B82F6' }} />
-                        <span>{formatUrlForDisplay(url).replace("https://", "")}</span>
+                        <LinkIcon sx={{ color: "#3B82F6" }} />
+                        <span>
+                          {formatUrlForDisplay(url).replace("https://", "")}
+                        </span>
                       </a>
                     )}
 
                     {location && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.75rem 1rem',
-                        backgroundColor: theme.palette.mode === 'dark' ? '#374151' : '#F3F4F6',
-                        borderRadius: '8px',
-                        color: theme.palette.mode === 'dark' ? '#F9FAFB' : '#111827',
-                        border: theme.palette.mode === 'dark' ? '1px solid #4B5563' : '1px solid #E5E7EB'
-                      }}>
-                        <LocationOnIcon sx={{ color: '#EF4444' }} />
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                          padding: "0.75rem 1rem",
+                          backgroundColor:
+                            theme.palette.mode === "dark"
+                              ? "#374151"
+                              : "#F3F4F6",
+                          borderRadius: "8px",
+                          color:
+                            theme.palette.mode === "dark"
+                              ? "#F9FAFB"
+                              : "#111827",
+                          border:
+                            theme.palette.mode === "dark"
+                              ? "1px solid #4B5563"
+                              : "1px solid #E5E7EB",
+                        }}
+                      >
+                        <LocationOnIcon sx={{ color: "#EF4444" }} />
                         <span>{location}</span>
-                </div>
+                      </div>
                     )}
-              </div>
+                  </div>
 
                   {/* GitHub Contributions */}
                   {showContributions && githubContributions.length > 0 && (
-                    <div style={{ marginTop: '1.5rem' }}>
-                      <Typography variant="h6" sx={{
-                        color: theme.palette.mode === 'dark' ? '#F9FAFB' : '#111827',
-                        marginBottom: '1rem',
-                        fontWeight: 600
-                      }}>
+                    <div style={{ marginTop: "1.5rem" }}>
+                      <Typography
+                        variant="h6"
+                        sx={{
+                          color:
+                            theme.palette.mode === "dark"
+                              ? "#F9FAFB"
+                              : "#111827",
+                          marginBottom: "1rem",
+                          fontWeight: 600,
+                        }}
+                      >
                         GitHub Activity
                       </Typography>
-                      <Typography variant="caption" sx={{ 
-                        color: theme.palette.mode === 'dark' ? '#D1D5DB' : '#6B7280',
-                        fontSize: '0.75rem',
-                        marginBottom: '8px',
-                        display: 'block'
-                      }}>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color:
+                            theme.palette.mode === "dark"
+                              ? "#D1D5DB"
+                              : "#6B7280",
+                          fontSize: "0.75rem",
+                          marginBottom: "8px",
+                          display: "block",
+                        }}
+                      >
                         Contribution Activity (Last 90 days)
                       </Typography>
-                      <ContributionHeatmap contributions={githubContributions} />
-            </div>
-          )}
+                      <ContributionHeatmap
+                        contributions={githubContributions}
+                      />
+                    </div>
+                  )}
                 </div>
               </>
             );
@@ -3627,35 +3778,66 @@ const ProfilePage: React.FC = () => {
         })()}
 
         {/* Profile Details Section - Always visible */}
-        <div style={{
-          backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : '#FFFFFF',
-          borderRadius: '12px',
-          padding: '1.5rem',
-          marginBottom: '1rem',
-          boxShadow: theme.palette.mode === 'dark' 
-            ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-            : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-          border: theme.palette.mode === 'dark' ? '1px solid #374151' : '1px solid #E5E7EB'
-        }}>
-          <Typography variant="h6" sx={{
-            color: theme.palette.mode === 'dark' ? '#F9FAFB' : '#111827',
-            marginBottom: '1rem',
-            fontWeight: 600
-          }}>
+        <div
+          style={{
+            backgroundColor:
+              theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+            borderRadius: "12px",
+            padding: "1.5rem",
+            marginBottom: "1rem",
+            boxShadow:
+              theme.palette.mode === "dark"
+                ? "0 4px 6px -1px rgba(0, 0, 0, 0.3)"
+                : "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+            border:
+              theme.palette.mode === "dark"
+                ? "1px solid #374151"
+                : "1px solid #E5E7EB",
+          }}
+        >
+          <Typography
+            variant="h6"
+            sx={{
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+              marginBottom: "1rem",
+              fontWeight: 600,
+            }}
+          >
             Profile Details
           </Typography>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body2" sx={{ color: theme.palette.mode === 'dark' ? '#D1D5DB' : '#6B7280' }}>
+
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Typography
+                variant="body2"
+                sx={{
+                  color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+                }}
+              >
                 Owner Address
               </Typography>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Typography variant="body2" sx={{ 
-                  fontFamily: 'monospace',
-                  color: theme.palette.mode === 'dark' ? '#F9FAFB' : '#111827'
-                }}>
-                  {owner ? `${owner.slice(0, 6)}...${owner.slice(-4)}` : 'Loading...'}
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontFamily: "monospace",
+                    color:
+                      theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                  }}
+                >
+                  {owner
+                    ? `${owner.slice(0, 6)}...${owner.slice(-4)}`
+                    : "Loading..."}
                 </Typography>
                 <button
                   onClick={() => {
@@ -3667,15 +3849,16 @@ const ProfilePage: React.FC = () => {
                     }
                   }}
                   style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '4px',
-                    borderRadius: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: theme.palette.mode === 'dark' ? '#9CA3AF' : '#6B7280'
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: "4px",
+                    borderRadius: "4px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color:
+                      theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
                   }}
                 >
                   <ContentCopyIcon fontSize="small" />
@@ -3685,8 +3868,9 @@ const ProfilePage: React.FC = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
-                    color: theme.palette.mode === 'dark' ? '#9CA3AF' : '#6B7280',
-                    textDecoration: 'none'
+                    color:
+                      theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                    textDecoration: "none",
                   }}
                 >
                   <OpenInNewIcon fontSize="small" />
@@ -3695,11 +3879,29 @@ const ProfilePage: React.FC = () => {
             </div>
 
             {expiry && new Date(expiry).getTime() > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="body2" sx={{ color: theme.palette.mode === 'dark' ? '#D1D5DB' : '#6B7280' }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color:
+                      theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+                  }}
+                >
                   Expiry
                 </Typography>
-                <Typography variant="body2" sx={{ color: theme.palette.mode === 'dark' ? '#F9FAFB' : '#111827' }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color:
+                      theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                  }}
+                >
                   {formatExpiry(expiry)}
                 </Typography>
               </div>
@@ -3708,59 +3910,74 @@ const ProfilePage: React.FC = () => {
         </div>
 
         {/* Owner Controls Section - Only visible to owner */}
-            {isOwner && (
-          <div style={{
-            backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : '#FFFFFF',
-            borderRadius: '12px',
-            padding: '1.5rem',
-            marginBottom: '1rem',
-            boxShadow: theme.palette.mode === 'dark' 
-              ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
-              : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-            border: theme.palette.mode === 'dark' ? '1px solid #374151' : '1px solid #E5E7EB'
-          }}>
-            <Typography variant="h6" sx={{
-              color: theme.palette.mode === 'dark' ? '#F9FAFB' : '#111827',
-              marginBottom: '1rem',
-              fontWeight: 600
-            }}>
+        {isOwner && (
+          <div
+            style={{
+              backgroundColor:
+                theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+              borderRadius: "12px",
+              padding: "1.5rem",
+              marginBottom: "1rem",
+              boxShadow:
+                theme.palette.mode === "dark"
+                  ? "0 4px 6px -1px rgba(0, 0, 0, 0.3)"
+                  : "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+              border:
+                theme.palette.mode === "dark"
+                  ? "1px solid #374151"
+                  : "1px solid #E5E7EB",
+            }}
+          >
+            <Typography
+              variant="h6"
+              sx={{
+                color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                marginBottom: "1rem",
+                fontWeight: 600,
+              }}
+            >
               Profile Management
             </Typography>
-            
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
               <Button
                 variant="outlined"
                 onClick={handleOpenEditModal}
                 sx={{
-                  borderColor: theme.palette.mode === 'dark' ? '#4B5563' : '#D1D5DB',
-                  color: theme.palette.mode === 'dark' ? '#F9FAFB' : '#111827',
-                  '&:hover': {
-                    borderColor: theme.palette.mode === 'dark' ? '#6B7280' : '#9CA3AF',
-                    backgroundColor: theme.palette.mode === 'dark' ? '#374151' : '#F9FAFB'
-                  }
+                  borderColor:
+                    theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
+                  color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                  "&:hover": {
+                    borderColor:
+                      theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+                    backgroundColor:
+                      theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+                  },
                 }}
               >
                 Edit Profile
               </Button>
-              
+
               <Button
                 variant="outlined"
-                  onClick={() => setIsSetDefaultModalOpen(true)}
+                onClick={() => setIsSetDefaultModalOpen(true)}
                 sx={{
-                  borderColor: theme.palette.mode === 'dark' ? '#4B5563' : '#D1D5DB',
-                  color: theme.palette.mode === 'dark' ? '#F9FAFB' : '#111827',
-                  '&:hover': {
-                    borderColor: theme.palette.mode === 'dark' ? '#6B7280' : '#9CA3AF',
-                    backgroundColor: theme.palette.mode === 'dark' ? '#374151' : '#F9FAFB'
-                  }
+                  borderColor:
+                    theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
+                  color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                  "&:hover": {
+                    borderColor:
+                      theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+                    backgroundColor:
+                      theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+                  },
                 }}
-                >
-                  Set as Default
+              >
+                Set as Default
               </Button>
             </div>
           </div>
         )}
-
       </div>
 
       <Modal
@@ -3768,7 +3985,7 @@ const ProfilePage: React.FC = () => {
         onClose={handleCloseEditModal}
         aria-labelledby="edit-profile-modal"
       >
-        <Box 
+        <Box
           className="edit-modal"
           sx={{
             bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
@@ -3780,18 +3997,23 @@ const ProfilePage: React.FC = () => {
               "& .field-wrapper": {
                 "& .MuiTextField-root": {
                   "& .MuiInputLabel-root": {
-                    color: theme.palette.mode === "dark" ? "#FFFFFF" : "#000000",
+                    color:
+                      theme.palette.mode === "dark" ? "#FFFFFF" : "#000000",
                   },
                   "& .MuiOutlinedInput-root": {
-                    color: theme.palette.mode === "dark" ? "#FFFFFF" : "#000000",
+                    color:
+                      theme.palette.mode === "dark" ? "#FFFFFF" : "#000000",
                     "& .MuiOutlinedInput-notchedOutline": {
-                      borderColor: theme.palette.mode === "dark" ? "#374151" : "#D1D5DB",
+                      borderColor:
+                        theme.palette.mode === "dark" ? "#374151" : "#D1D5DB",
                     },
                     "&:hover .MuiOutlinedInput-notchedOutline": {
-                      borderColor: theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+                      borderColor:
+                        theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
                     },
                     "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                      borderColor: theme.palette.mode === "dark" ? "#3B82F6" : "#3B82F6",
+                      borderColor:
+                        theme.palette.mode === "dark" ? "#3B82F6" : "#3B82F6",
                     },
                   },
                 },
@@ -3800,16 +4022,20 @@ const ProfilePage: React.FC = () => {
             "& .modal-buttons": {
               "& .cancel-button": {
                 color: theme.palette.mode === "dark" ? "#FFFFFF" : "#000000",
-                borderColor: theme.palette.mode === "dark" ? "#374151" : "#D1D5DB",
+                borderColor:
+                  theme.palette.mode === "dark" ? "#374151" : "#D1D5DB",
                 "&:hover": {
-                  backgroundColor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+                  backgroundColor:
+                    theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
                 },
               },
               "& .save-button": {
-                backgroundColor: theme.palette.mode === "dark" ? "#3B82F6" : "#3B82F6",
+                backgroundColor:
+                  theme.palette.mode === "dark" ? "#3B82F6" : "#3B82F6",
                 color: "#FFFFFF",
                 "&:hover": {
-                  backgroundColor: theme.palette.mode === "dark" ? "#2563EB" : "#2563EB",
+                  backgroundColor:
+                    theme.palette.mode === "dark" ? "#2563EB" : "#2563EB",
                 },
               },
             },
@@ -3853,8 +4079,11 @@ const ProfilePage: React.FC = () => {
                   onChange={(e) =>
                     setNewTwitter(
                       e.target.value.includes("/")
-                        ? e.target.value.replace(/\/+$/, "").split("/").pop()?.trim() ||
-                            ""
+                        ? e.target.value
+                            .replace(/\/+$/, "")
+                            .split("/")
+                            .pop()
+                            ?.trim() || ""
                         : e.target.value.replace(/^@/, "").trim()
                     )
                   }
@@ -3909,14 +4138,14 @@ const ProfilePage: React.FC = () => {
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
-                        {githubValidationStatus === 'validating' && (
+                        {githubValidationStatus === "validating" && (
                           <CircularProgress size={20} />
                         )}
-                        {githubValidationStatus === 'valid' && (
-                          <CheckCircleIcon sx={{ color: 'green' }} />
+                        {githubValidationStatus === "valid" && (
+                          <CheckCircleIcon sx={{ color: "green" }} />
                         )}
-                        {githubValidationStatus === 'invalid' && (
-                          <ErrorIcon sx={{ color: 'red' }} />
+                        {githubValidationStatus === "invalid" && (
+                          <ErrorIcon sx={{ color: "red" }} />
                         )}
                       </InputAdornment>
                     ),
@@ -3947,28 +4176,34 @@ const ProfilePage: React.FC = () => {
               </div>
             )}
 
-            {newGithub && newGithub.trim() !== '' && (
-              <div style={{ marginTop: '8px', marginBottom: '16px' }}>
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280", 
-                    fontSize: '0.75rem' 
+            {newGithub && newGithub.trim() !== "" && (
+              <div style={{ marginTop: "8px", marginBottom: "16px" }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color:
+                      theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+                    fontSize: "0.75rem",
                   }}
                 >
-                  <strong>Verification Required:</strong> To update your GitHub, your GitHub profile's Website must be set to:
+                  <strong>Verification Required:</strong> To update your GitHub,
+                  your GitHub profile's Website must be set to:
                 </Typography>
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    fontFamily: 'monospace', 
-                    backgroundColor: theme.palette.mode === "dark" ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)", 
-                    color: theme.palette.mode === "dark" ? "#FFFFFF" : "#000000",
-                    padding: '2px 6px', 
-                    borderRadius: '4px',
-                    display: 'block',
-                    marginTop: '4px',
-                    fontSize: '0.75rem'
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontFamily: "monospace",
+                    backgroundColor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.1)"
+                        : "rgba(0,0,0,0.1)",
+                    color:
+                      theme.palette.mode === "dark" ? "#FFFFFF" : "#000000",
+                    padding: "2px 6px",
+                    borderRadius: "4px",
+                    display: "block",
+                    marginTop: "4px",
+                    fontSize: "0.75rem",
                   }}
                 >
                   https://app.envoi.sh/#/{name}
@@ -4118,7 +4353,9 @@ const ProfilePage: React.FC = () => {
                 className="field-wrapper"
                 style={{ display: "flex", flexDirection: "column", gap: "8px" }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                >
                   <TextField
                     fullWidth
                     id="background"
@@ -4132,47 +4369,62 @@ const ProfilePage: React.FC = () => {
                       shrink: true,
                     }}
                     InputProps={{
-                    sx: {
-                      "& .MuiOutlinedInput-notchedOutline": {
-                        borderColor:
-                          theme.palette.mode === "dark" ? "#000" : undefined,
+                      sx: {
+                        "& .MuiOutlinedInput-notchedOutline": {
+                          borderColor:
+                            theme.palette.mode === "dark" ? "#000" : undefined,
+                        },
+                        "&:hover .MuiOutlinedInput-notchedOutline": {
+                          borderColor:
+                            theme.palette.mode === "dark" ? "#000" : undefined,
+                        },
+                        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                          borderColor:
+                            theme.palette.mode === "dark" ? "#000" : undefined,
+                        },
                       },
-                      "&:hover .MuiOutlinedInput-notchedOutline": {
-                        borderColor:
-                          theme.palette.mode === "dark" ? "#000" : undefined,
-                      },
-                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                        borderColor:
-                          theme.palette.mode === "dark" ? "#000" : undefined,
-                      },
-                    },
-                  }}
-                />
-                <Button
-                  sx={{ minWidth: "auto", height: "56px" }}
-                  onClick={() => {
+                    }}
+                  />
+                  <Button
+                    sx={{ minWidth: "auto", height: "56px" }}
+                    onClick={() => {
                       setNewBackground("");
-                  }}
-                >
-                  <DeleteIcon />
-                </Button>
+                    }}
+                  >
+                    <DeleteIcon />
+                  </Button>
                 </div>
-                
+
                 {/* Color Picker - Only show if it looks like a color */}
-                {newBackground && newBackground.startsWith('#') && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
-                    <Typography variant="body2" sx={{ 
-                      color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
-                      fontSize: "0.875rem"
-                    }}>
+                {newBackground && newBackground.startsWith("#") && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      marginTop: "8px",
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color:
+                          theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+                        fontSize: "0.875rem",
+                      }}
+                    >
                       Color Picker:
                     </Typography>
                     <input
                       type="color"
-                      value={newBackground.length === 9 ? newBackground.slice(0, 7) : newBackground}
+                      value={
+                        newBackground.length === 9
+                          ? newBackground.slice(0, 7)
+                          : newBackground
+                      }
                       onChange={(e) => {
                         // Convert 6-char hex to 8-char hex
-                        const colorValue = e.target.value + 'ff';
+                        const colorValue = e.target.value + "ff";
                         setNewBackground(colorValue);
                       }}
                       style={{
@@ -4181,13 +4433,17 @@ const ProfilePage: React.FC = () => {
                         border: "none",
                         borderRadius: "4px",
                         cursor: "pointer",
-                        backgroundColor: "transparent"
+                        backgroundColor: "transparent",
                       }}
                     />
-                    <Typography variant="caption" sx={{ 
-                      color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
-                      fontSize: "0.75rem"
-                    }}>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color:
+                          theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                        fontSize: "0.75rem",
+                      }}
+                    >
                       Click to pick a color
                     </Typography>
                   </div>
@@ -4200,7 +4456,9 @@ const ProfilePage: React.FC = () => {
                 className="field-wrapper"
                 style={{ display: "flex", flexDirection: "column", gap: "8px" }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                >
                   <TextField
                     fullWidth
                     id="banner"
@@ -4239,22 +4497,37 @@ const ProfilePage: React.FC = () => {
                     <DeleteIcon />
                   </Button>
                 </div>
-                
+
                 {/* Color Picker - Only show if it looks like a color */}
-                {newBanner && newBanner.startsWith('#') && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
-                    <Typography variant="body2" sx={{ 
-                      color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
-                      fontSize: "0.875rem"
-                    }}>
+                {newBanner && newBanner.startsWith("#") && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      marginTop: "8px",
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color:
+                          theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+                        fontSize: "0.875rem",
+                      }}
+                    >
                       Color Picker:
                     </Typography>
                     <input
                       type="color"
-                      value={newBanner.length === 9 ? newBanner.slice(0, 7) : newBanner}
+                      value={
+                        newBanner.length === 9
+                          ? newBanner.slice(0, 7)
+                          : newBanner
+                      }
                       onChange={(e) => {
                         // Convert 6-char hex to 8-char hex
-                        const colorValue = e.target.value + 'ff';
+                        const colorValue = e.target.value + "ff";
                         setNewBanner(colorValue);
                       }}
                       style={{
@@ -4263,13 +4536,17 @@ const ProfilePage: React.FC = () => {
                         border: "none",
                         borderRadius: "4px",
                         cursor: "pointer",
-                        backgroundColor: "transparent"
+                        backgroundColor: "transparent",
                       }}
                     />
-                    <Typography variant="caption" sx={{ 
-                      color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
-                      fontSize: "0.75rem"
-                    }}>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color:
+                          theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                        fontSize: "0.75rem",
+                      }}
+                    >
                       Click to pick a color
                     </Typography>
                   </div>
@@ -4440,15 +4717,22 @@ const ProfilePage: React.FC = () => {
                   (field.key === "banner" && newBanner);
 
                 // Console log for inspection
-                console.log('Field:', field.key, 'Active:', isFieldActive, 'Value:', {
-                  twitter: newTwitter,
-                  github: newGithub,
-                  location: newLocation,
-                  url: newUrl,
-                  bio: newBio,
-                  background: newBackground,
-                  banner: newBanner
-                });
+                console.log(
+                  "Field:",
+                  field.key,
+                  "Active:",
+                  isFieldActive,
+                  "Value:",
+                  {
+                    twitter: newTwitter,
+                    github: newGithub,
+                    location: newLocation,
+                    url: newUrl,
+                    bio: newBio,
+                    background: newBackground,
+                    banner: newBanner,
+                  }
+                );
 
                 return (
                   <ListItem
