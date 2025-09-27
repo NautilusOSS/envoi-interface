@@ -62,6 +62,7 @@ import { TRANSACTION_FEES } from "@/constants/fees";
 import { useNameRegistration } from "@/hooks/useNameRegistration";
 import { useNameRegistry } from "@/hooks/useNameRegistry";
 import { stripTrailingZeroBytes } from "@/utils/string";
+import MDEditor from "@uiw/react-md-editor";
 
 type NetworkType = "mainnet" | "testnet";
 
@@ -148,6 +149,18 @@ const AVAILABLE_FIELDS: ProfileField[] = [
     label: "Bio",
     icon: <EmailIcon />,
     placeholder: "Tell us about yourself",
+  },
+  {
+    key: "description",
+    label: "Description",
+    icon: <WebIcon />,
+    placeholder: "Short tagline or description",
+  },
+  {
+    key: "display",
+    label: "Display Name",
+    icon: <WebIcon />,
+    placeholder: "Preferred display form",
   },
   {
     key: "background",
@@ -1613,6 +1626,13 @@ const ProfilePage: React.FC = () => {
   const [newLocation, setNewLocation] = React.useState<string | null>(null);
   const [bio, setBio] = React.useState<string | null>(null);
   const [newBio, setNewBio] = React.useState<string | null>(null);
+  const [bioPages, setBioPages] = React.useState<string[]>([]);
+  const [newBioPages, setNewBioPages] = React.useState<string[]>([]);
+  const [bioError, setBioError] = React.useState<string>("");
+  const [description, setDescription] = React.useState<string | null>(null);
+  const [newDescription, setNewDescription] = React.useState<string | null>(null);
+  const [display, setDisplay] = React.useState<string | null>(null);
+  const [newDisplay, setNewDisplay] = React.useState<string | null>(null);
   const [background, setBackground] = React.useState<string | null>(null);
   const [newBackground, setNewBackground] = React.useState<string | null>(null);
   const [banner, setBanner] = React.useState<string | null>(null);
@@ -1792,6 +1812,9 @@ const ProfilePage: React.FC = () => {
     setNewLocation(location);
     setNewUrl(url);
     setNewBio(bio);
+    setNewBioPages(bioPages);
+    setNewDescription(description);
+    setNewDisplay(display);
     setNewBackground(background);
     setNewBanner(banner);
   };
@@ -1802,6 +1825,10 @@ const ProfilePage: React.FC = () => {
     setNewLocation(null);
     setNewUrl(null);
     setNewBio(null);
+    setNewBioPages([]);
+    setBioError("");
+    setNewDescription(null);
+    setNewDisplay(null);
     setNewBackground(null);
     setNewBanner(null);
   };
@@ -1836,6 +1863,127 @@ const ProfilePage: React.FC = () => {
       console.error("Error fetching NFTs:", error);
     }
     setLoading(false);
+  };
+
+  const paginateBio = (bioText: string): string[] => {
+    if (!bioText || bioText.length === 0) {
+      return [];
+    }
+    
+    const pages: string[] = [];
+    let remainingText = bioText;
+    
+    while (remainingText.length > 0) {
+      // Check byte length instead of character length for accurate 256-byte limit
+      const remainingBytes = Buffer.byteLength(remainingText, 'utf8');
+      
+      if (remainingBytes <= 256) {
+        pages.push(remainingText);
+        break;
+      } else {
+        // Start with a conservative estimate
+        let cutPoint = Math.floor(remainingText.length * 0.7);
+        let testText = remainingText.substring(0, cutPoint);
+        
+        // Binary search to find the exact cut point that fits in 256 bytes
+        while (Buffer.byteLength(testText, 'utf8') > 256 && cutPoint > 0) {
+          cutPoint = Math.floor(cutPoint * 0.8);
+          testText = remainingText.substring(0, cutPoint);
+        }
+        
+        // Now we have a cut point that fits in 256 bytes, but we need to ensure
+        // we don't cut in the middle of a multi-byte character
+        while (cutPoint > 0 && cutPoint < remainingText.length) {
+          const charAtCut = remainingText[cutPoint];
+          const charBeforeCut = remainingText[cutPoint - 1];
+          
+          // Check if we're in the middle of a multi-byte character
+          // UTF-8 continuation bytes start with 10xxxxxx (0x80-0xBF)
+          const charCode = charAtCut.charCodeAt(0);
+          const prevCharCode = charBeforeCut.charCodeAt(0);
+          
+          if (charCode >= 0x80 && charCode <= 0xBF) {
+            // We're in the middle of a multi-byte character, move back
+            cutPoint--;
+            testText = remainingText.substring(0, cutPoint);
+            
+            // Re-check byte length after moving back
+            if (Buffer.byteLength(testText, 'utf8') > 256) {
+              cutPoint = Math.floor(cutPoint * 0.9);
+              testText = remainingText.substring(0, cutPoint);
+              continue;
+            }
+          } else {
+            break; // We're at a safe cut point
+          }
+        }
+        
+        // Try to find a better break point (newline or space)
+        let bestCutPoint = cutPoint;
+        
+        // Look for newlines first (prefer breaking at paragraph boundaries)
+        const lastNewline = remainingText.lastIndexOf('\n', cutPoint);
+        if (lastNewline > cutPoint * 0.5) { // Only if it's not too far back
+          const newlineText = remainingText.substring(0, lastNewline);
+          if (Buffer.byteLength(newlineText, 'utf8') <= 256) {
+            bestCutPoint = lastNewline;
+          }
+        }
+        
+        // If no good newline, look for spaces
+        if (bestCutPoint === cutPoint) {
+          const lastSpace = remainingText.lastIndexOf(' ', cutPoint);
+          if (lastSpace > cutPoint * 0.6) { // Only if it's not too far back
+            const spaceText = remainingText.substring(0, lastSpace);
+            if (Buffer.byteLength(spaceText, 'utf8') <= 256) {
+              bestCutPoint = lastSpace;
+            }
+          }
+        }
+        
+        pages.push(remainingText.substring(0, bestCutPoint));
+        remainingText = remainingText.substring(bestCutPoint).trim();
+      }
+    }
+    
+    return pages;
+  };
+
+  const validateBio = (bioPages: string[]) => {
+    for (let i = 0; i < bioPages.length; i++) {
+      const pageBytes = Buffer.byteLength(bioPages[i], 'utf8');
+      if (pageBytes > 256) {
+        setBioError(`Bio page ${i + 1} must be 256 bytes or less (currently ${pageBytes} bytes)`);
+        return false;
+      }
+    }
+    setBioError("");
+    return true;
+  };
+
+
+  const loadBioPages = async (name: string, resolverInstance: ResolverService) => {
+    const pages: string[] = [];
+    
+    // Load main bio page
+    const mainBio = await resolverInstance.text(name, "bio");
+    if (mainBio) {
+      pages.push(mainBio);
+    }
+    
+    // Load extended bio pages
+    let pageNum = 2;
+    while (true) {
+      const extBio = await resolverInstance.text(name, `bio.ext.${pageNum}`);
+      if (extBio) {
+        pages.push(extBio);
+        pageNum++;
+      } else {
+        break; // Gap found, stop loading
+      }
+    }
+    
+    return pages;
   };
 
   const validateGithubUsername = async (username: string) => {
@@ -2195,8 +2343,15 @@ const ProfilePage: React.FC = () => {
     resolver.text(name || "", "location").then((location: string | null) => {
       setLocation(location);
     });
-    resolver.text(name || "", "bio").then((bio: string | null) => {
-      setBio(bio);
+    loadBioPages(name || "", resolver).then((pages: string[]) => {
+      setBioPages(pages);
+      setBio(pages.length > 0 ? pages.join("") : null);
+    });
+    resolver.text(name || "", "description").then((description: string | null) => {
+      setDescription(description);
+    });
+    resolver.text(name || "", "display").then((display: string | null) => {
+      setDisplay(display);
     });
     resolver
       .text(name || "", "background")
@@ -2306,6 +2461,14 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleSave = async () => {
+    // Check for bio validation errors before starting save process
+    if (bioError) {
+      enqueueSnackbar("Please fix bio validation errors before saving", {
+        variant: "error",
+      });
+      return;
+    }
+    
     setIsPendingTx(true);
     try {
       if (!activeAccount) return;
@@ -2387,14 +2550,99 @@ const ProfilePage: React.FC = () => {
       }
 
       let bioUpdated = false;
-      if (bio !== newBio && name) {
+      if (JSON.stringify(bioPages) !== JSON.stringify(newBioPages) && name) {
+        // Validate all bio pages before saving
+        if (!validateBio(newBioPages)) {
+          enqueueSnackbar(bioError, {
+            variant: "error",
+          });
+          setIsPendingTx(false);
+          return;
+        }
+        
+        // Additional server-side validation for each page
+        for (let i = 0; i < newBioPages.length; i++) {
+          const pageBytes = Buffer.byteLength(newBioPages[i].trim(), 'utf8');
+          if (pageBytes > 256) {
+            enqueueSnackbar(`Bio page ${i + 1} exceeds 256 bytes (${pageBytes} bytes)`, {
+              variant: "error",
+            });
+            setIsPendingTx(false);
+            return;
+          }
+        }
+        
+        // Save main bio page
+        if (newBioPages.length > 0) {
+          const setTextR: any = await resolver.setText(
+            name,
+            "bio",
+            newBioPages[0].trim()
+          );
+          buildN.push(setTextR);
+        } else {
+          // Clear main bio page if no pages exist
+          const clearTextR: any = await resolver.setText(
+            name,
+            "bio",
+            ""
+          );
+          buildN.push(clearTextR);
+        }
+        
+        // Save extended bio pages
+        for (let i = 1; i < newBioPages.length; i++) {
+          const setTextR: any = await resolver.setText(
+            name,
+            `bio.ext.${i + 1}`,
+            newBioPages[i].trim()
+          );
+          buildN.push(setTextR);
+        }
+        
+        // Clear any existing pages after the last non-empty page
+        // Check if there are any existing pages beyond our current set
+        let pageNum = newBioPages.length + 1;
+        while (true) {
+          const existingPage = await resolver.text(name, `bio.ext.${pageNum}`);
+          if (existingPage) {
+            // Clear this page by setting it to empty
+            const clearTextR: any = await resolver.setText(
+              name,
+              `bio.ext.${pageNum}`,
+              ""
+            );
+            buildN.push(clearTextR);
+            pageNum++;
+          } else {
+            // No more pages to clear
+            break;
+          }
+        }
+        
+        bioUpdated = true;
+      }
+
+      let descriptionUpdated = false;
+      if (description !== newDescription && name) {
         const setTextR: any = await resolver.setText(
           name,
-          "bio",
-          (newBio || "").trim()
+          "description",
+          (newDescription || "").trim()
         );
         buildN.push(setTextR);
-        bioUpdated = true;
+        descriptionUpdated = true;
+      }
+
+      let displayUpdated = false;
+      if (display !== newDisplay && name) {
+        const setTextR: any = await resolver.setText(
+          name,
+          "display",
+          (newDisplay || "").trim()
+        );
+        buildN.push(setTextR);
+        displayUpdated = true;
       }
 
       let backgroundUpdated = false;
@@ -2522,14 +2770,31 @@ const ProfilePage: React.FC = () => {
       }
 
       if (bioUpdated) {
-        let newBioText = await resolver.text(name || "", "bio");
+        const newBioPagesData = await loadBioPages(name || "", resolver);
+        setBioPages(newBioPagesData);
+        setBio(newBioPagesData.length > 0 ? newBioPagesData.join("") : null);
+      }
+
+      if (descriptionUpdated) {
+        let newDescriptionText = await resolver.text(name || "", "description");
         do {
-          if (newBioText !== bio) {
+          if (newDescriptionText !== description) {
             break;
           }
-          newBioText = await resolver.text(name || "", "bio");
+          newDescriptionText = await resolver.text(name || "", "description");
         } while (1);
-        setBio(newBioText);
+        setDescription(newDescriptionText);
+      }
+
+      if (displayUpdated) {
+        let newDisplayText = await resolver.text(name || "", "display");
+        do {
+          if (newDisplayText !== display) {
+            break;
+          }
+          newDisplayText = await resolver.text(name || "", "display");
+        } while (1);
+        setDisplay(newDisplayText);
       }
 
       if (backgroundUpdated) {
@@ -2585,7 +2850,16 @@ const ProfilePage: React.FC = () => {
         if (!newUrl) setNewUrl(" ");
         break;
       case "bio":
-        if (!newBio) setNewBio(" ");
+        if (!newBio) {
+          setNewBio(" ");
+          setNewBioPages([""]);
+        }
+        break;
+      case "description":
+        if (!newDescription) setNewDescription(" ");
+        break;
+      case "display":
+        if (!newDisplay) setNewDisplay(" ");
         break;
       case "background":
         if (!newBackground) setNewBackground(" ");
@@ -3361,7 +3635,7 @@ const ProfilePage: React.FC = () => {
           >
             {name?.charAt(0).toUpperCase()}
           </Avatar>
-          <h1 className="profile-name">{name}</h1>
+          <h1 className="profile-name">{display || name}</h1>
           {(isOwner || isController) && (
             <div
               style={{
@@ -3491,6 +3765,7 @@ const ProfilePage: React.FC = () => {
         {/* Check if there are any visible sections */}
         {(() => {
           const hasVisibleSections =
+            description ||
             bio ||
             twitter ||
             github ||
@@ -3501,6 +3776,40 @@ const ProfilePage: React.FC = () => {
           if (hasVisibleSections) {
             return (
               <>
+                {/* Description Section */}
+                {description && (
+                  <div
+                    style={{
+                      backgroundColor:
+                        theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+                      borderRadius: "12px",
+                      padding: "1rem",
+                      marginBottom: "1rem",
+                      boxShadow:
+                        theme.palette.mode === "dark"
+                          ? "0 4px 6px -1px rgba(0, 0, 0, 0.3)"
+                          : "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                      border:
+                        theme.palette.mode === "dark"
+                          ? "1px solid #374151"
+                          : "1px solid #E5E7EB",
+                    }}
+                  >
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        color:
+                          theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                        fontWeight: 500,
+                        fontSize: "1.1rem",
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {description}
+                    </Typography>
+                  </div>
+                )}
+
                 {/* Bio Section */}
                 {bio && (
                   <div
@@ -3520,17 +3829,22 @@ const ProfilePage: React.FC = () => {
                           : "1px solid #E5E7EB",
                     }}
                   >
-                    <Typography
-                      variant="body1"
-                      sx={{
-                        color:
-                          theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                    <div
+                      style={{
+                        color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
                         lineHeight: 1.6,
                         fontSize: "1rem",
                       }}
                     >
-                      {bio}
-                    </Typography>
+                      <MDEditor.Markdown 
+                        source={bio} 
+                        data-color-mode={theme.palette.mode}
+                        style={{
+                          backgroundColor: "transparent",
+                          color: "inherit",
+                        }}
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -4302,21 +4616,74 @@ const ProfilePage: React.FC = () => {
             )}
 
             {newBio && (
+              <div className="field-wrapper">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                  <Typography variant="h6">Bio</Typography>
+                  <Button
+                    sx={{ minWidth: "auto", height: "40px" }}
+                    onClick={() => {
+                      setNewBio("");
+                      setNewBioPages([]);
+                      setBioError("");
+                    }}
+                    color="error"
+                    variant="outlined"
+                  >
+                    <DeleteIcon />
+                  </Button>
+                </div>
+                
+                <div style={{ 
+                  border: bioError ? "1px solid #d32f2f" : "1px solid #ccc",
+                  borderRadius: "4px",
+                  overflow: "hidden"
+                }}>
+                  <MDEditor
+                    value={newBio || ""}
+                    onChange={(value) => {
+                      const markdownValue = value || "";
+                      setNewBio(markdownValue);
+                      // Automatically paginate the markdown bio behind the scenes
+                      const pages = paginateBio(markdownValue);
+                      setNewBioPages(pages);
+                      validateBio(pages);
+                    }}
+                    preview="edit"
+                    hideToolbar={false}
+                    data-color-mode={theme.palette.mode}
+                    height={300}
+                    textareaProps={{
+                      placeholder: "Tell us about yourself... You can use **bold**, *italic*, [links](https://example.com), and more markdown formatting!",
+                    }}
+                  />
+                </div>
+                
+                {bioError && (
+                  <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+                    {bioError}
+                  </Typography>
+                )}
+                
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  {`${(newBio || "").length} characters, ${Buffer.byteLength(newBio || "", 'utf8')} bytes${newBioPages.length > 1 ? ` (${newBioPages.length} pages)` : ""}`}
+                </Typography>
+              </div>
+            )}
+
+            {newDescription && (
               <div
                 className="field-wrapper"
                 style={{ display: "flex", alignItems: "center", gap: "8px" }}
               >
                 <TextField
                   fullWidth
-                  id="bio"
-                  label="Bio"
-                  placeholder="Tell us about yourself"
+                  id="description"
+                  label="Description"
+                  placeholder="Short tagline or description"
                   variant="outlined"
                   margin="normal"
-                  multiline
-                  rows={3}
-                  value={newBio || ""}
-                  onChange={(e) => setNewBio(e.target.value)}
+                  value={newDescription || ""}
+                  onChange={(e) => setNewDescription(e.target.value)}
                   InputLabelProps={{
                     shrink: true,
                   }}
@@ -4340,11 +4707,115 @@ const ProfilePage: React.FC = () => {
                 <Button
                   sx={{ minWidth: "auto", height: "56px" }}
                   onClick={() => {
-                    setNewBio("");
+                    setNewDescription("");
                   }}
                 >
                   <DeleteIcon />
                 </Button>
+              </div>
+            )}
+
+            {newDisplay && (
+              <div className="field-wrapper">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                  <Typography variant="h6">Display Name</Typography>
+                  <Button
+                    sx={{ minWidth: "auto", height: "40px" }}
+                    onClick={() => {
+                      setNewDisplay("");
+                    }}
+                    color="error"
+                    variant="outlined"
+                  >
+                    <DeleteIcon />
+                  </Button>
+                </div>
+                
+                <div style={{ marginBottom: "8px" }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Click on any character to change its case. This is your preferred display form.
+                  </Typography>
+                </div>
+                
+                <div style={{ 
+                  border: "1px solid #ccc",
+                  borderRadius: "4px",
+                  padding: "12px",
+                  backgroundColor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+                  minHeight: "60px",
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  gap: "2px"
+                }}>
+                  {(newDisplay || "").split('').map((char, index) => (
+                    <span
+                      key={index}
+                      onClick={() => {
+                        const newValue = (newDisplay || "").split('');
+                        if (char === char.toUpperCase()) {
+                          newValue[index] = char.toLowerCase();
+                        } else {
+                          newValue[index] = char.toUpperCase();
+                        }
+                        setNewDisplay(newValue.join(''));
+                      }}
+                      style={{
+                        cursor: "pointer",
+                        padding: "2px 4px",
+                        borderRadius: "3px",
+                        backgroundColor: theme.palette.mode === "dark" ? "#374151" : "#F3F4F6",
+                        fontSize: "1.1rem",
+                        fontWeight: 500,
+                        transition: "all 0.2s ease",
+                        userSelect: "none",
+                        display: "inline-block",
+                        minWidth: "20px",
+                        textAlign: "center"
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB";
+                        e.currentTarget.style.transform = "scale(1.1)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = theme.palette.mode === "dark" ? "#374151" : "#F3F4F6";
+                        e.currentTarget.style.transform = "scale(1)";
+                      }}
+                    >
+                      {char}
+                    </span>
+                  ))}
+                </div>
+                
+                <TextField
+                  fullWidth
+                  id="display"
+                  label="Display Name (Raw)"
+                  placeholder="Preferred display form"
+                  variant="outlined"
+                  margin="normal"
+                  value={newDisplay || ""}
+                  onChange={(e) => setNewDisplay(e.target.value)}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  InputProps={{
+                    sx: {
+                      "& .MuiOutlinedInput-notchedOutline": {
+                        borderColor:
+                          theme.palette.mode === "dark" ? "#000" : undefined,
+                      },
+                      "&:hover .MuiOutlinedInput-notchedOutline": {
+                        borderColor:
+                          theme.palette.mode === "dark" ? "#000" : undefined,
+                      },
+                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                        borderColor:
+                          theme.palette.mode === "dark" ? "#000" : undefined,
+                      },
+                    },
+                  }}
+                />
               </div>
             )}
 
@@ -4713,6 +5184,8 @@ const ProfilePage: React.FC = () => {
                   (field.key === "location" && newLocation) ||
                   (field.key === "url" && newUrl) ||
                   (field.key === "bio" && newBio) ||
+                  (field.key === "description" && newDescription) ||
+                  (field.key === "display" && newDisplay) ||
                   (field.key === "background" && newBackground) ||
                   (field.key === "banner" && newBanner);
 
@@ -4729,6 +5202,8 @@ const ProfilePage: React.FC = () => {
                     location: newLocation,
                     url: newUrl,
                     bio: newBio,
+                    description: newDescription,
+                    display: newDisplay,
                     background: newBackground,
                     banner: newBanner,
                   }
