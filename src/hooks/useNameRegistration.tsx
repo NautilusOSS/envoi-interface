@@ -826,6 +826,12 @@ export const useNameRegistration = ({
       const ctcInfoResolver = 797608;
       const ctcInfoEnVoi = paymentTokenAppId ?? 0;
 
+      console.log({
+        ctcInfoRegistrar,
+        ctcInfoResolver,
+        ctcInfoEnVoi,
+      });
+
       const ci = new CONTRACT(
         ctcInfoRegistrar,
         algodClient,
@@ -884,9 +890,9 @@ export const useNameRegistration = ({
       let customR;
       for (const p of [
         [0, 0], // no createBalanceBox and no deposit
-        //[0, 1], // no createBalanceBox and deposit
+        [0, 1], // no createBalanceBox and deposit
         // createBalanceBox and no deposit does not make sense
-        //[1, 1], // createBalanceBox and deposit
+        [1, 1], // createBalanceBox and deposit
       ]) {
         const [p0, p1] = p;
         const buildN = [];
@@ -936,21 +942,21 @@ export const useNameRegistration = ({
         }
 
         // arc200 transfer from user to registrar
-        // {
-        //   const txnO = (
-        //     await builder.arc200.arc200_transfer(
-        //       algosdk.getApplicationAddress(vns.registrar),
-        //       0
-        //     )
-        //   )?.obj;
-        //   buildN.push({
-        //     ...txnO,
-        //     payment: 28502,
-        //     note: new TextEncoder().encode(
-        //       `envoi arc200 transfer 0 ${paymentTokenSymbol} to ${name} renewal`
-        //     ),
-        //   });
-        // }
+        {
+          const txnO = (
+            await builder.arc200.arc200_transfer(
+              algosdk.getApplicationAddress(vns.registrar),
+              0
+            )
+          )?.obj;
+          buildN.push({
+            ...txnO,
+            payment: 28502,
+            note: new TextEncoder().encode(
+              `envoi arc200 transfer 0 ${paymentTokenSymbol} to ${name} renewal`
+            ),
+          });
+        }
 
         // Renew name
         {

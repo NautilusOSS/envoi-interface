@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import LaunchIcon from "@mui/icons-material/Launch";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
@@ -47,12 +47,12 @@ import InputAdornment from "@mui/material/InputAdornment";
 import LinkIcon from "@mui/icons-material/Link";
 import { ARC72Service } from "@/services/arc72";
 import { zeroAddress } from "@/contants/accounts";
-import { useSnackbar } from "notistack";
+import { enqueueSnackbar, useSnackbar } from "notistack";
 import { FastForwardIcon, SendIcon, PlusIcon } from "lucide-react";
 import CloseIcon from "@mui/icons-material/Close";
 import { getAlgorandClients } from "@/wallets";
 import algosdk from "algosdk";
-import { APP_SPEC as VNSRegistrarSpec } from "../clients/VNSRegistrarClient";
+import { APP_SPEC as VNSRegistrarSpec } from "@/clients/VNSRegistrarClient";
 import { APP_SPEC as VNSRegistrySpec } from "@/clients/VNSRegistryClient";
 import { APP_SPEC as VNSPublicResolverSpec } from "@/clients/VNSPublicResolverClient";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
@@ -63,6 +63,7 @@ import { useNameRegistration } from "@/hooks/useNameRegistration";
 import { useNameRegistry } from "@/hooks/useNameRegistry";
 import { stripTrailingZeroBytes } from "@/utils/string";
 import MDEditor from "@uiw/react-md-editor";
+import { VnsRegistrarClient } from "@/clients/VNSRegistrarClient";
 
 type NetworkType = "mainnet" | "testnet";
 
@@ -471,6 +472,16 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
     initialPaymentToken: paymentToken,
     initialPaymentTokenDecimals: paymentTokenDecimals,
     initialPaymentTokenSymbol: paymentTokenSymbol,
+  });
+
+  console.log({
+    name,
+    parentName,
+    parentAppId,
+    paymentToken,
+    paymentTokenDecimals,
+    paymentTokenSymbol,
+    duration,
   });
 
   console.log("name", name);
@@ -1594,11 +1605,1109 @@ const MintModal: React.FC<MintModalProps> = ({
   );
 };
 
+interface SubnameModalProps {
+  open: boolean;
+  onClose: () => void;
+  parentName: string;
+  onConfirmSubname: (subname: string, recipientAddress: string) => void;
+}
+
+const SubnameModal: React.FC<SubnameModalProps> = ({
+  open,
+  onClose,
+  parentName,
+  onConfirmSubname,
+}) => {
+  const { theme } = useTheme();
+  const [subname, setSubname] = useState("");
+  const [recipientAddress, setRecipientAddress] = useState("");
+
+  const handleCreate = () => {
+    if (!subname.trim() || !recipientAddress.trim()) return;
+    onConfirmSubname(subname.trim(), recipientAddress.trim());
+  };
+
+  const handleClose = () => {
+    setSubname("");
+    setRecipientAddress("");
+    onClose();
+  };
+
+  return (
+    <Modal open={open} onClose={handleClose} aria-labelledby="subname-modal">
+      <Box
+        sx={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: "90%",
+          maxWidth: "500px",
+          bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+          borderRadius: "12px",
+          boxShadow: 24,
+          p: 3,
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
+          <Typography
+            variant="h6"
+            sx={{
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+              fontWeight: 600,
+            }}
+          >
+            Create New Subname
+          </Typography>
+          <IconButton onClick={handleClose} size="small">
+            <CloseIcon
+              sx={{
+                color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+              }}
+            />
+          </IconButton>
+        </Box>
+
+        <Box sx={{ mb: 3 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+              mb: 2,
+            }}
+          >
+            Create a subname under <strong>{parentName}</strong>
+          </Typography>
+
+          <TextField
+            fullWidth
+            label="Subname"
+            placeholder="Enter subname (e.g., 'blog')"
+            value={subname}
+            onChange={(e) => setSubname(e.target.value)}
+            sx={{
+              mb: 2,
+              "& .MuiInputLabel-root": {
+                color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+              },
+              "& .MuiOutlinedInput-root": {
+                color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor:
+                    theme.palette.mode === "dark" ? "#374151" : "#D1D5DB",
+                },
+                "&:hover .MuiOutlinedInput-notchedOutline": {
+                  borderColor:
+                    theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+                },
+                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                  borderColor:
+                    theme.palette.mode === "dark" ? "#3B82F6" : "#3B82F6",
+                },
+              },
+            }}
+          />
+
+          <TextField
+            fullWidth
+            label="Recipient Address"
+            placeholder="Enter recipient address"
+            value={recipientAddress}
+            onChange={(e) => setRecipientAddress(e.target.value)}
+            sx={{
+              mb: 2,
+              "& .MuiInputLabel-root": {
+                color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+              },
+              "& .MuiOutlinedInput-root": {
+                color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor:
+                    theme.palette.mode === "dark" ? "#374151" : "#D1D5DB",
+                },
+                "&:hover .MuiOutlinedInput-notchedOutline": {
+                  borderColor:
+                    theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+                },
+                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                  borderColor:
+                    theme.palette.mode === "dark" ? "#3B82F6" : "#3B82F6",
+                },
+              },
+            }}
+          />
+
+          <Typography
+            variant="body2"
+            sx={{
+              color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+              fontSize: "0.875rem",
+            }}
+          >
+            This will create:{" "}
+            <strong>
+              {subname || "subname"}.{parentName}
+            </strong>
+          </Typography>
+        </Box>
+
+        <Box
+          sx={{
+            display: "flex",
+            gap: 2,
+            justifyContent: "flex-end",
+          }}
+        >
+          <Button
+            variant="outlined"
+            onClick={handleClose}
+            sx={{
+              borderColor:
+                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+              "&:hover": {
+                borderColor:
+                  theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+                backgroundColor:
+                  theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+              },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleCreate}
+            disabled={!subname.trim() || !recipientAddress.trim()}
+            sx={{
+              backgroundColor:
+                theme.palette.mode === "dark" ? "#3B82F6" : "#3B82F6",
+              color: "#FFFFFF",
+              "&:hover": {
+                backgroundColor:
+                  theme.palette.mode === "dark" ? "#2563EB" : "#2563EB",
+              },
+              "&:disabled": {
+                backgroundColor:
+                  theme.palette.mode === "dark" ? "#374151" : "#E5E7EB",
+                color: theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+              },
+            }}
+          >
+            Next
+          </Button>
+        </Box>
+      </Box>
+    </Modal>
+  );
+};
+
+interface ConfirmSubnameModalProps {
+  open: boolean;
+  onClose: () => void;
+  parentName: string;
+  subname: string;
+  recipientAddress: string;
+  onConfirm: () => void;
+}
+
+const ConfirmSubnameModal: React.FC<ConfirmSubnameModalProps> = ({
+  open,
+  onClose,
+  parentName,
+  subname,
+  recipientAddress,
+  onConfirm,
+}) => {
+  const { theme } = useTheme();
+  const { enqueueSnackbar } = useSnackbar();
+
+  const formatCompactAddress = (address: string): string => {
+    if (!address) return "";
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      enqueueSnackbar("Address copied to clipboard", {
+        variant: "success",
+        anchorOrigin: {
+          vertical: "top",
+          horizontal: "center",
+        },
+      });
+    } catch (err) {
+      enqueueSnackbar("Failed to copy address", {
+        variant: "error",
+        anchorOrigin: {
+          vertical: "top",
+          horizontal: "center",
+        },
+      });
+    }
+  };
+
+  const openInExplorer = () => {
+    const explorerUrl = `https://block.voi.network/explorer/account/${recipientAddress}/transactions`;
+    window.open(explorerUrl, "_blank", "noopener,noreferrer");
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      aria-labelledby="confirm-subname-modal"
+    >
+      <Box
+        sx={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: "90%",
+          maxWidth: "500px",
+          bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+          borderRadius: "12px",
+          boxShadow: 24,
+          p: 3,
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
+          <Typography
+            variant="h6"
+            sx={{
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+              fontWeight: 600,
+            }}
+          >
+            Confirm Subname Creation
+          </Typography>
+          <IconButton onClick={onClose} size="small">
+            <CloseIcon
+              sx={{
+                color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+              }}
+            />
+          </IconButton>
+        </Box>
+
+        <Box sx={{ mb: 3 }}>
+          <Typography
+            variant="body1"
+            sx={{
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+              mb: 2,
+            }}
+          >
+            You are about to create:
+          </Typography>
+
+          <Box
+            sx={{
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F3F4F6",
+              borderRadius: "8px",
+              p: 2,
+              mb: 2,
+            }}
+          >
+            <Typography
+              variant="h6"
+              sx={{
+                color: theme.palette.mode === "dark" ? "#3B82F6" : "#3B82F6",
+                fontWeight: 600,
+                textAlign: "center",
+              }}
+            >
+              {subname}.{parentName}
+            </Typography>
+          </Box>
+
+          <Typography
+            variant="body2"
+            sx={{
+              color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+              mb: 2,
+            }}
+          >
+            This will create a new subname under <strong>{parentName}</strong>{" "}
+            owned by:
+          </Typography>
+
+          <Box
+            sx={{
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F3F4F6",
+              borderRadius: "8px",
+              p: 2,
+              mb: 2,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <Typography
+              variant="body2"
+              sx={{
+                color: theme.palette.mode === "dark" ? "#3B82F6" : "#3B82F6",
+                fontWeight: 500,
+                fontFamily: "monospace",
+              }}
+            >
+              {formatCompactAddress(recipientAddress)}
+            </Typography>
+            <Box sx={{ display: "flex", gap: 1 }}>
+              <IconButton
+                size="small"
+                onClick={() => copyToClipboard(recipientAddress)}
+                sx={{
+                  color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                  "&:hover": {
+                    color:
+                      theme.palette.mode === "dark" ? "#D1D5DB" : "#374151",
+                    backgroundColor:
+                      theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB",
+                  },
+                }}
+              >
+                <ContentCopyIcon fontSize="small" />
+              </IconButton>
+              <IconButton
+                size="small"
+                onClick={openInExplorer}
+                sx={{
+                  color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                  "&:hover": {
+                    color:
+                      theme.palette.mode === "dark" ? "#D1D5DB" : "#374151",
+                    backgroundColor:
+                      theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB",
+                  },
+                }}
+              >
+                <OpenInNewIcon fontSize="small" />
+              </IconButton>
+            </Box>
+          </Box>
+
+          <Typography
+            variant="body2"
+            sx={{
+              color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+              mb: 2,
+            }}
+          >
+            This subname can be used for:
+          </Typography>
+
+          <Box sx={{ ml: 2 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+                mb: 1,
+              }}
+            >
+              • Address resolution
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{
+                color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+                mb: 1,
+              }}
+            >
+              • Profile records
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{
+                color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+                mb: 1,
+              }}
+            >
+              • Custom text records
+            </Typography>
+          </Box>
+        </Box>
+
+        <Box
+          sx={{
+            display: "flex",
+            gap: 2,
+            justifyContent: "flex-end",
+          }}
+        >
+          <Button
+            variant="outlined"
+            onClick={onClose}
+            sx={{
+              borderColor:
+                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+              "&:hover": {
+                borderColor:
+                  theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+                backgroundColor:
+                  theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+              },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={onConfirm}
+            sx={{
+              backgroundColor:
+                theme.palette.mode === "dark" ? "#3B82F6" : "#3B82F6",
+              color: "#FFFFFF",
+              "&:hover": {
+                backgroundColor:
+                  theme.palette.mode === "dark" ? "#2563EB" : "#2563EB",
+              },
+            }}
+          >
+            Create Subname
+          </Button>
+        </Box>
+      </Box>
+    </Modal>
+  );
+};
+
+interface SubnameProgressModalProps {
+  open: boolean;
+  onClose: () => void;
+  parentName: string;
+  parentAppId: number;
+  subname: string;
+  recipientAddress: string;
+  onComplete: () => void;
+}
+
+const SubnameProgressModal: React.FC<SubnameProgressModalProps> = ({
+  open,
+  onClose,
+  parentName,
+  parentAppId,
+  subname,
+  recipientAddress,
+  onComplete,
+}) => {
+  const { activeAccount, signTransactions, transactionSigner } = useWallet();
+  const { theme } = useTheme();
+  const [currentStep, setCurrentStep] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const steps = [
+    {
+      title: "Preparing Transaction",
+      description: "Setting up subname creation parameters",
+      icon: <CircularProgress size={20} />,
+    },
+    {
+      title: "Creating Subname",
+      description: `Registering ${subname}.${parentName}`,
+      icon: <CircularProgress size={20} />,
+    },
+    {
+      title: "Updating Registry",
+      description: "Adding subname to the registry",
+      icon: <CircularProgress size={20} />,
+    },
+    {
+      title: "Complete",
+      description: "Subname created successfully",
+      icon: <CheckCircleIcon sx={{ color: "#10B981" }} />,
+    },
+  ];
+
+  useEffect(() => {
+    if (open) {
+      executeSubnameTransaction();
+    }
+  }, [open]);
+
+  const executeSubnameTransaction = async () => {
+    setIsProcessing(true);
+    if (!activeAccount) {
+      enqueueSnackbar("Please connect your wallet to create a subname", {
+        variant: "error",
+      });
+      return;
+    }
+    try {
+      // Step 1: Preparing Transaction
+      setCurrentStep(0);
+
+      // Determine the parent app ID for the subname (same logic as ProfilePage)
+      const { algodClient, indexerClient } = getAlgorandClients();
+      const subnameNode = namehash(`${subname}.${parentName}`);
+
+      const vns = {
+        registry: 797607,
+        resolver: 797608,
+        registrar: parentAppId,
+        reverseRegistrar: 797610,
+      };
+      const ciRegistrar = new CONTRACT(
+        Number(vns.registrar),
+        algodClient,
+        indexerClient,
+        { ...VNSRegistrarSpec.contract, events: [] },
+        { addr: activeAccount.address, sk: new Uint8Array() }
+      );
+      const ciRegistry = new CONTRACT(
+        Number(vns.registry),
+        algodClient,
+        indexerClient,
+        { ...VNSRegistrySpec.contract, events: [] },
+        {
+          addr:
+            activeAccount.address ||
+            algosdk.getApplicationAddress(vns.registry),
+          sk: new Uint8Array(),
+        }
+      );
+      const ciResolver = new CONTRACT(
+        vns.resolver,
+        algodClient,
+        indexerClient,
+        { ...VNSPublicResolverSpec.contract, events: [] },
+        { addr: activeAccount.address, sk: new Uint8Array() }
+      );
+      const tokenId = uint8ArrayToBigInt(await namehash(parentName));
+      console.log("tokenId", tokenId);
+      const tokenOwnerR = await ciRegistrar.arc72_ownerOf(tokenId);
+      if (!tokenOwnerR.success) {
+        throw new Error("Failed to get owner of token");
+      }
+      const tokenOwner = tokenOwnerR.returnValue;
+      console.log("tokenOwner", tokenOwner);
+      if (tokenOwner !== activeAccount.address) {
+        throw new Error("Token not owned by active account");
+      }
+      const ownerOfR = await ciRegistry.ownerOf(await namehash(parentName));
+      if (!ownerOfR.success) {
+        throw new Error("Failed to get owner of node");
+      }
+      const nodeOwner = ownerOfR.returnValue;
+
+      let subnameParentAppId = 0;
+
+      do {
+        // if the node owner is the active account, we likely have to deploy a new registrar
+        // or update the existing
+        // if (nodeOwner === activeAccount.address) {
+        //   break;
+        // }
+
+        // TODO: Get application transactions for the subname node
+        // This should follow the same pattern as ProfilePage to find the registrar
+        const applicationTransactions = await indexerClient
+          .lookupAccountTransactions(nodeOwner)
+          .do();
+
+        // TODO: Find the registrar application transaction
+        const applicationTransaction =
+          applicationTransactions.transactions.find((txn: any) => {
+            const mAppId = txn["application-transaction"]?.["application-id"];
+            if (!mAppId) {
+              return false;
+            }
+            return algosdk.getApplicationAddress(mAppId) === nodeOwner;
+          });
+
+        if (!applicationTransaction) {
+          break;
+        }
+
+        subnameParentAppId =
+          applicationTransaction["application-transaction"]["application-id"];
+      } while (0);
+
+      if (subnameParentAppId === 0) {
+        // if the subname parent app id is 0, we need to deploy a new registrar
+        // set subnameParentAppId to the application id of the registrar
+        const clientParams: any = {
+          resolveBy: "creatorAndName",
+          findExistingUsing: indexerClient,
+          creatorAddress: activeAccount.address,
+          name: `vns-registrar-${parentName}`,
+          sender: {
+            addr: activeAccount.address,
+            signer: transactionSigner,
+          },
+        };
+        const appClient = new VnsRegistrarClient(clientParams, algodClient);
+        if (appClient) {
+          console.log(appClient);
+          const app = await appClient.deploy({
+            deployTimeParams: {},
+            onUpdate: "update",
+            onSchemaBreak: "fail",
+          });
+          subnameParentAppId = Number(app.appId);
+        }
+      }
+      if (subnameParentAppId === 0) {
+        throw new Error("Failed to deploy registrar");
+      }
+      const ci = new CONTRACT(
+        subnameParentAppId,
+        algodClient,
+        indexerClient,
+        abi.custom,
+        { addr: activeAccount.address, sk: new Uint8Array() }
+      );
+      const builder = {
+        parentRegistrar: new CONTRACT(
+          parentAppId,
+          algodClient,
+          indexerClient,
+          { ...VNSRegistrarSpec.contract, events: [] },
+          { addr: activeAccount.address, sk: new Uint8Array() },
+          true,
+          false,
+          true
+        ),
+        registrar: new CONTRACT(
+          subnameParentAppId,
+          algodClient,
+          indexerClient,
+          { ...VNSRegistrarSpec.contract, events: [] },
+          { addr: activeAccount.address, sk: new Uint8Array() },
+          true,
+          false,
+          true
+        ),
+        resolver: new CONTRACT(
+          vns.resolver,
+          algodClient,
+          indexerClient,
+          { ...VNSPublicResolverSpec.contract, events: [] },
+          { addr: activeAccount.address, sk: new Uint8Array() },
+          true,
+          false,
+          true
+        ),
+        registry: new CONTRACT(
+          vns.registry,
+          algodClient,
+          indexerClient,
+          { ...VNSRegistrySpec.contract, events: [] },
+          { addr: activeAccount.address, sk: new Uint8Array() },
+          true,
+          false,
+          true
+        ),
+      };
+      const ciSubnameRegistrar = new CONTRACT(
+        subnameParentAppId,
+        algodClient,
+        indexerClient,
+        { ...VNSRegistrarSpec.contract, events: [] },
+        { addr: activeAccount.address, sk: new Uint8Array() }
+      );
+      const buildN = [];
+      // if parent node not owned by active account
+      //   reclaim through parent registrar
+      const nodeId = await namehash(parentName);
+      const ownerNodeR = await ciRegistry.ownerOf(nodeId);
+      if (!ownerNodeR.success) {
+        throw new Error("Failed to get owner of node");
+      }
+      const ownerNode = ownerNodeR.returnValue;
+      console.log("ownerNode", ownerNode);
+      if (ownerNode !== activeAccount.address) {
+        const txnO = (
+          await builder.parentRegistrar.reclaim(
+            stringToUint8Array(parentName.split(".")[0], 32)
+          )
+        )?.obj;
+        buildN.push({
+          ...txnO,
+          note: new TextEncoder().encode(
+            `parentRegistrar reclaim ${parentName}`
+          ),
+        });
+      }
+      //if not owned by active account and not owned by registrar
+      //  reclaim through registrar
+      // if (
+      //   ownerNode !== activeAccount.address &&
+      //   ownerNode !== algosdk.getApplicationAddress(subnameParentAppId)
+      // ) {
+      //   const txnO = (
+      //     await builder.parentRegistrar.reclaim(stringToUint8Array(subname, 32))
+      //   )?.obj;
+      //   buildN.push({
+      //     ...txnO,
+      //     note: new TextEncoder().encode(
+      //       `registrar reclaim ${subname}.${parentName}`
+      //     ),
+      //   });
+      // }
+      // should be owned by active account
+      // if owned by active account and not owned by registrar
+      //   registry transfer node ownership to the new registrar application address
+      if (ownerNode !== algosdk.getApplicationAddress(subnameParentAppId)) {
+        const txnO = (
+          await builder.registry.setOwner(
+            await namehash(`${parentName}`),
+            algosdk.getApplicationAddress(subnameParentAppId)
+          )
+        )?.obj;
+        buildN.push({
+          ...txnO,
+          note: new TextEncoder().encode(
+            `registry setOwner ${parentName} to ${algosdk.getApplicationAddress(
+              subnameParentAppId
+            )}`
+          ),
+        });
+      }
+      // if root node not set
+      //   registrar set root node
+      const get_root_nodeR = await ciSubnameRegistrar.get_root_node();
+      if (!get_root_nodeR.success) {
+        throw new Error("Failed to get root node");
+      }
+      const root_node = get_root_nodeR.returnValue;
+      console.log("root_node", root_node);
+      if (root_node !== "") {
+        const txnO = (
+          await builder.registrar.set_root_node(await namehash(`${parentName}`))
+        )?.obj;
+        buildN.push({
+          ...txnO,
+          note: new TextEncoder().encode(
+            `registrar set_root_node to ${parentName}`
+          ),
+        });
+      }
+      // if registrar registry not vns.registry
+      //   registrar set registry to vns.registry
+      const get_registryR = await ciSubnameRegistrar.get_registry();
+      if (!get_registryR.success) {
+        throw new Error("Failed to get registry");
+      }
+      const registry = Number(get_registryR.returnValue);
+      console.log("registry", registry);
+      if (registry !== vns.registry) {
+        const txnO = (await builder.registrar.set_registry(vns.registry))?.obj;
+        buildN.push({
+          ...txnO,
+          note: new TextEncoder().encode(
+            `registrar set_registry to ${vns.registry}`
+          ),
+        });
+      }
+      // mint subname to active account
+      const txnO = (
+        await builder.registrar.mint(
+          activeAccount.address,
+          stringToUint8Array(subname, 32)
+        )
+      )?.obj;
+      buildN.push({
+        ...txnO,
+        note: new TextEncoder().encode(
+          `registrar mint ${subname}.${parentName}`
+        ),
+        payment: 336700,
+      });
+      // reclaim subname
+      {
+        const txnO = (
+          await builder.registrar.reclaim(stringToUint8Array(subname, 32))
+        )?.obj;
+        buildN.push({
+          ...txnO,
+          note: new TextEncoder().encode(
+            `registrar reclaim ${subname}.${parentName}`
+          ),
+        });
+      }
+      // if subname text name is does not match subname
+      //   resolver set name in resolver eg text name subname.voi
+      const nameR = await ciResolver.name(
+        await namehash(`${subname}.${parentName}`)
+      );
+      if (!nameR.success) {
+        throw new Error("Failed to get name");
+      }
+      const name = nameR.returnValue;
+      console.log("name", name);
+      if (name !== `${subname}.${parentName}`) {
+        const txnO = (
+          await builder.resolver.setName(
+            await namehash(`${subname}.${parentName}`),
+            stringToUint8Array(`${subname}.${parentName}`, 256)
+          )
+        )?.obj;
+        buildN.push({
+          ...txnO,
+          payment: 336701,
+          note: new TextEncoder().encode(
+            `resolver setName ${subname}.${parentName}`
+          ),
+        });
+      }
+      // registry node set owner to recipient
+      {
+        const txnO = (
+          await builder.registry.setOwner(
+            await namehash(`${subname}.${parentName}`),
+            recipientAddress
+          )
+        )?.obj;
+        buildN.push({
+          ...txnO,
+          note: new TextEncoder().encode(
+            `registry transfer ${subname}.${parentName} to ${recipientAddress}`
+          ),
+        });
+      }
+      // registrar token transfer to recipient
+      {
+        const txnO = (
+          await builder.registrar.arc72_transferFrom(
+            activeAccount.address,
+            recipientAddress,
+            uint8ArrayToBigInt(await namehash(`${subname}.${parentName}`))
+          )
+        )?.obj;
+        buildN.push({
+          ...txnO,
+          note: new TextEncoder().encode(
+            `registrar arc72_transferFrom ${subname}.${parentName} to ${recipientAddress}`
+          ),
+        });
+      }
+      // build and simulate
+      console.log({ buildN });
+      ci.setExtraTxns(buildN);
+      ci.setFee(10000);
+      ci.setEnableGroupResourceSharing(true);
+      const customR = await ci.custom();
+      console.log({ customR });
+      if (!customR.success) {
+        throw new Error("Failed to create subname");
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Step 2: Creating Subname
+      setCurrentStep(1);
+
+      // sign
+      const stxns = await signTransactions(
+        customR.txns.map(
+          (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+        )
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Step 3: Updating Registry
+      setCurrentStep(2);
+
+      // send
+      await algodClient.sendRawTransaction(stxns as Uint8Array[]).do();
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Step 4: Complete
+      setCurrentStep(3);
+      setIsProcessing(false);
+
+      // Auto-close after 2 seconds and navigate
+      setTimeout(() => {
+        onComplete();
+      }, 2000);
+    } catch (error) {
+      console.error("Error executing subname transaction:", error);
+      setIsProcessing(false);
+      enqueueSnackbar("Failed to create subname. Please try again.", {
+        variant: "error",
+      });
+    }
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={isProcessing ? undefined : onClose}
+      aria-labelledby="subname-progress-modal"
+    >
+      <Box
+        sx={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: "90%",
+          maxWidth: "500px",
+          bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+          borderRadius: "12px",
+          boxShadow: 24,
+          p: 3,
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
+          <Typography
+            variant="h6"
+            sx={{
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+              fontWeight: 600,
+            }}
+          >
+            Creating Subname
+          </Typography>
+          {!isProcessing && (
+            <IconButton onClick={onClose} size="small">
+              <CloseIcon
+                sx={{
+                  color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                }}
+              />
+            </IconButton>
+          )}
+        </Box>
+
+        <Box sx={{ mb: 3 }}>
+          <Typography
+            variant="body1"
+            sx={{
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+              mb: 2,
+              textAlign: "center",
+            }}
+          >
+            Creating{" "}
+            <strong>
+              {subname}.{parentName}
+            </strong>
+          </Typography>
+        </Box>
+
+        <Box sx={{ mb: 3 }}>
+          {steps.map((step, index) => (
+            <Box
+              key={index}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                mb: 2,
+                opacity: index <= currentStep ? 1 : 0.5,
+              }}
+            >
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  mr: 2,
+                  bgcolor:
+                    index < currentStep
+                      ? "#10B981"
+                      : index === currentStep
+                      ? theme.palette.mode === "dark"
+                        ? "#3B82F6"
+                        : "#3B82F6"
+                      : theme.palette.mode === "dark"
+                      ? "#374151"
+                      : "#E5E7EB",
+                  color:
+                    index <= currentStep
+                      ? "#FFFFFF"
+                      : theme.palette.mode === "dark"
+                      ? "#6B7280"
+                      : "#9CA3AF",
+                }}
+              >
+                {index < currentStep ? <CheckCircleIcon /> : step.icon}
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Typography
+                  variant="body1"
+                  sx={{
+                    color:
+                      theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                    fontWeight: index === currentStep ? 600 : 400,
+                  }}
+                >
+                  {step.title}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color:
+                      theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+                  }}
+                >
+                  {step.description}
+                </Typography>
+              </Box>
+            </Box>
+          ))}
+        </Box>
+
+        {currentStep === 3 && (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              mb: 2,
+            }}
+          >
+            <Typography
+              variant="body2"
+              sx={{
+                color: "#10B981",
+                fontWeight: 600,
+              }}
+            >
+              ✓ Subname created successfully!
+            </Typography>
+          </Box>
+        )}
+      </Box>
+    </Modal>
+  );
+};
+
 const ProfilePage: React.FC = () => {
   const { activeAccount, signTransactions } = useWallet();
   const { name } = useParams<{ name: string }>();
   const { theme } = useTheme();
   const { enqueueSnackbar } = useSnackbar();
+  const navigate = useNavigate();
 
   const selectedNetwork: NetworkType =
     (localStorage.getItem("selectedNetwork") as NetworkType) || "mainnet";
@@ -1630,7 +2739,9 @@ const ProfilePage: React.FC = () => {
   const [newBioPages, setNewBioPages] = React.useState<string[]>([]);
   const [bioError, setBioError] = React.useState<string>("");
   const [description, setDescription] = React.useState<string | null>(null);
-  const [newDescription, setNewDescription] = React.useState<string | null>(null);
+  const [newDescription, setNewDescription] = React.useState<string | null>(
+    null
+  );
   const [display, setDisplay] = React.useState<string | null>(null);
   const [newDisplay, setNewDisplay] = React.useState<string | null>(null);
   const [background, setBackground] = React.useState<string | null>(null);
@@ -1673,10 +2784,28 @@ const ProfilePage: React.FC = () => {
   const [isController, setIsController] = useState<boolean>(false);
   const [isMintModalOpen, setIsMintModalOpen] = useState(false);
   const [mintToAddress, setMintToAddress] = useState<string>("");
+  const [isSubnameModalOpen, setIsSubnameModalOpen] = useState(false);
+  const [isConfirmSubnameModalOpen, setIsConfirmSubnameModalOpen] =
+    useState(false);
+  const [isSubnameProgressModalOpen, setIsSubnameProgressModalOpen] =
+    useState(false);
+  const [pendingSubname, setPendingSubname] = useState<string>("");
+  const [pendingRecipientAddress, setPendingRecipientAddress] =
+    useState<string>("");
 
   useEffect(() => {
+    if (!name) return;
+    const parentName = name.split(".").slice(1).join(".");
+    if (parentName === "voi") {
+      setParentName("voi");
+      setParentAppId(797609);
+      setPaymentToken(828295);
+      setPaymentTokenDecimals(6);
+      setPaymentTokenSymbol("VOI");
+      return;
+    }
     if (name) {
-      const parentName = name.split(".").slice(1).join(".");
+      console.log("parentName", parentName, "name", name);
       setParentName(parentName);
       (async () => {
         const { algodClient, indexerClient } = getAlgorandClients();
@@ -1709,9 +2838,12 @@ const ProfilePage: React.FC = () => {
         );
         if (!applicationTransaction) {
           setParentAppId(0);
+          return;
         }
         const appId =
           applicationTransaction["application-transaction"]["application-id"];
+
+        console.log("appId", appId);
         setParentAppId(appId);
 
         console.log("appId", appId);
@@ -1766,6 +2898,11 @@ const ProfilePage: React.FC = () => {
       })();
     }
   }, [name]);
+  console.log("parentName", parentName);
+  console.log("parentAppId", parentAppId);
+  console.log("paymentToken", paymentToken);
+  console.log("paymentTokenDecimals", paymentTokenDecimals);
+  console.log("paymentTokenSymbol", paymentTokenSymbol);
 
   useEffect(() => {
     if (parentAppId) {
@@ -1833,6 +2970,49 @@ const ProfilePage: React.FC = () => {
     setNewBanner(null);
   };
 
+  const handleCreateSubname = () => {
+    setIsSubnameModalOpen(true);
+  };
+
+  const handleCloseSubnameModal = () => {
+    setIsSubnameModalOpen(false);
+  };
+
+  const handleConfirmSubname = (subname: string, recipientAddress: string) => {
+    setPendingSubname(subname);
+    setPendingRecipientAddress(recipientAddress);
+    setIsSubnameModalOpen(false);
+    setIsConfirmSubnameModalOpen(true);
+  };
+
+  const handleCloseConfirmSubnameModal = () => {
+    setIsConfirmSubnameModalOpen(false);
+    setPendingSubname("");
+    setPendingRecipientAddress("");
+  };
+
+  const handleSubnameCreation = async () => {
+    if (!name || !pendingSubname) return;
+
+    // Close confirmation modal and show progress modal
+    setIsConfirmSubnameModalOpen(false);
+    setIsSubnameProgressModalOpen(true);
+  };
+
+  const handleSubnameProgressComplete = () => {
+    // Close progress modal and navigate to the new subname's profile page
+    setIsSubnameProgressModalOpen(false);
+    navigate(`/${pendingSubname}.${name}`);
+    setPendingSubname("");
+    setPendingRecipientAddress("");
+  };
+
+  const handleCloseSubnameProgressModal = () => {
+    setIsSubnameProgressModalOpen(false);
+    setPendingSubname("");
+    setPendingRecipientAddress("");
+  };
+
   const handleAvatarClick = (event: React.MouseEvent) => {
     event.stopPropagation();
     setShowAvatarMenu(!showAvatarMenu);
@@ -1869,14 +3049,14 @@ const ProfilePage: React.FC = () => {
     if (!bioText || bioText.length === 0) {
       return [];
     }
-    
+
     const pages: string[] = [];
     let remainingText = bioText;
-    
+
     while (remainingText.length > 0) {
       // Check byte length instead of character length for accurate 256-byte limit
-      const remainingBytes = Buffer.byteLength(remainingText, 'utf8');
-      
+      const remainingBytes = Buffer.byteLength(remainingText, "utf8");
+
       if (remainingBytes <= 256) {
         pages.push(remainingText);
         break;
@@ -1884,31 +3064,31 @@ const ProfilePage: React.FC = () => {
         // Start with a conservative estimate
         let cutPoint = Math.floor(remainingText.length * 0.7);
         let testText = remainingText.substring(0, cutPoint);
-        
+
         // Binary search to find the exact cut point that fits in 256 bytes
-        while (Buffer.byteLength(testText, 'utf8') > 256 && cutPoint > 0) {
+        while (Buffer.byteLength(testText, "utf8") > 256 && cutPoint > 0) {
           cutPoint = Math.floor(cutPoint * 0.8);
           testText = remainingText.substring(0, cutPoint);
         }
-        
+
         // Now we have a cut point that fits in 256 bytes, but we need to ensure
         // we don't cut in the middle of a multi-byte character
         while (cutPoint > 0 && cutPoint < remainingText.length) {
           const charAtCut = remainingText[cutPoint];
           const charBeforeCut = remainingText[cutPoint - 1];
-          
+
           // Check if we're in the middle of a multi-byte character
           // UTF-8 continuation bytes start with 10xxxxxx (0x80-0xBF)
           const charCode = charAtCut.charCodeAt(0);
           const prevCharCode = charBeforeCut.charCodeAt(0);
-          
-          if (charCode >= 0x80 && charCode <= 0xBF) {
+
+          if (charCode >= 0x80 && charCode <= 0xbf) {
             // We're in the middle of a multi-byte character, move back
             cutPoint--;
             testText = remainingText.substring(0, cutPoint);
-            
+
             // Re-check byte length after moving back
-            if (Buffer.byteLength(testText, 'utf8') > 256) {
+            if (Buffer.byteLength(testText, "utf8") > 256) {
               cutPoint = Math.floor(cutPoint * 0.9);
               testText = remainingText.substring(0, cutPoint);
               continue;
@@ -1917,43 +3097,49 @@ const ProfilePage: React.FC = () => {
             break; // We're at a safe cut point
           }
         }
-        
+
         // Try to find a better break point (newline or space)
         let bestCutPoint = cutPoint;
-        
+
         // Look for newlines first (prefer breaking at paragraph boundaries)
-        const lastNewline = remainingText.lastIndexOf('\n', cutPoint);
-        if (lastNewline > cutPoint * 0.5) { // Only if it's not too far back
+        const lastNewline = remainingText.lastIndexOf("\n", cutPoint);
+        if (lastNewline > cutPoint * 0.5) {
+          // Only if it's not too far back
           const newlineText = remainingText.substring(0, lastNewline);
-          if (Buffer.byteLength(newlineText, 'utf8') <= 256) {
+          if (Buffer.byteLength(newlineText, "utf8") <= 256) {
             bestCutPoint = lastNewline;
           }
         }
-        
+
         // If no good newline, look for spaces
         if (bestCutPoint === cutPoint) {
-          const lastSpace = remainingText.lastIndexOf(' ', cutPoint);
-          if (lastSpace > cutPoint * 0.6) { // Only if it's not too far back
+          const lastSpace = remainingText.lastIndexOf(" ", cutPoint);
+          if (lastSpace > cutPoint * 0.6) {
+            // Only if it's not too far back
             const spaceText = remainingText.substring(0, lastSpace);
-            if (Buffer.byteLength(spaceText, 'utf8') <= 256) {
+            if (Buffer.byteLength(spaceText, "utf8") <= 256) {
               bestCutPoint = lastSpace;
             }
           }
         }
-        
+
         pages.push(remainingText.substring(0, bestCutPoint));
         remainingText = remainingText.substring(bestCutPoint).trim();
       }
     }
-    
+
     return pages;
   };
 
   const validateBio = (bioPages: string[]) => {
     for (let i = 0; i < bioPages.length; i++) {
-      const pageBytes = Buffer.byteLength(bioPages[i], 'utf8');
+      const pageBytes = Buffer.byteLength(bioPages[i], "utf8");
       if (pageBytes > 256) {
-        setBioError(`Bio page ${i + 1} must be 256 bytes or less (currently ${pageBytes} bytes)`);
+        setBioError(
+          `Bio page ${
+            i + 1
+          } must be 256 bytes or less (currently ${pageBytes} bytes)`
+        );
         return false;
       }
     }
@@ -1961,16 +3147,18 @@ const ProfilePage: React.FC = () => {
     return true;
   };
 
-
-  const loadBioPages = async (name: string, resolverInstance: ResolverService) => {
+  const loadBioPages = async (
+    name: string,
+    resolverInstance: ResolverService
+  ) => {
     const pages: string[] = [];
-    
+
     // Load main bio page
     const mainBio = await resolverInstance.text(name, "bio");
     if (mainBio) {
       pages.push(mainBio);
     }
-    
+
     // Load extended bio pages
     let pageNum = 2;
     while (true) {
@@ -1982,7 +3170,7 @@ const ProfilePage: React.FC = () => {
         break; // Gap found, stop loading
       }
     }
-    
+
     return pages;
   };
 
@@ -2347,9 +3535,11 @@ const ProfilePage: React.FC = () => {
       setBioPages(pages);
       setBio(pages.length > 0 ? pages.join("") : null);
     });
-    resolver.text(name || "", "description").then((description: string | null) => {
-      setDescription(description);
-    });
+    resolver
+      .text(name || "", "description")
+      .then((description: string | null) => {
+        setDescription(description);
+      });
     resolver.text(name || "", "display").then((display: string | null) => {
       setDisplay(display);
     });
@@ -2468,7 +3658,7 @@ const ProfilePage: React.FC = () => {
       });
       return;
     }
-    
+
     setIsPendingTx(true);
     try {
       if (!activeAccount) return;
@@ -2559,19 +3749,22 @@ const ProfilePage: React.FC = () => {
           setIsPendingTx(false);
           return;
         }
-        
+
         // Additional server-side validation for each page
         for (let i = 0; i < newBioPages.length; i++) {
-          const pageBytes = Buffer.byteLength(newBioPages[i].trim(), 'utf8');
+          const pageBytes = Buffer.byteLength(newBioPages[i].trim(), "utf8");
           if (pageBytes > 256) {
-            enqueueSnackbar(`Bio page ${i + 1} exceeds 256 bytes (${pageBytes} bytes)`, {
-              variant: "error",
-            });
+            enqueueSnackbar(
+              `Bio page ${i + 1} exceeds 256 bytes (${pageBytes} bytes)`,
+              {
+                variant: "error",
+              }
+            );
             setIsPendingTx(false);
             return;
           }
         }
-        
+
         // Save main bio page
         if (newBioPages.length > 0) {
           const setTextR: any = await resolver.setText(
@@ -2582,14 +3775,10 @@ const ProfilePage: React.FC = () => {
           buildN.push(setTextR);
         } else {
           // Clear main bio page if no pages exist
-          const clearTextR: any = await resolver.setText(
-            name,
-            "bio",
-            ""
-          );
+          const clearTextR: any = await resolver.setText(name, "bio", "");
           buildN.push(clearTextR);
         }
-        
+
         // Save extended bio pages
         for (let i = 1; i < newBioPages.length; i++) {
           const setTextR: any = await resolver.setText(
@@ -2599,7 +3788,7 @@ const ProfilePage: React.FC = () => {
           );
           buildN.push(setTextR);
         }
-        
+
         // Clear any existing pages after the last non-empty page
         // Check if there are any existing pages beyond our current set
         let pageNum = newBioPages.length + 1;
@@ -2619,7 +3808,7 @@ const ProfilePage: React.FC = () => {
             break;
           }
         }
-        
+
         bioUpdated = true;
       }
 
@@ -3037,19 +4226,19 @@ const ProfilePage: React.FC = () => {
         }
 
         // Extend name
-        // {
-        //   const label = name.split(".")[0];
-        //   const paramName = stringToUint8Array(label, 32);
-        //   const paramDuration = Number(selectedDuration) * 365 * 24 * 60 * 60; // Convert years to seconds
-        //   const txnO = (await builder.registrar.renew())?.obj;
-        //   buildN.push({
-        //     ...txnO,
-        //     payment: 336700,
-        //     note: new TextEncoder().encode(
-        //       `envoi registrar extend ${name}.${parentName} for ${selectedDuration} years`
-        //     ),
-        //   });
-        // }
+        {
+          const label = name.split(".")[0];
+          const paramName = stringToUint8Array(label, 32);
+          const paramDuration = Number(selectedDuration) * 365 * 24 * 60 * 60; // Convert years to seconds
+          const txnO = (await builder.registrar.renew())?.obj;
+          buildN.push({
+            ...txnO,
+            payment: 336700,
+            note: new TextEncoder().encode(
+              `envoi registrar extend ${name}.${parentName} for ${selectedDuration} years`
+            ),
+          });
+        }
 
         ci.setFee(15000);
         ci.setEnableGroupResourceSharing(true);
@@ -3122,6 +4311,7 @@ const ProfilePage: React.FC = () => {
 
       const vns = {
         registrar: parentAppId,
+        registry: 797607,
       };
 
       const ci = new CONTRACT(
@@ -3154,6 +4344,16 @@ const ProfilePage: React.FC = () => {
           false,
           true
         ),
+        registry: new CONTRACT(
+          vns.registry,
+          algodClient,
+          indexerClient,
+          { ...VNSRegistrySpec.contract, events: [] },
+          { addr: activeAccount.address, sk: new Uint8Array() },
+          true,
+          false,
+          true
+        ),
       };
 
       const buildN = [];
@@ -3162,19 +4362,34 @@ const ProfilePage: React.FC = () => {
       const node = await namehash(name || "");
       const tokenId = uint8ArrayToBigInt(node);
 
-      // Transfer the name
-      const txnO = await builder.registrar.arc72_transferFrom(
-        activeAccount.address,
-        newOwnerForTransfer || "",
-        tokenId
-      );
-      buildN.push({
-        ...txnO.obj,
-        payment: 28500,
-        note: new TextEncoder().encode(
-          `envoi arc72_transferFrom ${name}.voi from ${activeAccount.address} to ${newOwnerForTransfer}`
-        ),
-      });
+      // registry transfer node to new owner
+      {
+        const txnO = await builder.registry.setOwner(
+          node,
+          newOwnerForTransfer || ""
+        );
+        buildN.push({
+          ...txnO.obj,
+          note: new TextEncoder().encode(
+            `registry transfer ${name}.voi to ${newOwnerForTransfer}`
+          ),
+        });
+      }
+      // registrar transfer token to new owner
+      {
+        const txnO = await builder.registrar.arc72_transferFrom(
+          activeAccount.address,
+          newOwnerForTransfer || "",
+          tokenId
+        );
+        buildN.push({
+          ...txnO.obj,
+          payment: 28500,
+          note: new TextEncoder().encode(
+            `envoi arc72_transferFrom ${name}.voi from ${activeAccount.address} to ${newOwnerForTransfer}`
+          ),
+        });
+      }
 
       ci.setFee(2000);
       ci.setEnableGroupResourceSharing(true);
@@ -3746,6 +4961,38 @@ const ProfilePage: React.FC = () => {
                     Transfer
                     <SendIcon />
                   </Button>
+                  {/*<Button
+                    variant="contained"
+                    onClick={handleCreateSubname}
+                    sx={{
+                      bgcolor:
+                        theme.palette.mode === "dark" ? "#374151" : "white",
+                      color:
+                        theme.palette.mode === "dark" ? "#F9FAFB" : "#10B981",
+                      "&:hover": {
+                        bgcolor:
+                          theme.palette.mode === "dark" ? "#4B5563" : "#F0FDF4",
+                      },
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      padding: "0.5rem 1rem",
+                      borderRadius: "0.5rem",
+                      fontWeight: "600",
+                      fontSize: "0.875rem",
+                      boxShadow:
+                        theme.palette.mode === "dark"
+                          ? "0 2px 4px rgba(0, 0, 0, 0.3)"
+                          : "0 2px 4px rgba(0, 0, 0, 0.1)",
+                      border:
+                        theme.palette.mode === "dark"
+                          ? "1px solid #4B5563"
+                          : "none",
+                    }}
+                  >
+                    New Subname
+                    <PlusIcon size={16} />
+                  </Button>*/}
                 </>
               )}
             </div>
@@ -3831,13 +5078,14 @@ const ProfilePage: React.FC = () => {
                   >
                     <div
                       style={{
-                        color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                        color:
+                          theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
                         lineHeight: 1.6,
                         fontSize: "1rem",
                       }}
                     >
-                      <MDEditor.Markdown 
-                        source={bio} 
+                      <MDEditor.Markdown
+                        source={bio}
                         data-color-mode={theme.palette.mode}
                         style={{
                           backgroundColor: "transparent",
@@ -4617,7 +5865,14 @@ const ProfilePage: React.FC = () => {
 
             {newBio && (
               <div className="field-wrapper">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "8px",
+                  }}
+                >
                   <Typography variant="h6">Bio</Typography>
                   <Button
                     sx={{ minWidth: "auto", height: "40px" }}
@@ -4632,12 +5887,14 @@ const ProfilePage: React.FC = () => {
                     <DeleteIcon />
                   </Button>
                 </div>
-                
-                <div style={{ 
-                  border: bioError ? "1px solid #d32f2f" : "1px solid #ccc",
-                  borderRadius: "4px",
-                  overflow: "hidden"
-                }}>
+
+                <div
+                  style={{
+                    border: bioError ? "1px solid #d32f2f" : "1px solid #ccc",
+                    borderRadius: "4px",
+                    overflow: "hidden",
+                  }}
+                >
                   <MDEditor
                     value={newBio || ""}
                     onChange={(value) => {
@@ -4653,19 +5910,31 @@ const ProfilePage: React.FC = () => {
                     data-color-mode={theme.palette.mode}
                     height={300}
                     textareaProps={{
-                      placeholder: "Tell us about yourself... You can use **bold**, *italic*, [links](https://example.com), and more markdown formatting!",
+                      placeholder:
+                        "Tell us about yourself... You can use **bold**, *italic*, [links](https://example.com), and more markdown formatting!",
                     }}
                   />
                 </div>
-                
+
                 {bioError && (
                   <Typography variant="body2" color="error" sx={{ mt: 1 }}>
                     {bioError}
                   </Typography>
                 )}
-                
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  {`${(newBio || "").length} characters, ${Buffer.byteLength(newBio || "", 'utf8')} bytes${newBioPages.length > 1 ? ` (${newBioPages.length} pages)` : ""}`}
+
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 1 }}
+                >
+                  {`${(newBio || "").length} characters, ${Buffer.byteLength(
+                    newBio || "",
+                    "utf8"
+                  )} bytes${
+                    newBioPages.length > 1
+                      ? ` (${newBioPages.length} pages)`
+                      : ""
+                  }`}
                 </Typography>
               </div>
             )}
@@ -4717,7 +5986,14 @@ const ProfilePage: React.FC = () => {
 
             {newDisplay && (
               <div className="field-wrapper">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "8px",
+                  }}
+                >
                   <Typography variant="h6">Display Name</Typography>
                   <Button
                     sx={{ minWidth: "auto", height: "40px" }}
@@ -4730,55 +6006,62 @@ const ProfilePage: React.FC = () => {
                     <DeleteIcon />
                   </Button>
                 </div>
-                
+
                 <div style={{ marginBottom: "8px" }}>
                   <Typography variant="body2" color="text.secondary">
-                    Click on any character to change its case. This is your preferred display form.
+                    Click on any character to change its case. This is your
+                    preferred display form.
                   </Typography>
                 </div>
-                
-                <div style={{ 
-                  border: "1px solid #ccc",
-                  borderRadius: "4px",
-                  padding: "12px",
-                  backgroundColor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
-                  minHeight: "60px",
-                  display: "flex",
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                  gap: "2px"
-                }}>
-                  {(newDisplay || "").split('').map((char, index) => (
+
+                <div
+                  style={{
+                    border: "1px solid #ccc",
+                    borderRadius: "4px",
+                    padding: "12px",
+                    backgroundColor:
+                      theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+                    minHeight: "60px",
+                    display: "flex",
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                    gap: "2px",
+                  }}
+                >
+                  {(newDisplay || "").split("").map((char, index) => (
                     <span
                       key={index}
                       onClick={() => {
-                        const newValue = (newDisplay || "").split('');
+                        const newValue = (newDisplay || "").split("");
                         if (char === char.toUpperCase()) {
                           newValue[index] = char.toLowerCase();
                         } else {
                           newValue[index] = char.toUpperCase();
                         }
-                        setNewDisplay(newValue.join(''));
+                        setNewDisplay(newValue.join(""));
                       }}
                       style={{
                         cursor: "pointer",
                         padding: "2px 4px",
                         borderRadius: "3px",
-                        backgroundColor: theme.palette.mode === "dark" ? "#374151" : "#F3F4F6",
+                        backgroundColor:
+                          theme.palette.mode === "dark" ? "#374151" : "#F3F4F6",
                         fontSize: "1.1rem",
                         fontWeight: 500,
                         transition: "all 0.2s ease",
                         userSelect: "none",
                         display: "inline-block",
                         minWidth: "20px",
-                        textAlign: "center"
+                        textAlign: "center",
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB";
+                        e.currentTarget.style.backgroundColor =
+                          theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB";
                         e.currentTarget.style.transform = "scale(1.1)";
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = theme.palette.mode === "dark" ? "#374151" : "#F3F4F6";
+                        e.currentTarget.style.backgroundColor =
+                          theme.palette.mode === "dark" ? "#374151" : "#F3F4F6";
                         e.currentTarget.style.transform = "scale(1)";
                       }}
                     >
@@ -4786,7 +6069,7 @@ const ProfilePage: React.FC = () => {
                     </span>
                   ))}
                 </div>
-                
+
                 <TextField
                   fullWidth
                   id="display"
@@ -5298,6 +6581,32 @@ const ProfilePage: React.FC = () => {
         setMintToAddress={setMintToAddress}
         profileName={name || ""}
         isPendingTx={isPendingTx}
+      />
+
+      <SubnameModal
+        open={isSubnameModalOpen}
+        onClose={handleCloseSubnameModal}
+        parentName={name || ""}
+        onConfirmSubname={handleConfirmSubname}
+      />
+
+      <ConfirmSubnameModal
+        open={isConfirmSubnameModalOpen}
+        onClose={handleCloseConfirmSubnameModal}
+        parentName={name || ""}
+        subname={pendingSubname}
+        recipientAddress={pendingRecipientAddress}
+        onConfirm={handleSubnameCreation}
+      />
+
+      <SubnameProgressModal
+        open={isSubnameProgressModalOpen}
+        onClose={handleCloseSubnameProgressModal}
+        parentName={name || ""}
+        parentAppId={parentAppId}
+        subname={pendingSubname}
+        recipientAddress={pendingRecipientAddress}
+        onComplete={handleSubnameProgressComplete}
       />
 
       <Snackbar
