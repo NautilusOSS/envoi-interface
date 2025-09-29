@@ -5077,38 +5077,40 @@ const ProfilePage: React.FC = () => {
                       <SendIcon />
                     </Button>
                   )}
-                  <Button
-                    variant="contained"
-                    onClick={handleCreateSubname}
-                    sx={{
-                      bgcolor:
-                        theme.palette.mode === "dark" ? "#374151" : "white",
-                      color:
-                        theme.palette.mode === "dark" ? "#F9FAFB" : "#10B981",
-                      "&:hover": {
+                  {name && name.split('.').length < 3 && (
+                    <Button
+                      variant="contained"
+                      onClick={handleCreateSubname}
+                      sx={{
                         bgcolor:
-                          theme.palette.mode === "dark" ? "#4B5563" : "#F0FDF4",
-                      },
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                      padding: "0.5rem 1rem",
-                      borderRadius: "0.5rem",
-                      fontWeight: "600",
-                      fontSize: "0.875rem",
-                      boxShadow:
-                        theme.palette.mode === "dark"
-                          ? "0 2px 4px rgba(0, 0, 0, 0.3)"
-                          : "0 2px 4px rgba(0, 0, 0, 0.1)",
-                      border:
-                        theme.palette.mode === "dark"
-                          ? "1px solid #4B5563"
-                          : "none",
-                    }}
-                  >
-                    New Subname
-                    <PlusIcon size={16} />
-                  </Button>
+                          theme.palette.mode === "dark" ? "#374151" : "white",
+                        color:
+                          theme.palette.mode === "dark" ? "#F9FAFB" : "#10B981",
+                        "&:hover": {
+                          bgcolor:
+                            theme.palette.mode === "dark" ? "#4B5563" : "#F0FDF4",
+                        },
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        padding: "0.5rem 1rem",
+                        borderRadius: "0.5rem",
+                        fontWeight: "600",
+                        fontSize: "0.875rem",
+                        boxShadow:
+                          theme.palette.mode === "dark"
+                            ? "0 2px 4px rgba(0, 0, 0, 0.3)"
+                            : "0 2px 4px rgba(0, 0, 0, 0.1)",
+                        border:
+                          theme.palette.mode === "dark"
+                            ? "1px solid #4B5563"
+                            : "none",
+                      }}
+                    >
+                      New Subname
+                      <PlusIcon size={16} />
+                    </Button>
+                  )}
                 </>
               )}
             </div>
