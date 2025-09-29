@@ -1691,7 +1691,7 @@ const SubnameModal: React.FC<SubnameModalProps> = ({
             label="Subname"
             placeholder="Enter subname (e.g., 'blog')"
             value={subname}
-            onChange={(e) => setSubname(e.target.value)}
+            onChange={(e) => setSubname(e.target.value.toLowerCase())}
             sx={{
               mb: 2,
               "& .MuiInputLabel-root": {
@@ -2206,10 +2206,34 @@ const SubnameProgressModal: React.FC<SubnameProgressModalProps> = ({
         throw new Error("Failed to get owner of node");
       }
       const nodeOwner = ownerOfR.returnValue;
+      const subnameRegistrarR = await ciResolver.text(
+        await namehash(`${parentName}`),
+        stringToUint8Array(`subname_registrar`, 22)
+      );
+      let subnameRegistrar = null;
+      if (!subnameRegistrarR.success) {
+        throw new Error("Failed to get text");
+      } else {
+        try {
+          subnameRegistrar = JSON.parse(
+            stripTrailingZeroBytes(subnameRegistrarR.returnValue)
+          );
+        } catch (e) {
+          console.log("error", e);
+        }
+      }
+      console.log("subnameRegistrar", subnameRegistrar);
 
       let subnameParentAppId = 0;
 
       do {
+        if (
+          !!subnameRegistrar &&
+          subnameRegistrar.subname_registrar === parentName
+        ) {
+          subnameParentAppId = Number(subnameRegistrar.contract);
+        }
+
         // if the node owner is the active account, we likely have to deploy a new registrar
         // or update the existing
         // if (nodeOwner === activeAccount.address) {
@@ -2346,12 +2370,32 @@ const SubnameProgressModal: React.FC<SubnameProgressModalProps> = ({
           ),
         });
       }
+      // if subnmae_registrar not set
+      //   resolver set text subname_registrar
+      if (!subnameRegistrar) {
+        const txnO = (
+          await builder.resolver.setText(
+            await namehash(`${parentName}`),
+            stringToUint8Array(`subname_registrar`, 22),
+            stringToUint8Array(
+              JSON.stringify({
+                subname_registrar: `${parentName}`,
+                contract: `${subnameParentAppId}`,
+              }),
+              256
+            )
+          )
+        )?.obj;
+        buildN.push({
+          ...txnO,
+          note: new TextEncoder().encode(
+            `resolver setText subname_registrar ${parentName} ${subnameParentAppId}`
+          ),
+        });
+      }
       //if not owned by active account and not owned by registrar
       //  reclaim through registrar
-      // if (
-      //   ownerNode !== activeAccount.address &&
-      //   ownerNode !== algosdk.getApplicationAddress(subnameParentAppId)
-      // ) {
+      // if (ownerNode !== activeAccount.address) {
       //   const txnO = (
       //     await builder.parentRegistrar.reclaim(stringToUint8Array(subname, 32))
       //   )?.obj;
@@ -2792,6 +2836,74 @@ const ProfilePage: React.FC = () => {
   const [pendingSubname, setPendingSubname] = useState<string>("");
   const [pendingRecipientAddress, setPendingRecipientAddress] =
     useState<string>("");
+  interface SubnameRegistrar {
+    subname_registrar: string;
+    contract: string;
+  }
+  const [subnameRegistrar, setSubnameRegistrar] =
+    useState<SubnameRegistrar | null>(null);
+  const [nodeOwner, setNodeOwner] = useState<string | null>(null);
+
+  // check node owner to check if mint button should be shown
+  useEffect(() => {
+    if (!name) return;
+    (async () => {
+      const { algodClient, indexerClient } = getAlgorandClients();
+      const registryAppId = 797607;
+      const resolver = new CONTRACT(
+        registryAppId,
+        algodClient,
+        indexerClient,
+        { ...VNSRegistrySpec.contract, events: [] },
+        {
+          addr: algosdk.getApplicationAddress(registryAppId),
+          sk: new Uint8Array(),
+        }
+      );
+      const nodeOwnerR = await resolver.ownerOf(await namehash(name));
+      if (!nodeOwnerR.success) {
+        setNodeOwner(null);
+      } else {
+        setNodeOwner(nodeOwnerR.returnValue);
+      }
+    })();
+  }, [name]);
+
+  useEffect(() => {
+    if (!name) return;
+    (async () => {
+      const { algodClient, indexerClient } = getAlgorandClients();
+      const resolverAppId = 797608;
+      const resolver = new CONTRACT(
+        resolverAppId,
+        algodClient,
+        indexerClient,
+        { ...VNSPublicResolverSpec.contract, events: [] },
+        {
+          addr: algosdk.getApplicationAddress(resolverAppId),
+          sk: new Uint8Array(),
+        }
+      );
+      const subnameRegistrarR = await resolver.text(
+        await namehash(name),
+        stringToUint8Array("subname_registrar", 22)
+      );
+      if (!subnameRegistrarR.success) {
+        setSubnameRegistrar(null);
+      } else {
+        let subnameRegistrar = null;
+        try {
+          subnameRegistrar = JSON.parse(
+            stripTrailingZeroBytes(subnameRegistrarR.returnValue)
+          );
+        } catch (e) {
+          console.log("error", e);
+        }
+        setSubnameRegistrar(subnameRegistrar);
+      }
+    })();
+  }, [name]);
+  console.log("subnameRegistrar", subnameRegistrar);
 
   useEffect(() => {
     if (!name) return;
@@ -4861,7 +4973,7 @@ const ProfilePage: React.FC = () => {
                 gap: "0.5rem",
               }}
             >
-              {isController && (
+              {false && isController && nodeOwner === zeroAddress && (
                 <Button
                   variant="contained"
                   onClick={() => setIsMintModalOpen(true)}
@@ -4929,39 +5041,43 @@ const ProfilePage: React.FC = () => {
                     Extend
                     <FastForwardIcon />
                   </Button>
-                  <Button
-                    variant="contained"
-                    onClick={handleOpenTransferModal}
-                    sx={{
-                      bgcolor:
-                        theme.palette.mode === "dark" ? "#374151" : "white",
-                      color:
-                        theme.palette.mode === "dark" ? "#F9FAFB" : "#EF4444",
-                      "&:hover": {
+                  {!subnameRegistrar && (
+                    <Button
+                      variant="contained"
+                      onClick={handleOpenTransferModal}
+                      sx={{
                         bgcolor:
-                          theme.palette.mode === "dark" ? "#4B5563" : "#FEF2F2",
-                      },
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                      padding: "0.5rem 1rem",
-                      borderRadius: "0.5rem",
-                      fontWeight: "600",
-                      fontSize: "0.875rem",
-                      boxShadow:
-                        theme.palette.mode === "dark"
-                          ? "0 2px 4px rgba(0, 0, 0, 0.3)"
-                          : "0 2px 4px rgba(0, 0, 0, 0.1)",
-                      border:
-                        theme.palette.mode === "dark"
-                          ? "1px solid #4B5563"
-                          : "none",
-                    }}
-                  >
-                    Transfer
-                    <SendIcon />
-                  </Button>
-                  {/*<Button
+                          theme.palette.mode === "dark" ? "#374151" : "white",
+                        color:
+                          theme.palette.mode === "dark" ? "#F9FAFB" : "#EF4444",
+                        "&:hover": {
+                          bgcolor:
+                            theme.palette.mode === "dark"
+                              ? "#4B5563"
+                              : "#FEF2F2",
+                        },
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        padding: "0.5rem 1rem",
+                        borderRadius: "0.5rem",
+                        fontWeight: "600",
+                        fontSize: "0.875rem",
+                        boxShadow:
+                          theme.palette.mode === "dark"
+                            ? "0 2px 4px rgba(0, 0, 0, 0.3)"
+                            : "0 2px 4px rgba(0, 0, 0, 0.1)",
+                        border:
+                          theme.palette.mode === "dark"
+                            ? "1px solid #4B5563"
+                            : "none",
+                      }}
+                    >
+                      Transfer
+                      <SendIcon />
+                    </Button>
+                  )}
+                  <Button
                     variant="contained"
                     onClick={handleCreateSubname}
                     sx={{
@@ -4992,7 +5108,7 @@ const ProfilePage: React.FC = () => {
                   >
                     New Subname
                     <PlusIcon size={16} />
-                  </Button>*/}
+                  </Button>
                 </>
               )}
             </div>
