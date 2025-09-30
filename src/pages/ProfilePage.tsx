@@ -2372,7 +2372,7 @@ const SubnameProgressModal: React.FC<SubnameProgressModalProps> = ({
       }
       // if subnmae_registrar not set
       //   resolver set text subname_registrar
-      if (!subnameRegistrar) {
+      {
         const txnO = (
           await builder.resolver.setText(
             await namehash(`${parentName}`),
@@ -5077,7 +5077,7 @@ const ProfilePage: React.FC = () => {
                       <SendIcon />
                     </Button>
                   )}
-                  {name && name.split('.').length < 3 && (
+                  {name && name.split(".").length < 3 && (
                     <Button
                       variant="contained"
                       onClick={handleCreateSubname}
@@ -5088,7 +5088,9 @@ const ProfilePage: React.FC = () => {
                           theme.palette.mode === "dark" ? "#F9FAFB" : "#10B981",
                         "&:hover": {
                           bgcolor:
-                            theme.palette.mode === "dark" ? "#4B5563" : "#F0FDF4",
+                            theme.palette.mode === "dark"
+                              ? "#4B5563"
+                              : "#F0FDF4",
                         },
                         display: "flex",
                         alignItems: "center",
