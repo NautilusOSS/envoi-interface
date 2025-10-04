@@ -45,10 +45,17 @@ import LocationOnIcon from "@mui/icons-material/LocationOn";
 import SearchIcon from "@mui/icons-material/Search";
 import InputAdornment from "@mui/material/InputAdornment";
 import LinkIcon from "@mui/icons-material/Link";
+import AttachFileIcon from "@mui/icons-material/AttachFile";
 import { ARC72Service } from "@/services/arc72";
 import { zeroAddress } from "@/contants/accounts";
 import { enqueueSnackbar, useSnackbar } from "notistack";
-import { FastForwardIcon, SendIcon, PlusIcon } from "lucide-react";
+import {
+  FastForwardIcon,
+  SendIcon,
+  PlusIcon,
+  UndoIcon,
+  ArrowUpDownIcon,
+} from "lucide-react";
 import CloseIcon from "@mui/icons-material/Close";
 import { getAlgorandClients } from "@/wallets";
 import algosdk from "algosdk";
@@ -57,6 +64,7 @@ import { APP_SPEC as VNSRegistrySpec } from "@/clients/VNSRegistryClient";
 import { APP_SPEC as VNSPublicResolverSpec } from "@/clients/VNSPublicResolverClient";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import SystemUpdateIcon from "@mui/icons-material/SystemUpdate";
 import ErrorIcon from "@mui/icons-material/Error";
 import { TRANSACTION_FEES } from "@/constants/fees";
 import { useNameRegistration } from "@/hooks/useNameRegistration";
@@ -64,6 +72,9 @@ import { useNameRegistry } from "@/hooks/useNameRegistry";
 import { stripTrailingZeroBytes } from "@/utils/string";
 import MDEditor from "@uiw/react-md-editor";
 import { VnsRegistrarClient } from "@/clients/VNSRegistrarClient";
+
+const currentVNSRegistrarContractVersion = 1;
+const currentVNSRegistrarDeploymentVersion = 4;
 
 type NetworkType = "mainnet" | "testnet";
 
@@ -1117,6 +1128,205 @@ const ConfirmSetDefaultModal: React.FC<ConfirmSetDefaultModalProps> = ({
   );
 };
 
+interface NodeTransferModalProps {
+  open: boolean;
+  onClose: () => void;
+  name: string;
+  onConfirm: (newOwner: string) => void;
+}
+
+const NodeTransferModal: React.FC<NodeTransferModalProps> = ({
+  open,
+  onClose,
+  name,
+  onConfirm,
+}) => {
+  const { theme } = useTheme();
+  const [newOwner, setNewOwner] = useState("");
+  const [isValidAddress, setIsValidAddress] = useState(false);
+
+  const validateAddress = (address: string) => {
+    try {
+      algosdk.decodeAddress(address);
+      setIsValidAddress(true);
+    } catch {
+      setIsValidAddress(false);
+    }
+  };
+
+  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const address = e.target.value;
+    setNewOwner(address);
+    validateAddress(address);
+  };
+
+  const handleConfirm = () => {
+    if (isValidAddress && newOwner.trim()) {
+      onConfirm(newOwner.trim());
+      setNewOwner("");
+      setIsValidAddress(false);
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose}>
+      <Box
+        className="edit-modal"
+        sx={{
+          bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+          border: `1px solid ${
+            theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+          }`,
+          borderRadius: "12px",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.4)"
+              : "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+        }}
+      >
+        <IconButton
+          onClick={onClose}
+          sx={{
+            position: "absolute",
+            right: 16,
+            top: 16,
+            color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+            "&:hover": {
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F3F4F6",
+            },
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+
+        <Typography
+          variant="h6"
+          component="h2"
+          sx={{
+            mb: 3,
+            textAlign: "center",
+            fontSize: "1.25rem",
+            fontWeight: 600,
+            color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+            pt: 2,
+          }}
+        >
+          Transfer Node Ownership of {name}
+        </Typography>
+
+        <Typography
+          variant="body2"
+          sx={{
+            mb: 3,
+            textAlign: "center",
+            color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+            lineHeight: 1.5,
+          }}
+        >
+          Transfer node ownership of this name to another address. This action
+          cannot be undone.
+        </Typography>
+
+        <TextField
+          fullWidth
+          label="New Node Owner Address"
+          placeholder="Enter Algorand address"
+          value={newOwner}
+          onChange={handleAddressChange}
+          error={newOwner.length > 0 && !isValidAddress}
+          helperText={
+            newOwner.length > 0 && !isValidAddress
+              ? "Please enter a valid Algorand address"
+              : ""
+          }
+          sx={{
+            mb: 3,
+            "& .MuiOutlinedInput-root": {
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+              "& fieldset": {
+                borderColor:
+                  theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
+              },
+              "&:hover fieldset": {
+                borderColor:
+                  theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+              },
+              "&.Mui-focused fieldset": {
+                borderColor:
+                  theme.palette.mode === "dark" ? "#EF4444" : "#EF4444",
+              },
+            },
+            "& .MuiInputLabel-root": {
+              color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+              "&.Mui-focused": {
+                color: theme.palette.mode === "dark" ? "#EF4444" : "#EF4444",
+              },
+            },
+            "& .MuiInputBase-input": {
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+            },
+            "& .MuiFormHelperText-root": {
+              color: theme.palette.mode === "dark" ? "#EF4444" : "#EF4444",
+            },
+          }}
+        />
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 2,
+          }}
+        >
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={onClose}
+            sx={{
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+              border: `1px solid ${
+                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
+              }`,
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
+              fontWeight: 600,
+              "&:hover": {
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#F3F4F6",
+                borderColor:
+                  theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+              },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={handleConfirm}
+            disabled={!isValidAddress || !newOwner.trim()}
+            sx={{
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#6366F1",
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "white",
+              fontWeight: 600,
+              border:
+                theme.palette.mode === "dark" ? "1px solid #4B5563" : "none",
+              "&:hover": {
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#5B21B6",
+                borderColor: theme.palette.mode === "dark" ? "#6B7280" : "none",
+              },
+              "&:disabled": {
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
+                color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+              },
+            }}
+          >
+            Transfer Node
+          </Button>
+        </Box>
+      </Box>
+    </Modal>
+  );
+};
+
 interface ConfirmTransferModalProps {
   open: boolean;
   onClose: () => void;
@@ -1605,6 +1815,336 @@ const MintModal: React.FC<MintModalProps> = ({
   );
 };
 
+interface ConfirmClawbackModalProps {
+  open: boolean;
+  onClose: () => void;
+  name: string;
+  onConfirm: () => void;
+}
+
+const ConfirmClawbackModal: React.FC<ConfirmClawbackModalProps> = ({
+  open,
+  onClose,
+  name,
+  onConfirm,
+}) => {
+  const { theme } = useTheme();
+  const [isConfirming, setIsConfirming] = useState(false);
+
+  const handleConfirm = async () => {
+    setIsConfirming(true);
+    try {
+      await onConfirm();
+      onClose();
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose}>
+      <Box
+        className="edit-modal"
+        sx={{
+          bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+          border: `1px solid ${
+            theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+          }`,
+          borderRadius: "12px",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.4)"
+              : "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+          p: 3,
+          position: "relative",
+          minWidth: "400px",
+          maxWidth: "500px",
+          width: "90vw",
+          maxHeight: "90vh",
+          overflowY: "auto",
+        }}
+      >
+        <Typography
+          variant="h6"
+          component="h2"
+          sx={{
+            mb: 3,
+            textAlign: "center",
+            fontSize: "1.5rem",
+            fontWeight: 600,
+            color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+          }}
+        >
+          Confirm Clawback
+        </Typography>
+
+        <Typography
+          sx={{
+            mb: 3,
+            color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+            textAlign: "center",
+          }}
+        >
+          Are you sure you want to reclaim <strong>{name}</strong>? This action
+          will transfer ownership back to the registrar and may have
+          irreversible consequences.
+        </Typography>
+
+        <Box
+          sx={{
+            mb: 3,
+            p: 2,
+            bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+            borderRadius: "8px",
+            border: `1px solid ${
+              theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+            }`,
+          }}
+        >
+          <Typography
+            variant="body2"
+            sx={{
+              color: theme.palette.mode === "dark" ? "#F59E0B" : "#D97706",
+              fontWeight: 600,
+              mb: 1,
+            }}
+          >
+            ⚠️ Warning
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{
+              color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+            }}
+          >
+            This action will reclaim the domain name and transfer it back to the
+            registrar. This is typically used when there are issues with the
+            current ownership or registration.
+          </Typography>
+        </Box>
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 2,
+          }}
+        >
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={onClose}
+            disabled={isConfirming}
+            sx={{
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+              border: `1px solid ${
+                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
+              }`,
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
+              fontWeight: 600,
+              "&:hover": {
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#F3F4F6",
+                borderColor:
+                  theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+              },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={handleConfirm}
+            disabled={isConfirming}
+            sx={{
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F59E0B",
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "white",
+              fontWeight: 600,
+              border:
+                theme.palette.mode === "dark" ? "1px solid #4B5563" : "none",
+              "&:hover": {
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#D97706",
+                borderColor: theme.palette.mode === "dark" ? "#6B7280" : "none",
+              },
+              "&:disabled": {
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
+                color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+              },
+            }}
+          >
+            {isConfirming ? "Reclaiming..." : "Reclaim"}
+          </Button>
+        </Box>
+      </Box>
+    </Modal>
+  );
+};
+
+interface ConfirmNodeClawbackModalProps {
+  open: boolean;
+  onClose: () => void;
+  name: string;
+  onConfirm: () => void;
+}
+
+const ConfirmNodeClawbackModal: React.FC<ConfirmNodeClawbackModalProps> = ({
+  open,
+  onClose,
+  name,
+  onConfirm,
+}) => {
+  const { theme } = useTheme();
+  const [isConfirming, setIsConfirming] = useState(false);
+
+  const handleConfirm = async () => {
+    setIsConfirming(true);
+    try {
+      await onConfirm();
+      onClose();
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose}>
+      <Box
+        className="edit-modal"
+        sx={{
+          bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+          border: `1px solid ${
+            theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+          }`,
+          borderRadius: "12px",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.4)"
+              : "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+          p: 3,
+          position: "relative",
+          minWidth: "400px",
+          maxWidth: "500px",
+          width: "90vw",
+          maxHeight: "90vh",
+          overflowY: "auto",
+        }}
+      >
+        <Typography
+          variant="h6"
+          component="h2"
+          sx={{
+            mb: 3,
+            textAlign: "center",
+            fontSize: "1.5rem",
+            fontWeight: 600,
+            color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+          }}
+        >
+          Confirm Node Reclaim
+        </Typography>
+
+        <Typography
+          sx={{
+            mb: 3,
+            color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+            textAlign: "center",
+          }}
+        >
+          Are you sure you want to reclaim node ownership of{" "}
+          <strong>{name}</strong>? This will transfer node ownership back to you
+          as the token holder.
+        </Typography>
+
+        <Box
+          sx={{
+            mb: 3,
+            p: 2,
+            bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+            borderRadius: "8px",
+            border: `1px solid ${
+              theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+            }`,
+          }}
+        >
+          <Typography
+            variant="body2"
+            sx={{
+              color: theme.palette.mode === "dark" ? "#F59E0B" : "#D97706",
+              fontWeight: 600,
+              mb: 1,
+            }}
+          >
+            ⚠️ Warning
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{
+              color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+            }}
+          >
+            This action will reclaim node ownership and transfer it back to you
+            as the token holder. The current node owner will lose control of the
+            node.
+          </Typography>
+        </Box>
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 2,
+          }}
+        >
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={onClose}
+            disabled={isConfirming}
+            sx={{
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+              border: `1px solid ${
+                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
+              }`,
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
+              fontWeight: 600,
+              "&:hover": {
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#F3F4F6",
+                borderColor:
+                  theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+              },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={handleConfirm}
+            disabled={isConfirming}
+            sx={{
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F59E0B",
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "white",
+              fontWeight: 600,
+              border:
+                theme.palette.mode === "dark" ? "1px solid #4B5563" : "none",
+              "&:hover": {
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#D97706",
+                borderColor: theme.palette.mode === "dark" ? "#6B7280" : "none",
+              },
+              "&:disabled": {
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
+                color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+              },
+            }}
+          >
+            {isConfirming ? "Reclaiming Node..." : "Reclaim Node"}
+          </Button>
+        </Box>
+      </Box>
+    </Modal>
+  );
+};
+
 interface SubnameModalProps {
   open: boolean;
   onClose: () => void;
@@ -2082,6 +2622,251 @@ const ConfirmSubnameModal: React.FC<ConfirmSubnameModalProps> = ({
             }}
           >
             Create Subname
+          </Button>
+        </Box>
+      </Box>
+    </Modal>
+  );
+};
+
+interface ConfirmNodeTransferModalProps {
+  open: boolean;
+  onClose: () => void;
+  name: string;
+  newOwner: string;
+  currentOwner: string;
+  onConfirm: () => void;
+}
+
+const ConfirmNodeTransferModal: React.FC<ConfirmNodeTransferModalProps> = ({
+  open,
+  onClose,
+  name,
+  newOwner,
+  currentOwner,
+  onConfirm,
+}) => {
+  const { theme } = useTheme();
+  const [isConfirming, setIsConfirming] = useState(false);
+
+  const handleConfirm = async () => {
+    setIsConfirming(true);
+    try {
+      await onConfirm();
+      onClose();
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose}>
+      <Box
+        className="edit-modal"
+        sx={{
+          bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+          border: `1px solid ${
+            theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+          }`,
+          borderRadius: "12px",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.4)"
+              : "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+        }}
+      >
+        <Typography
+          variant="h6"
+          component="h2"
+          sx={{
+            mb: 3,
+            textAlign: "center",
+            fontSize: "1.5rem",
+            fontWeight: 600,
+            color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+          }}
+        >
+          Confirm Node Transfer
+        </Typography>
+
+        <Box
+          sx={{
+            mb: 3,
+            p: 2,
+            bgcolor: theme.palette.mode === "dark" ? "#374151" : "#FEF2F2",
+            border: `1px solid ${
+              theme.palette.mode === "dark" ? "#EF4444" : "#FECACA"
+            }`,
+            borderRadius: "8px",
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+          }}
+        >
+          <Typography
+            sx={{
+              color: theme.palette.mode === "dark" ? "#FCA5A5" : "#DC2626",
+              fontWeight: 600,
+              fontSize: "1rem",
+            }}
+          >
+            ⚠️ Warning: This action cannot be undone!
+          </Typography>
+        </Box>
+
+        <Box sx={{ mb: 3 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              mb: 2,
+              p: 2,
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+              borderRadius: 1,
+              border: `1px solid ${
+                theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+              }`,
+            }}
+          >
+            <Typography
+              sx={{
+                color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                fontWeight: 500,
+              }}
+            >
+              Name
+            </Typography>
+            <Typography
+              sx={{
+                color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                fontWeight: 600,
+              }}
+            >
+              {name}
+            </Typography>
+          </Box>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              mb: 2,
+              p: 2,
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+              borderRadius: 1,
+              border: `1px solid ${
+                theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+              }`,
+            }}
+          >
+            <Typography
+              sx={{
+                color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                fontWeight: 500,
+              }}
+            >
+              Current Node Owner
+            </Typography>
+            <Typography
+              sx={{
+                color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                fontWeight: 600,
+                fontFamily: "monospace",
+                fontSize: "0.875rem",
+              }}
+            >
+              {currentOwner}
+            </Typography>
+          </Box>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              mb: 2,
+              p: 2,
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+              borderRadius: 1,
+              border: `1px solid ${
+                theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+              }`,
+            }}
+          >
+            <Typography
+              sx={{
+                color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                fontWeight: 500,
+              }}
+            >
+              New Node Owner
+            </Typography>
+            <Typography
+              sx={{
+                color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                fontWeight: 600,
+                fontFamily: "monospace",
+                fontSize: "0.875rem",
+              }}
+            >
+              {newOwner}
+            </Typography>
+          </Box>
+        </Box>
+
+        <Box sx={{ display: "flex", gap: 2 }}>
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={onClose}
+            disabled={isConfirming}
+            sx={{
+              flex: 1,
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+              border: `1px solid ${
+                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
+              }`,
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
+              fontWeight: 600,
+              "&:hover": {
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#F3F4F6",
+                borderColor:
+                  theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+              },
+              "&:disabled": {
+                bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#F3F4F6",
+                borderColor:
+                  theme.palette.mode === "dark" ? "#374151" : "#E5E7EB",
+                color: theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+              },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={handleConfirm}
+            disabled={isConfirming}
+            sx={{
+              flex: 1,
+              bgcolor: "#EF4444",
+              color: "white",
+              fontWeight: 600,
+              "&:hover": {
+                bgcolor: "#DC2626",
+              },
+              "&:disabled": {
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
+                color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+              },
+            }}
+          >
+            {isConfirming ? (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <CircularProgress size={20} color="inherit" />
+                Transferring Node...
+              </Box>
+            ) : (
+              "Confirm Node Transfer"
+            )}
           </Button>
         </Box>
       </Box>
@@ -2746,8 +3531,112 @@ const SubnameProgressModal: React.FC<SubnameProgressModalProps> = ({
   );
 };
 
+interface ReverseAddressModalProps {
+  open: boolean;
+  onClose: () => void;
+  name: string;
+  onConfirm: () => void;
+}
+
+const ReverseAddressModal: React.FC<ReverseAddressModalProps> = ({
+  open,
+  onClose,
+  name,
+  onConfirm,
+}) => {
+  const handleConfirm = () => {
+    onConfirm();
+    onClose();
+  };
+
+  return (
+    <Modal open={open} onClose={onClose}>
+      <Box
+        className="edit-modal"
+        sx={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: "90%",
+          maxWidth: "500px",
+          bgcolor: "background.paper",
+          borderRadius: "12px",
+          boxShadow: 24,
+          p: 4,
+        }}
+      >
+        <Typography
+          variant="h6"
+          component="h2"
+          sx={{
+            fontWeight: 600,
+            mb: 2,
+            color: "text.primary",
+          }}
+        >
+          Set Reverse Address Name
+        </Typography>
+
+        <Typography
+          variant="body1"
+          sx={{
+            mb: 3,
+            lineHeight: 1.6,
+            color: "text.secondary",
+          }}
+        >
+          Are you sure you want to set <strong>{name}</strong> as the reverse
+          address name? This will allow your wallet address to resolve to this
+          name.
+        </Typography>
+
+        <Box
+          sx={{
+            display: "flex",
+            gap: 2,
+            justifyContent: "flex-end",
+            mt: 3,
+          }}
+        >
+          <Button
+            variant="outlined"
+            onClick={onClose}
+            sx={{
+              px: 3,
+              py: 1,
+              borderRadius: "8px",
+              textTransform: "none",
+              fontWeight: 500,
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleConfirm}
+            sx={{
+              px: 3,
+              py: 1,
+              borderRadius: "8px",
+              textTransform: "none",
+              fontWeight: 500,
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              "&:hover": {
+                background: "linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)",
+              },
+            }}
+          >
+            Confirm
+          </Button>
+        </Box>
+      </Box>
+    </Modal>
+  );
+};
+
 const ProfilePage: React.FC = () => {
-  const { activeAccount, signTransactions } = useWallet();
+  const { activeAccount, signTransactions, transactionSigner } = useWallet();
   const { name } = useParams<{ name: string }>();
   const { theme } = useTheme();
   const { enqueueSnackbar } = useSnackbar();
@@ -2764,6 +3653,7 @@ const ProfilePage: React.FC = () => {
   const [owner, setOwner] = React.useState<string | null>(null);
   const [expiry, setExpiry] = React.useState<Date | null>(null);
   const [avatarText, setAvatarText] = React.useState<string | null>(null);
+  const [primaryName, setPrimaryName] = React.useState<string | null>(null);
   const [twitter, setTwitter] = React.useState<string | null>(null);
   const [newTwitter, setNewTwitter] = React.useState<string | null>(null);
   const [githubValidationStatus, setGithubValidationStatus] = React.useState<
@@ -2815,9 +3705,15 @@ const ProfilePage: React.FC = () => {
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isConfirmTransferModalOpen, setIsConfirmTransferModalOpen] =
     useState(false);
+  const [isNodeTransferModalOpen, setIsNodeTransferModalOpen] = useState(false);
+  const [isConfirmNodeTransferModalOpen, setIsConfirmNodeTransferModalOpen] =
+    useState(false);
   const [newOwnerForTransfer, setNewOwnerForTransfer] = useState<string | null>(
     null
   );
+  const [newNodeOwnerForTransfer, setNewNodeOwnerForTransfer] = useState<
+    string | null
+  >(null);
   const [isSetDefaultModalOpen, setIsSetDefaultModalOpen] = useState(false);
   const [parentName, setParentName] = useState<string>("voi");
   const [parentAppId, setParentAppId] = useState<number>(797609);
@@ -2833,6 +3729,10 @@ const ProfilePage: React.FC = () => {
     useState(false);
   const [isSubnameProgressModalOpen, setIsSubnameProgressModalOpen] =
     useState(false);
+  const [isClawbackModalOpen, setIsClawbackModalOpen] = useState(false);
+  const [isNodeClawbackModalOpen, setIsNodeClawbackModalOpen] = useState(false);
+  const [isReverseAddressModalOpen, setIsReverseAddressModalOpen] =
+    useState(false);
   const [pendingSubname, setPendingSubname] = useState<string>("");
   const [pendingRecipientAddress, setPendingRecipientAddress] =
     useState<string>("");
@@ -2842,7 +3742,19 @@ const ProfilePage: React.FC = () => {
   }
   const [subnameRegistrar, setSubnameRegistrar] =
     useState<SubnameRegistrar | null>(null);
+  const [parentSubnameRegistrar, setParentSubnameRegistrar] =
+    useState<SubnameRegistrar | null>(null);
+  const [parentRegistrarOwner, setParentRegistrarOwner] = useState<
+    string | null
+  >(null);
+  const [subnameRegistrarContractVersion, setSubnameRegistrarContractVersion] =
+    useState<number | null>(null);
+  const [
+    subnameRegistrarDeploymentVersion,
+    setSubnameRegistrarDeploymentVersion,
+  ] = useState<number | null>(null);
   const [nodeOwner, setNodeOwner] = useState<string | null>(null);
+  const [tokenOwner, setTokenOwner] = useState<string | null>(null);
 
   // check node owner to check if mint button should be shown
   useEffect(() => {
@@ -2860,14 +3772,79 @@ const ProfilePage: React.FC = () => {
           sk: new Uint8Array(),
         }
       );
+
       const nodeOwnerR = await resolver.ownerOf(await namehash(name));
       if (!nodeOwnerR.success) {
         setNodeOwner(null);
       } else {
         setNodeOwner(nodeOwnerR.returnValue);
       }
+      if (
+        parentSubnameRegistrar?.subname_registrar ===
+          name.split(".").slice(1).join(".") &&
+        !isNaN(Number(parentSubnameRegistrar?.contract))
+      ) {
+        const parentAppId = Number(parentSubnameRegistrar?.contract);
+        const collection = new CONTRACT(
+          parentAppId,
+          algodClient,
+          indexerClient,
+          { ...VNSRegistrarSpec.contract, events: [] },
+          {
+            addr: algosdk.getApplicationAddress(parentAppId),
+            sk: new Uint8Array(),
+          }
+        );
+        const tokenOwnerR = await collection.arc72_ownerOf(
+          uint8ArrayToBigInt(await namehash(name))
+        );
+        console.log("tokenOwnerR", tokenOwnerR);
+        if (!tokenOwnerR.success) {
+          setTokenOwner(null);
+        } else {
+          const tokenOwner = tokenOwnerR.returnValue;
+          setTokenOwner(tokenOwner);
+          setOwner(tokenOwner);
+          setIsOwner(tokenOwner === activeAccount?.address);
+        }
+      }
     })();
-  }, [name]);
+  }, [name, parentSubnameRegistrar]);
+
+  console.log("parentRegistrarOwner", parentRegistrarOwner);
+
+  useEffect(() => {
+    if (!name) return;
+    if (!parentSubnameRegistrar) return;
+    try {
+      (async () => {
+        const registrarAppId = Number(parentSubnameRegistrar?.contract);
+        const { algodClient, indexerClient } = getAlgorandClients();
+        const registrar = new CONTRACT(
+          registrarAppId,
+          algodClient,
+          indexerClient,
+          { ...VNSRegistrarSpec.contract, events: [] },
+          {
+            addr: algosdk.getApplicationAddress(registrarAppId),
+            sk: new Uint8Array(),
+          }
+        );
+        const ownerOfR = await registrar.arc72_ownerOf(
+          uint8ArrayToBigInt(await namehash(name))
+        );
+        if (!ownerOfR.success) {
+          throw new Error("Failed to get owner of token");
+        }
+        const owner = ownerOfR.returnValue;
+        setOwner(owner);
+        setIsOwner(owner === activeAccount?.address);
+        setTokenOwner(owner);
+      })();
+    } catch (e) {
+      console.log("error", e);
+    }
+  }, [activeAccount, name, parentSubnameRegistrar]);
 
   useEffect(() => {
     if (!name) return;
@@ -2880,7 +3857,9 @@ const ProfilePage: React.FC = () => {
         indexerClient,
         { ...VNSPublicResolverSpec.contract, events: [] },
         {
-          addr: algosdk.getApplicationAddress(resolverAppId),
+          addr:
+            activeAccount?.address ||
+            algosdk.getApplicationAddress(resolverAppId),
           sk: new Uint8Array(),
         }
       );
@@ -2891,19 +3870,75 @@ const ProfilePage: React.FC = () => {
       if (!subnameRegistrarR.success) {
         setSubnameRegistrar(null);
       } else {
-        let subnameRegistrar = null;
         try {
-          subnameRegistrar = JSON.parse(
+          const subnameRegistrar = JSON.parse(
             stripTrailingZeroBytes(subnameRegistrarR.returnValue)
           );
+          setSubnameRegistrar(subnameRegistrar);
+          const contract = new VnsRegistrarClient(
+            {
+              resolveBy: "id",
+              id: Number(subnameRegistrar?.contract),
+              sender: {
+                addr: activeAccount?.address,
+                sk: new Uint8Array(),
+              },
+            },
+            algodClient
+          );
+          const gs = await contract.getGlobalState();
+          const contractVersion = gs.contractVersion?.asNumber();
+          const deploymentVersion = gs.deploymentVersion?.asNumber();
+          setSubnameRegistrarContractVersion(contractVersion);
+          setSubnameRegistrarDeploymentVersion(deploymentVersion);
         } catch (e) {
           console.log("error", e);
         }
-        setSubnameRegistrar(subnameRegistrar);
+      }
+      const parentSubnameRegistrarR = await resolver.text(
+        await namehash(name.split(".").slice(1).join(".")),
+        stringToUint8Array("subname_registrar", 22)
+      );
+      console.log("parentSubnameRegistrarR", parentSubnameRegistrarR);
+      if (!parentSubnameRegistrarR.success) {
+        setParentSubnameRegistrar(null);
+      } else {
+        try {
+          const parentSubnameRegistrar = JSON.parse(
+            stripTrailingZeroBytes(parentSubnameRegistrarR.returnValue)
+          );
+          setParentSubnameRegistrar(parentSubnameRegistrar);
+          setParentAppId(Number(parentSubnameRegistrar?.contract));
+          const ci = new CONTRACT(
+            Number(parentSubnameRegistrar?.contract),
+            algodClient,
+            indexerClient,
+            { ...VNSRegistrarSpec.contract, events: [] },
+            {
+              addr: algosdk.getApplicationAddress(
+                Number(parentSubnameRegistrar?.contract)
+              ),
+              sk: new Uint8Array(),
+            }
+          );
+          const parentRegistrarOwnerR = await ci.get_owner();
+          if (!parentRegistrarOwnerR.success) {
+            setParentRegistrarOwner(null);
+          } else {
+            setParentRegistrarOwner(parentRegistrarOwnerR.returnValue);
+          }
+        } catch (e) {
+          console.log("error", e);
+        }
       }
     })();
   }, [name]);
-  console.log("subnameRegistrar", subnameRegistrar);
+
+  // Compute clawback visibility - only show for parent registrar owner
+  const shouldShowClawback =
+    activeAccount &&
+    parentRegistrarOwner &&
+    activeAccount?.address === parentRegistrarOwner;
 
   useEffect(() => {
     if (!name) return;
@@ -3084,6 +4119,73 @@ const ProfilePage: React.FC = () => {
 
   const handleCreateSubname = () => {
     setIsSubnameModalOpen(true);
+  };
+
+  const handleUpdate = async () => {
+    if (!activeAccount || !subnameRegistrar?.contract) {
+      enqueueSnackbar(
+        "Unable to update contract: missing account or contract info",
+        {
+          variant: "error",
+        }
+      );
+      return;
+    }
+
+    setIsPendingTx(true);
+
+    try {
+      const { algodClient } = getAlgorandClients();
+
+      const contract = new VnsRegistrarClient(
+        {
+          resolveBy: "id",
+          id: Number(subnameRegistrar.contract),
+          sender: {
+            addr: activeAccount.address,
+            signer: transactionSigner,
+          },
+        },
+        algodClient
+      );
+
+      console.log("contract", contract);
+
+      // Update the contract and call post_update using compose with notes
+      const updateResult = await contract
+        .compose()
+        .update.bare({
+          sendParams: {
+            note: new TextEncoder().encode(
+              `Contract update transaction VNSRegistrar ${currentVNSRegistrarContractVersion}.${currentVNSRegistrarDeploymentVersion}`
+            ),
+          },
+        })
+        .postUpdate(
+          {},
+          {
+            sendParams: {
+              note: new TextEncoder().encode("Post-update transaction"),
+            },
+          }
+        )
+        .execute();
+
+      enqueueSnackbar("Contract updated successfully!", { variant: "success" });
+
+      // Refresh the page to show updated state
+      window.location.reload();
+    } catch (error: any) {
+      console.error("Contract update error:", error);
+      enqueueSnackbar(
+        `Contract update failed: ${error.message || "Unknown error"}`,
+        {
+          variant: "error",
+        }
+      );
+    } finally {
+      setIsPendingTx(false);
+    }
   };
 
   const handleCloseSubnameModal = () => {
@@ -3583,21 +4685,62 @@ const ProfilePage: React.FC = () => {
     }
   }, [github, name, showContributions]);
 
+  // Fetch primary name for the owner address
   useEffect(() => {
-    if (!name || !parentAppId) return;
+    if (!owner) {
+      setPrimaryName(null);
+      return;
+    }
+
     (async () => {
-      const node = await namehash(name || "");
-      const tokenId = uint8ArrayToBigInt(node);
-      const arc72 = new ARC72Service(
-        "mainnet",
-        activeAccount?.address,
-        parentAppId
-      );
-      const owner = await arc72.ownerOf(tokenId);
-      setOwner(owner);
-      setIsOwner(owner === activeAccount?.address);
+      try {
+        const { algodClient, indexerClient } = getAlgorandClients();
+
+        const ciResolver = new CONTRACT(
+          797608, // Resolver app ID
+          algodClient,
+          indexerClient,
+          { ...VNSPublicResolverSpec.contract, events: [] },
+          {
+            addr: algosdk.getApplicationAddress(797608),
+            sk: new Uint8Array(),
+          }
+        );
+
+        // Check if reverse node exists for this address
+        const nameR = await ciResolver.name(
+          await namehash(`${owner}.addr.reverse`)
+        );
+
+        if (!nameR.success) {
+          setPrimaryName(null);
+          return;
+        }
+
+        const primaryNameValue = stripTrailingZeroBytes(nameR.returnValue);
+        setPrimaryName(primaryNameValue || null);
+      } catch (error) {
+        console.error("Error fetching primary name:", error);
+        setPrimaryName(null);
+      }
     })();
-  }, [name, activeAccount, parentAppId]);
+  }, [owner]);
+
+  // useEffect(() => {
+  //   if (!name || !parentAppId) return;
+  //   (async () => {
+  //     const node = await namehash(name || "");
+  //     const tokenId = uint8ArrayToBigInt(node);
+  //     const arc72 = new ARC72Service(
+  //       "mainnet",
+  //       activeAccount?.address,
+  //       parentAppId
+  //     );
+  //     const owner = await arc72.ownerOf(tokenId);
+  //     setOwner(owner);
+  //     setIsOwner(owner === activeAccount?.address);
+  //   })();
+  // }, [name, activeAccount, parentAppId]);
 
   useEffect(() => {
     const registry = new RegistryService("mainnet");
@@ -4403,10 +5546,25 @@ const ProfilePage: React.FC = () => {
     setNewOwnerForTransfer(null);
   };
 
+  const handleOpenNodeTransferModal = () => {
+    setIsNodeTransferModalOpen(true);
+  };
+
+  const handleCloseNodeTransferModal = () => {
+    setIsNodeTransferModalOpen(false);
+    setNewNodeOwnerForTransfer(null);
+  };
+
   const handleConfirmTransfer = async (newOwner: string) => {
     setNewOwnerForTransfer(newOwner);
     setIsConfirmTransferModalOpen(true);
     setIsTransferModalOpen(false);
+  };
+
+  const handleConfirmNodeTransfer = async (newOwner: string) => {
+    setNewNodeOwnerForTransfer(newOwner);
+    setIsConfirmNodeTransferModalOpen(true);
+    setIsNodeTransferModalOpen(false);
   };
 
   const handleFinalTransferConfirm = async () => {
@@ -4533,6 +5691,359 @@ const ProfilePage: React.FC = () => {
       enqueueSnackbar("Failed to transfer name. Please try again.", {
         variant: "error",
       });
+    } finally {
+      setIsPendingTx(false);
+    }
+  };
+
+  const handleFinalNodeTransferConfirm = async () => {
+    setIsPendingTx(true);
+    try {
+      if (!activeAccount) {
+        enqueueSnackbar(
+          "Please connect your wallet to transfer node ownership",
+          {
+            variant: "error",
+          }
+        );
+        return;
+      }
+
+      const { algodClient, indexerClient } = getAlgorandClients();
+
+      const vns = {
+        registry: 797607,
+      };
+
+      const ci = new CONTRACT(
+        vns.registry,
+        algodClient,
+        indexerClient,
+        abi.custom,
+        {
+          addr: activeAccount.address,
+          sk: new Uint8Array(),
+        }
+      );
+
+      const builder = {
+        registry: new CONTRACT(
+          vns.registry,
+          algodClient,
+          indexerClient,
+          { ...VNSRegistrySpec.contract, events: [] },
+          { addr: activeAccount.address, sk: new Uint8Array() },
+          true,
+          false,
+          true
+        ),
+      };
+
+      const buildN = [];
+
+      // Get the node for the name
+      const node = await namehash(name || "");
+
+      // registry transfer node to new owner
+      {
+        const txnO = await builder.registry.setOwner(
+          node,
+          newNodeOwnerForTransfer || ""
+        );
+        buildN.push({
+          ...txnO.obj,
+          note: new TextEncoder().encode(
+            `registry transfer node ${name} to ${newNodeOwnerForTransfer}`
+          ),
+        });
+      }
+
+      ci.setFee(2000);
+      ci.setEnableGroupResourceSharing(true);
+      ci.setExtraTxns(buildN);
+
+      const customR = await ci.custom();
+
+      if (!customR.success) {
+        throw new Error("Failed to transfer node ownership");
+      }
+
+      const stxns = await signTransactions(
+        customR.txns.map(
+          (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+        )
+      );
+
+      await algodClient.sendRawTransaction(stxns as Uint8Array[]).do();
+
+      // Refresh node owner after successful transfer
+      setNodeOwner(newNodeOwnerForTransfer);
+
+      enqueueSnackbar("Node ownership transferred successfully!", {
+        variant: "success",
+      });
+      setIsConfirmNodeTransferModalOpen(false);
+    } catch (error) {
+      console.error("Error transferring node ownership:", error);
+      enqueueSnackbar("Failed to transfer node ownership. Please try again.", {
+        variant: "error",
+      });
+    } finally {
+      setIsPendingTx(false);
+    }
+  };
+
+  const handleClawback = async () => {
+    setIsClawbackModalOpen(true);
+  };
+
+  const handleNodeOwnerClawback = async () => {
+    setIsNodeClawbackModalOpen(true);
+  };
+
+  const handleConfirmClawback = async () => {
+    alert("handleConfirmClawback");
+    if (!name || !activeAccount) return;
+
+    setIsPendingTx(true);
+
+    try {
+      const { algodClient, indexerClient } = getAlgorandClients();
+
+      const vns = {
+        registry: 797607, // TODO fetch from registrar
+        registrar: parentAppId,
+      };
+
+      const ci = new CONTRACT(
+        vns.registrar,
+        algodClient,
+        indexerClient,
+        abi.custom,
+        {
+          addr: activeAccount.address,
+          sk: new Uint8Array(),
+        }
+      );
+
+      const builder = {
+        registry: new CONTRACT(
+          vns.registry,
+          algodClient,
+          indexerClient,
+          { ...VNSRegistrySpec.contract, events: [] },
+          { addr: activeAccount.address, sk: new Uint8Array() },
+          true,
+          false,
+          true
+        ),
+        registrar: new CONTRACT(
+          vns.registrar,
+          algodClient,
+          indexerClient,
+          {
+            name: "registrar",
+            description: "Registrar",
+            methods: VNSRegistrarSpec.contract.methods,
+            events: [],
+          },
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(),
+          },
+          true,
+          false,
+          true
+        ),
+      };
+
+      const buildN = [];
+
+      const tokenId = uint8ArrayToBigInt(await namehash(name || ""));
+
+      // registrar admin transfer name to active account
+      {
+        const reclaimR = await builder.registrar.arc72_admin_transfer(
+          tokenId,
+          activeAccount.address
+        );
+        buildN.push({
+          ...reclaimR.obj,
+          note: new TextEncoder().encode(
+            `envoi registrar arc72_admin_transfer ${name}`
+          ),
+        });
+      }
+
+      // registry transfer node to active account
+      // {
+      //   const txnO = await builder.registry.setOwner(
+      //     await namehash(name || ""),
+      //     algosdk.getApplicationAddress(vns.registrar)
+      //   );
+      //   buildN.push({
+      //     ...txnO.obj,
+      //     note: new TextEncoder().encode(
+      //       `envoi registry setOwner ${name} to ${algosdk.getApplicationAddress(vns.registrar)}`
+      //     ),
+      //   });
+      // }
+
+      // registrar reclaim name
+      {
+        const reclaimR = await builder.registrar.reclaim(
+          stringToUint8Array(name?.split(".")[0] || "", 32)
+        );
+        buildN.push({
+          ...reclaimR.obj,
+          note: new TextEncoder().encode(`envoi registrar reclaim ${name}`),
+        });
+      }
+
+      ci.setFee(2000);
+      ci.setEnableGroupResourceSharing(true);
+      ci.setExtraTxns(buildN);
+
+      const customR = await ci.custom();
+
+      console.log({ customR });
+
+      if (!customR.success) {
+        throw new Error("Failed to reclaim name", customR.error);
+      }
+
+      const signedTxns = await signTransactions(
+        customR.txns.map(
+          (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+        )
+      );
+      const { txId } = await algodClient
+        .sendRawTransaction(signedTxns as Uint8Array[])
+        .do();
+
+      enqueueSnackbar(`Successfully reclaimed ${name}`, { variant: "success" });
+
+      // Refresh the page to show updated state
+      window.location.reload();
+    } catch (error: any) {
+      console.error("Clawback error:", error);
+      enqueueSnackbar(`Clawback failed: ${error.message || "Unknown error"}`, {
+        variant: "error",
+      });
+    } finally {
+      setIsPendingTx(false);
+    }
+  };
+
+  const handleConfirmNodeClawback = async () => {
+    if (!name || !activeAccount) return;
+
+    setIsPendingTx(true);
+
+    try {
+      const { algodClient, indexerClient } = getAlgorandClients();
+
+      const vns = {
+        registry: 797607,
+        registrar: parentAppId,
+      };
+
+      const ci = new CONTRACT(
+        vns.registrar,
+        algodClient,
+        indexerClient,
+        abi.custom,
+        {
+          addr: activeAccount.address,
+          sk: new Uint8Array(),
+        }
+      );
+
+      const builder = {
+        registrar: new CONTRACT(
+          vns.registrar,
+          algodClient,
+          indexerClient,
+          {
+            name: "registrar",
+            description: "Registrar",
+            methods: VNSRegistrarSpec.contract.methods,
+            events: [],
+          },
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(),
+          },
+          true,
+          false,
+          true
+        ),
+        registry: new CONTRACT(
+          vns.registry,
+          algodClient,
+          indexerClient,
+          { ...VNSRegistrySpec.contract, events: [] },
+          { addr: activeAccount.address, sk: new Uint8Array() },
+          true,
+          false,
+          true
+        ),
+      };
+
+      const buildN = [];
+
+      // Get the node for the name
+      const node = await namehash(name || "");
+
+      // registry transfer node back to token owner (active account)
+      {
+        const txnO = await builder.registry.setOwner(
+          node,
+          activeAccount.address
+        );
+        buildN.push({
+          ...txnO.obj,
+          note: new TextEncoder().encode(
+            `registry reclaim node ${name} to token owner ${activeAccount.address}`
+          ),
+        });
+      }
+
+      ci.setFee(2000);
+      ci.setEnableGroupResourceSharing(true);
+      ci.setExtraTxns(buildN);
+
+      const customR = await ci.custom();
+
+      if (!customR.success) {
+        throw new Error("Failed to reclaim node ownership");
+      }
+
+      const signedTxns = await signTransactions(
+        customR.txns.map(
+          (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+        )
+      );
+      const { txId } = await algodClient
+        .sendRawTransaction(signedTxns as Uint8Array[])
+        .do();
+
+      enqueueSnackbar(`Successfully reclaimed node ownership of ${name}`, {
+        variant: "success",
+      });
+
+      // Refresh node owner after successful reclaim
+      setNodeOwner(activeAccount.address);
+
+      setIsNodeClawbackModalOpen(false);
+    } catch (error: any) {
+      console.error("Node clawback error:", error);
+      enqueueSnackbar(
+        `Node reclaim failed: ${error.message || "Unknown error"}`,
+        {
+          variant: "error",
+        }
+      );
     } finally {
       setIsPendingTx(false);
     }
@@ -4905,6 +6416,132 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const handleSetReverseAddress = async () => {
+    if (!name || !activeAccount) return;
+
+    // here
+    setIsPendingTx(true);
+    try {
+      const { algodClient, indexerClient } = getAlgorandClients();
+
+      const vns = {
+        reverseRegistrar: 797610,
+        resolver: 797608,
+      };
+
+      const ci = new CONTRACT(
+        vns.resolver,
+        algodClient,
+        indexerClient,
+        abi.custom,
+        { addr: activeAccount.address, sk: new Uint8Array() }
+      );
+
+      const builder = {
+        reverseRegistrar: new CONTRACT(
+          vns.reverseRegistrar,
+          algodClient,
+          indexerClient,
+          { ...VNSRegistrarSpec.contract, events: [] },
+          { addr: activeAccount.address, sk: new Uint8Array() },
+          true,
+          false,
+          true
+        ),
+        resolver: new CONTRACT(
+          vns.resolver,
+          algodClient,
+          indexerClient,
+          {
+            name: "resolver",
+            description: "Resolver",
+            methods: VNSPublicResolverSpec.contract.methods,
+            events: [],
+          },
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(),
+          },
+          true,
+          false,
+          true
+        ),
+      };
+
+      let customR;
+      for (const p of [[0], [1]]) {
+        const [p1] = p;
+        const buildN = [];
+
+        // Check if reverse node exists, if not create it
+        if (p1 > 0) {
+          const txnO = (
+            await builder.reverseRegistrar.register(
+              algosdk.decodeAddress(activeAccount.address).publicKey,
+              activeAccount.address,
+              0
+            )
+          )?.obj;
+          buildN.push({
+            ...txnO,
+            payment: 28500,
+            note: new TextEncoder().encode(
+              `envoi register ${activeAccount.address}.addr.reverse`
+            ),
+          });
+        }
+
+        // Set name with resolver
+        {
+          const txnO = (
+            await builder.resolver.setName(
+              await namehash(`${activeAccount.address}.addr.reverse`),
+              stringToUint8Array(`${name}`)
+            )
+          )?.obj;
+          buildN.push({
+            ...txnO,
+            note: new TextEncoder().encode(
+              `envoi resolver setName ${activeAccount.address}.addr.reverse ${name}`
+            ),
+          });
+        }
+
+        ci.setFee(2000);
+        ci.setExtraTxns(buildN);
+        ci.setEnableGroupResourceSharing(true);
+        customR = await ci.custom();
+        if (customR.success) {
+          break;
+        }
+      }
+      if (!customR.success) {
+        throw new Error("Failed to set reverse address name");
+      }
+
+      const stxns = await signTransactions(
+        customR.txns.map(
+          (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+        )
+      );
+      const { txId } = await algodClient
+        .sendRawTransaction(stxns as Uint8Array[])
+        .do();
+      await algosdk.waitForConfirmation(algodClient, txId, 4);
+
+      enqueueSnackbar(`Successfully set reverse address name to ${name}!`, {
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Error setting reverse address:", error);
+      enqueueSnackbar("Failed to set reverse address name. Please try again.", {
+        variant: "error",
+      });
+    } finally {
+      setIsPendingTx(false);
+    }
+  };
+
   return (
     <div
       className="profile-container"
@@ -5007,8 +6644,8 @@ const ProfilePage: React.FC = () => {
                   <PlusIcon />
                 </Button>
               )}
-              {isOwner && (
-                <>
+              <>
+                {isOwner && (
                   <Button
                     variant="contained"
                     onClick={handleExtend}
@@ -5041,80 +6678,42 @@ const ProfilePage: React.FC = () => {
                     Extend
                     <FastForwardIcon />
                   </Button>
-                  {!subnameRegistrar && (
-                    <Button
-                      variant="contained"
-                      onClick={handleOpenTransferModal}
-                      sx={{
+                )}
+                {!subnameRegistrar && (
+                  <Button
+                    variant="contained"
+                    onClick={handleOpenTransferModal}
+                    sx={{
+                      bgcolor:
+                        theme.palette.mode === "dark" ? "#374151" : "white",
+                      color:
+                        theme.palette.mode === "dark" ? "#F9FAFB" : "#EF4444",
+                      "&:hover": {
                         bgcolor:
-                          theme.palette.mode === "dark" ? "#374151" : "white",
-                        color:
-                          theme.palette.mode === "dark" ? "#F9FAFB" : "#EF4444",
-                        "&:hover": {
-                          bgcolor:
-                            theme.palette.mode === "dark"
-                              ? "#4B5563"
-                              : "#FEF2F2",
-                        },
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.5rem",
-                        padding: "0.5rem 1rem",
-                        borderRadius: "0.5rem",
-                        fontWeight: "600",
-                        fontSize: "0.875rem",
-                        boxShadow:
-                          theme.palette.mode === "dark"
-                            ? "0 2px 4px rgba(0, 0, 0, 0.3)"
-                            : "0 2px 4px rgba(0, 0, 0, 0.1)",
-                        border:
-                          theme.palette.mode === "dark"
-                            ? "1px solid #4B5563"
-                            : "none",
-                      }}
-                    >
-                      Transfer
-                      <SendIcon />
-                    </Button>
-                  )}
-                  {name && name.split(".").length < 3 && (
-                    <Button
-                      variant="contained"
-                      onClick={handleCreateSubname}
-                      sx={{
-                        bgcolor:
-                          theme.palette.mode === "dark" ? "#374151" : "white",
-                        color:
-                          theme.palette.mode === "dark" ? "#F9FAFB" : "#10B981",
-                        "&:hover": {
-                          bgcolor:
-                            theme.palette.mode === "dark"
-                              ? "#4B5563"
-                              : "#F0FDF4",
-                        },
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.5rem",
-                        padding: "0.5rem 1rem",
-                        borderRadius: "0.5rem",
-                        fontWeight: "600",
-                        fontSize: "0.875rem",
-                        boxShadow:
-                          theme.palette.mode === "dark"
-                            ? "0 2px 4px rgba(0, 0, 0, 0.3)"
-                            : "0 2px 4px rgba(0, 0, 0, 0.1)",
-                        border:
-                          theme.palette.mode === "dark"
-                            ? "1px solid #4B5563"
-                            : "none",
-                      }}
-                    >
-                      New Subname
-                      <PlusIcon size={16} />
-                    </Button>
-                  )}
-                </>
-              )}
+                          theme.palette.mode === "dark" ? "#4B5563" : "#FEF2F2",
+                      },
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      padding: "0.5rem 1rem",
+                      borderRadius: "0.5rem",
+                      fontWeight: "600",
+                      fontSize: "0.875rem",
+                      boxShadow:
+                        theme.palette.mode === "dark"
+                          ? "0 2px 4px rgba(0, 0, 0, 0.3)"
+                          : "0 2px 4px rgba(0, 0, 0, 0.1)",
+                      border:
+                        theme.palette.mode === "dark"
+                          ? "1px solid #4B5563"
+                          : "none",
+                    }}
+                  >
+                    Transfer
+                    <SendIcon />
+                  </Button>
+                )}
+              </>
             </div>
           )}
         </div>
@@ -5560,6 +7159,81 @@ const ProfilePage: React.FC = () => {
               </div>
             </div>
 
+            {primaryName && primaryName.trim() !== "" && !primaryName.includes('\x00'.repeat(256)) && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+                  }}
+                >
+                  Primary Name
+                </Typography>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontFamily: "monospace",
+                      color:
+                        theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                    }}
+                  >
+                    {primaryName}
+                  </Typography>
+                  <button
+                    onClick={() => {
+                      if (primaryName) {
+                        navigator.clipboard.writeText(primaryName);
+                        enqueueSnackbar("Primary name copied to clipboard!", {
+                          variant: "success",
+                        });
+                      }
+                    }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "4px",
+                      borderRadius: "4px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color:
+                        theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                    }}
+                    title="Copy primary name"
+                  >
+                    <ContentCopyIcon fontSize="small" />
+                  </button>
+                  <a
+                    href={`/#/${primaryName}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color:
+                        theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                      textDecoration: "none",
+                    }}
+                    title="Open profile"
+                  >
+                    <LaunchIcon fontSize="small" />
+                  </a>
+                </div>
+              </div>
+            )}
+
             {expiry && new Date(expiry).getTime() > 0 && (
               <div
                 style={{
@@ -5590,6 +7264,856 @@ const ProfilePage: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Technical Details Section */}
+        <div
+          style={{
+            backgroundColor:
+              theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+            borderRadius: "12px",
+            padding: "1.5rem",
+            marginBottom: "1rem",
+            boxShadow:
+              theme.palette.mode === "dark"
+                ? "0 4px 6px -1px rgba(0, 0, 0, 0.3)"
+                : "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+            border:
+              theme.palette.mode === "dark"
+                ? "1px solid #374151"
+                : "1px solid #E5E7EB",
+          }}
+        >
+          <Typography
+            variant="h6"
+            sx={{
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+              marginBottom: "1rem",
+              fontWeight: 600,
+            }}
+          >
+            Technical Details
+          </Typography>
+
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+          >
+            {tokenOwner && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color:
+                      theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+                  }}
+                >
+                  Token Owner
+                </Typography>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontFamily: "monospace",
+                      color:
+                        theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                    }}
+                  >
+                    {tokenOwner
+                      ? `${tokenOwner.slice(0, 6)}...${tokenOwner.slice(-4)}`
+                      : "Loading..."}
+                  </Typography>
+                  <button
+                    onClick={() => {
+                      if (tokenOwner) {
+                        navigator.clipboard.writeText(tokenOwner);
+                        enqueueSnackbar(
+                          "Token owner address copied to clipboard!",
+                          {
+                            variant: "success",
+                          }
+                        );
+                      }
+                    }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "4px",
+                      borderRadius: "4px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color:
+                        theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                    }}
+                  >
+                    <ContentCopyIcon fontSize="small" />
+                  </button>
+                  <a
+                    href={`${explorerBaseUrl}/account/${tokenOwner}/transactions`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color:
+                        theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                      textDecoration: "none",
+                    }}
+                  >
+                    <OpenInNewIcon fontSize="small" />
+                  </a>
+                  <button
+                    onClick={handleOpenTransferModal}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "4px",
+                      borderRadius: "4px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color:
+                        theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                    }}
+                    title="Transfer ownership"
+                  >
+                    <ArrowUpDownIcon size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {nodeOwner && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color:
+                      theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+                  }}
+                >
+                  Node Owner
+                </Typography>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontFamily: "monospace",
+                      color:
+                        theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                    }}
+                  >
+                    {nodeOwner
+                      ? `${nodeOwner.slice(0, 6)}...${nodeOwner.slice(-4)}`
+                      : "Loading..."}
+                  </Typography>
+                  <button
+                    onClick={() => {
+                      if (nodeOwner) {
+                        navigator.clipboard.writeText(nodeOwner);
+                        enqueueSnackbar(
+                          "Node owner address copied to clipboard!",
+                          {
+                            variant: "success",
+                          }
+                        );
+                      }
+                    }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "4px",
+                      borderRadius: "4px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color:
+                        theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                    }}
+                  >
+                    <ContentCopyIcon fontSize="small" />
+                  </button>
+                  <a
+                    href={`${explorerBaseUrl}/account/${nodeOwner}/transactions`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color:
+                        theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                      textDecoration: "none",
+                    }}
+                  >
+                    <OpenInNewIcon fontSize="small" />
+                  </a>
+                  {nodeOwner === activeAccount?.address && (
+                    <button
+                      onClick={handleOpenNodeTransferModal}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: "4px",
+                        borderRadius: "4px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color:
+                          theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                      }}
+                      title="Transfer node ownership"
+                    >
+                      <ArrowUpDownIcon size={16} />
+                    </button>
+                  )}
+                  {nodeOwner !== activeAccount?.address &&
+                    tokenOwner === activeAccount?.address && (
+                      <button
+                        onClick={handleNodeOwnerClawback}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          padding: "4px",
+                          borderRadius: "4px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color:
+                            theme.palette.mode === "dark"
+                              ? "#9CA3AF"
+                              : "#6B7280",
+                        }}
+                        title="Reclaim node ownership"
+                      >
+                        <UndoIcon size={16} />
+                      </button>
+                    )}
+                </div>
+              </div>
+            )}
+
+            {resolvedName && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color:
+                      theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+                  }}
+                >
+                  Node Name
+                </Typography>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontFamily: "monospace",
+                      color:
+                        theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                    }}
+                  >
+                    {resolvedName}
+                  </Typography>
+                  <button
+                    onClick={() => setIsReverseAddressModalOpen(true)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "4px",
+                      borderRadius: "4px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color:
+                        theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                    }}
+                    title="Set reverse address name"
+                  >
+                    <AttachFileIcon fontSize="small" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (resolvedName) {
+                        navigator.clipboard.writeText(resolvedName);
+                        enqueueSnackbar("Node name copied to clipboard!", {
+                          variant: "success",
+                        });
+                      }
+                    }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "4px",
+                      borderRadius: "4px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color:
+                        theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                    }}
+                  >
+                    <ContentCopyIcon fontSize="small" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {parentAppId && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color:
+                      theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+                  }}
+                >
+                  Parent Registrar App Address
+                </Typography>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontFamily: "monospace",
+                      color:
+                        theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                    }}
+                  >
+                    {algosdk.getApplicationAddress(parentAppId)
+                      ? `${algosdk
+                          .getApplicationAddress(parentAppId)
+                          .slice(0, 6)}...${algosdk
+                          .getApplicationAddress(parentAppId)
+                          .slice(-4)}`
+                      : "Loading..."}
+                  </Typography>
+                  <button
+                    onClick={() => {
+                      if (parentAppId) {
+                        navigator.clipboard.writeText(
+                          algosdk.getApplicationAddress(parentAppId)
+                        );
+                        enqueueSnackbar(
+                          "Parent registrar app address copied to clipboard!",
+                          {
+                            variant: "success",
+                          }
+                        );
+                      }
+                    }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "4px",
+                      borderRadius: "4px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color:
+                        theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                    }}
+                  >
+                    <ContentCopyIcon fontSize="small" />
+                  </button>
+                  <a
+                    href={`${explorerBaseUrl}/account/${algosdk.getApplicationAddress(
+                      parentAppId
+                    )}/transactions`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color:
+                        theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                      textDecoration: "none",
+                    }}
+                  >
+                    <OpenInNewIcon fontSize="small" />
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {parentAppId && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color:
+                      theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+                  }}
+                >
+                  Parent Registrar App ID
+                </Typography>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontFamily: "monospace",
+                      color:
+                        theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                    }}
+                  >
+                    {parentAppId}
+                  </Typography>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(parentAppId.toString());
+                      enqueueSnackbar(
+                        "Parent Registrar App ID copied to clipboard!",
+                        {
+                          variant: "success",
+                        }
+                      );
+                    }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "4px",
+                      borderRadius: "4px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color:
+                        theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                    }}
+                  >
+                    <ContentCopyIcon fontSize="small" />
+                  </button>
+                  <a
+                    href={`${explorerBaseUrl}/application/${parentAppId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color:
+                        theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                      textDecoration: "none",
+                    }}
+                  >
+                    <OpenInNewIcon fontSize="small" />
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {subnameRegistrar?.contract &&
+              name &&
+              name.split(".").length <= 2 && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color:
+                        theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+                    }}
+                  >
+                    Registrar App ID
+                  </Typography>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontFamily: "monospace",
+                        color:
+                          theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                      }}
+                    >
+                      {subnameRegistrar.contract}
+                    </Typography>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(
+                          subnameRegistrar.contract
+                        );
+                        enqueueSnackbar(
+                          "Registrar App ID copied to clipboard!",
+                          {
+                            variant: "success",
+                          }
+                        );
+                      }}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: "4px",
+                        borderRadius: "4px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color:
+                          theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                      }}
+                    >
+                      <ContentCopyIcon fontSize="small" />
+                    </button>
+                    <a
+                      href={`${explorerBaseUrl}/application/${subnameRegistrar.contract}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        color:
+                          theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                        textDecoration: "none",
+                      }}
+                    >
+                      <OpenInNewIcon fontSize="small" />
+                    </a>
+                  </div>
+                </div>
+              )}
+
+            {parentName && parentName.split(".").length > 1 && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color:
+                      theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+                  }}
+                >
+                  Parent Registrar Name
+                </Typography>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontFamily: "monospace",
+                      color:
+                        theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                    }}
+                  >
+                    {parentName}
+                  </Typography>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(parentName);
+                      enqueueSnackbar(
+                        "Parent registrar name copied to clipboard!",
+                        {
+                          variant: "success",
+                        }
+                      );
+                    }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "4px",
+                      borderRadius: "4px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color:
+                        theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                    }}
+                  >
+                    <ContentCopyIcon fontSize="small" />
+                  </button>
+                  <a
+                    href={`/#/${parentName}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color:
+                        theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                      textDecoration: "none",
+                    }}
+                  >
+                    <OpenInNewIcon fontSize="small" />
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {(subnameRegistrarContractVersion !== null ||
+              subnameRegistrarDeploymentVersion !== null) && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color:
+                      theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+                  }}
+                >
+                  Version
+                </Typography>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontFamily: "monospace",
+                      color:
+                        theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                    }}
+                  >
+                    {subnameRegistrarContractVersion !== undefined &&
+                    subnameRegistrarDeploymentVersion !== undefined
+                      ? `${subnameRegistrarContractVersion}.${subnameRegistrarDeploymentVersion}`
+                      : "Loading..."}
+                  </Typography>
+                  {subnameRegistrarContractVersion !== null &&
+                    subnameRegistrarDeploymentVersion !== null &&
+                    subnameRegistrarContractVersion <=
+                      currentVNSRegistrarContractVersion &&
+                    subnameRegistrarDeploymentVersion <
+                      currentVNSRegistrarDeploymentVersion && (
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={handleUpdate}
+                        disabled={isPendingTx || !subnameRegistrar?.contract}
+                        sx={{
+                          minWidth: "auto",
+                          padding: "2px 6px",
+                          fontSize: "0.75rem",
+                          height: "24px",
+                          bgcolor:
+                            theme.palette.mode === "dark" ? "#374151" : "white",
+                          color:
+                            theme.palette.mode === "dark"
+                              ? "#F9FAFB"
+                              : "#3B82F6",
+                          borderColor:
+                            theme.palette.mode === "dark"
+                              ? "#4B5563"
+                              : "#D1D5DB",
+                          "&:hover": {
+                            bgcolor:
+                              theme.palette.mode === "dark"
+                                ? "#4B5563"
+                                : "#EBF4FF",
+                            borderColor:
+                              theme.palette.mode === "dark"
+                                ? "#6B7280"
+                                : "#3B82F6",
+                          },
+                          "&:disabled": {
+                            bgcolor:
+                              theme.palette.mode === "dark"
+                                ? "#1F2937"
+                                : "#F3F4F6",
+                            color:
+                              theme.palette.mode === "dark"
+                                ? "#6B7280"
+                                : "#9CA3AF",
+                            borderColor:
+                              theme.palette.mode === "dark"
+                                ? "#374151"
+                                : "#E5E7EB",
+                          },
+                        }}
+                      >
+                        {isPendingTx ? "..." : "Update"}
+                      </Button>
+                    )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Admin Actions Section */}
+        {(shouldShowClawback ||
+          (isOwner && name && name.split(".").length < 3)) && (
+          <div
+            style={{
+              backgroundColor:
+                theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+              borderRadius: "12px",
+              padding: "1.5rem",
+              marginBottom: "1rem",
+              boxShadow:
+                theme.palette.mode === "dark"
+                  ? "0 4px 6px -1px rgba(0, 0, 0, 0.3)"
+                  : "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+              border:
+                theme.palette.mode === "dark"
+                  ? "1px solid #374151"
+                  : "1px solid #E5E7EB",
+            }}
+          >
+            <Typography
+              variant="h6"
+              sx={{
+                color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                marginBottom: "1rem",
+                fontWeight: 600,
+              }}
+            >
+              Admin Actions
+            </Typography>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
+              {shouldShowClawback && (
+                <Button
+                  variant="contained"
+                  onClick={handleClawback}
+                  sx={{
+                    bgcolor:
+                      theme.palette.mode === "dark" ? "#374151" : "white",
+                    color:
+                      theme.palette.mode === "dark" ? "#F9FAFB" : "#F59E0B",
+                    "&:hover": {
+                      bgcolor:
+                        theme.palette.mode === "dark" ? "#4B5563" : "#FFFBEB",
+                    },
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    padding: "0.5rem 1rem",
+                    borderRadius: "0.5rem",
+                    fontWeight: "600",
+                    fontSize: "0.875rem",
+                    boxShadow:
+                      theme.palette.mode === "dark"
+                        ? "0 2px 4px rgba(0, 0, 0, 0.3)"
+                        : "0 2px 4px rgba(0, 0, 0, 0.1)",
+                    border:
+                      theme.palette.mode === "dark"
+                        ? "1px solid #4B5563"
+                        : "none",
+                  }}
+                >
+                  Clawback
+                  <UndoIcon size={16} />
+                </Button>
+              )}
+              {isOwner && name && name.split(".").length < 3 && (
+                <Button
+                  variant="contained"
+                  onClick={handleCreateSubname}
+                  sx={{
+                    bgcolor:
+                      theme.palette.mode === "dark" ? "#374151" : "white",
+                    color:
+                      theme.palette.mode === "dark" ? "#F9FAFB" : "#10B981",
+                    "&:hover": {
+                      bgcolor:
+                        theme.palette.mode === "dark" ? "#4B5563" : "#F0FDF4",
+                    },
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    padding: "0.5rem 1rem",
+                    borderRadius: "0.5rem",
+                    fontWeight: "600",
+                    fontSize: "0.875rem",
+                    boxShadow:
+                      theme.palette.mode === "dark"
+                        ? "0 2px 4px rgba(0, 0, 0, 0.3)"
+                        : "0 2px 4px rgba(0, 0, 0, 0.1)",
+                    border:
+                      theme.palette.mode === "dark"
+                        ? "1px solid #4B5563"
+                        : "none",
+                  }}
+                >
+                  New Subname
+                  <PlusIcon size={16} />
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Owner Controls Section - Only visible to owner */}
         {isOwner && (
@@ -5623,39 +8147,65 @@ const ProfilePage: React.FC = () => {
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
               <Button
-                variant="outlined"
+                variant="contained"
                 onClick={handleOpenEditModal}
                 sx={{
-                  borderColor:
-                    theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
-                  color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                  bgcolor: theme.palette.mode === "dark" ? "#374151" : "white",
+                  color: theme.palette.mode === "dark" ? "#F9FAFB" : "#3B82F6",
                   "&:hover": {
-                    borderColor:
-                      theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
-                    backgroundColor:
-                      theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+                    bgcolor:
+                      theme.palette.mode === "dark" ? "#4B5563" : "#EBF4FF",
                   },
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.5rem 1rem",
+                  borderRadius: "0.5rem",
+                  fontWeight: "600",
+                  fontSize: "0.875rem",
+                  boxShadow:
+                    theme.palette.mode === "dark"
+                      ? "0 2px 4px rgba(0, 0, 0, 0.3)"
+                      : "0 2px 4px rgba(0, 0, 0, 0.1)",
+                  border:
+                    theme.palette.mode === "dark"
+                      ? "1px solid #4B5563"
+                      : "none",
                 }}
               >
                 Edit Profile
+                <CameraAltIcon sx={{ fontSize: 16 }} />
               </Button>
 
               <Button
-                variant="outlined"
+                variant="contained"
                 onClick={() => setIsSetDefaultModalOpen(true)}
                 sx={{
-                  borderColor:
-                    theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
-                  color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                  bgcolor: theme.palette.mode === "dark" ? "#374151" : "white",
+                  color: theme.palette.mode === "dark" ? "#F9FAFB" : "#10B981",
                   "&:hover": {
-                    borderColor:
-                      theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
-                    backgroundColor:
-                      theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+                    bgcolor:
+                      theme.palette.mode === "dark" ? "#4B5563" : "#F0FDF4",
                   },
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.5rem 1rem",
+                  borderRadius: "0.5rem",
+                  fontWeight: "600",
+                  fontSize: "0.875rem",
+                  boxShadow:
+                    theme.palette.mode === "dark"
+                      ? "0 2px 4px rgba(0, 0, 0, 0.3)"
+                      : "0 2px 4px rgba(0, 0, 0, 0.1)",
+                  border:
+                    theme.palette.mode === "dark"
+                      ? "1px solid #4B5563"
+                      : "none",
                 }}
               >
                 Set as Default
+                <CheckCircleIcon sx={{ fontSize: 16 }} />
               </Button>
             </div>
           </div>
@@ -6677,6 +9227,13 @@ const ProfilePage: React.FC = () => {
         onConfirm={handleConfirmTransfer}
       />
 
+      <NodeTransferModal
+        open={isNodeTransferModalOpen}
+        onClose={handleCloseNodeTransferModal}
+        name={name || ""}
+        onConfirm={handleConfirmNodeTransfer}
+      />
+
       <ConfirmTransferModal
         open={isConfirmTransferModalOpen}
         onClose={() => setIsConfirmTransferModalOpen(false)}
@@ -6686,11 +9243,34 @@ const ProfilePage: React.FC = () => {
         onConfirm={handleFinalTransferConfirm}
       />
 
+      <ConfirmNodeTransferModal
+        open={isConfirmNodeTransferModalOpen}
+        onClose={() => setIsConfirmNodeTransferModalOpen(false)}
+        name={name || ""}
+        newOwner={newNodeOwnerForTransfer || ""}
+        currentOwner={nodeOwner || ""}
+        onConfirm={handleFinalNodeTransferConfirm}
+      />
+
       <ConfirmSetDefaultModal
         open={isSetDefaultModalOpen}
         onClose={() => setIsSetDefaultModalOpen(false)}
         name={name || ""}
         onConfirm={handleSetAsDefault}
+      />
+
+      <ConfirmClawbackModal
+        open={isClawbackModalOpen}
+        onClose={() => setIsClawbackModalOpen(false)}
+        name={name || ""}
+        onConfirm={handleConfirmClawback}
+      />
+
+      <ConfirmNodeClawbackModal
+        open={isNodeClawbackModalOpen}
+        onClose={() => setIsNodeClawbackModalOpen(false)}
+        name={name || ""}
+        onConfirm={handleConfirmNodeClawback}
       />
 
       <MintModal
@@ -6727,6 +9307,13 @@ const ProfilePage: React.FC = () => {
         subname={pendingSubname}
         recipientAddress={pendingRecipientAddress}
         onComplete={handleSubnameProgressComplete}
+      />
+
+      <ReverseAddressModal
+        open={isReverseAddressModalOpen}
+        onClose={() => setIsReverseAddressModalOpen(false)}
+        name={name || ""}
+        onConfirm={handleSetReverseAddress}
       />
 
       <Snackbar
