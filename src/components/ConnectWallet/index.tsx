@@ -13,7 +13,6 @@ import {
 } from "../../config/quest";
 import { useWallet } from "@txnlab/use-wallet-react";
 import { ArrowDownward } from "@mui/icons-material";
-import { currentVersion, deploymentVersion } from "@/contants/versions";
 
 const WalletIcon2 = () => {
   return (
@@ -684,12 +683,6 @@ function BasicMenu() {
             </ProviderContainer>
           )}
 
-          <Divider />
-          <Box>
-            <Typography variant="body2" className="text-right">
-              Nautilus Ver {currentVersion}.{deploymentVersion}
-            </Typography>
-          </Box>
         </WalletContainer>
       </AccountMenu>
     </div>

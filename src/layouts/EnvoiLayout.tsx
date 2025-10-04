@@ -54,13 +54,14 @@ import {
   stringToUint8Array,
   uint8ArrayToBigInt,
 } from "@/utils/namehash";
+import { currentVersion, deploymentVersion } from "@/contants/versions";
 import { useName } from "@/hooks/useName";
-import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
 import ReservationsModal from "@/components/ReservationsModal";
 import { rsvps } from "@/constants/rsvps";
 import DomainIcon from "@mui/icons-material/Domain";
 import MyNamesModal from "@/components/MyNamesModal";
 import PaymentIcon from "@mui/icons-material/Payment";
+import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import { setPaymentMethod } from "@/store/userSlice";
@@ -784,6 +785,10 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
           sx={{
             padding: 0,
             maxWidth: "none",
+            position: "relative",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
           }}
         >
           {activeAccount ? (
@@ -1142,6 +1147,28 @@ const EnvoiLayout: React.FC<EnvoiLayoutProps> = ({ children }) => {
                 ))
               : null}
           </List>
+
+          {/* Version Display */}
+          <Box
+            sx={{
+              mt: "auto",
+              px: 3,
+              py: 2,
+            }}
+          >
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                fontSize: "0.7rem",
+                textAlign: "center",
+                fontWeight: 300,
+                opacity: 0.7,
+              }}
+            >
+              envoi ver {currentVersion}.{deploymentVersion}
+            </Typography>
+          </Box>
         </Container>
       </Drawer>
 

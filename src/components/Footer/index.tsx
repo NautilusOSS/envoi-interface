@@ -6,7 +6,6 @@ import { useSelector } from "react-redux";
 import { RootState } from "../../store/store";
 import { Box, Grid, Stack, Typography } from "@mui/material";
 import { Link } from "react-router-dom";
-import { currentVersion, deploymentVersion } from "@/contants/versions";
 
 const FooterRoot = styled.footer`
   position: absolute;
@@ -227,16 +226,6 @@ const Footer: React.FC = () => {
           >
             <Copyright>© 2024 Nautilus. All Rights Reserved.</Copyright>
           </Stack>
-        </Grid>
-        <Grid item xs={12}>
-          <Typography
-            align="left"
-            sx={{ color: isDarkTheme ? "white" : "black" }}
-            variant="body2"
-            color="textSecondary"
-          >
-            Ver {currentVersion}.{deploymentVersion}
-          </Typography>
         </Grid>
       </Grid>
     </FooterRoot>
