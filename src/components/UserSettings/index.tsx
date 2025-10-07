@@ -21,7 +21,6 @@ interface UserSettingsProps {
 // Define default tokens outside component to be consistent across the app
 export const DEFAULT_ENABLED_TOKENS = [
   390001, // VOI
-  395614, // aUSDC
   420069, // UNIT
   302222, // F
 ];

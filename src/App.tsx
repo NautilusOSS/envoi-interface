@@ -38,7 +38,7 @@ const queryClient = new QueryClient();
 const App: React.FC = () => {
   const { ALGO_SERVER } = getCurrentNodeEnv();
 
-  const walletConnectProjectId = "e7b04c22de006e0fc7cef5a00cb7fac9";
+  const walletConnectProjectId = "cd7fe0125d88d239da79fa286e6de2a8";
 
   const walletManager = new WalletManager({
     wallets: [

@@ -244,7 +244,6 @@ const VERIFIED_PAYMENT_TOKENS: Record<
   number,
   { symbol: string; name: string; decimals: number; isASA?: boolean }
 > = {
-  395614: { symbol: "aUSDC", name: "Algorand USDC", decimals: 6, isASA: true },
   420069: { symbol: "UNIT", name: "Unit", decimals: 8 },
   302222: { symbol: "F", name: "F Token", decimals: 6 },
   412682: { symbol: "CORN", name: "Corn coin", decimals: 6 },
