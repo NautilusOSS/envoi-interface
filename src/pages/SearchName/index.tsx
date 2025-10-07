@@ -170,9 +170,9 @@ const SearchName: React.FC = () => {
 
   const handleSuggestionClick = (suggestion: NameSuggestion) => {
     if (suggestion.status === "Registered") {
-      setToastMessage(`${suggestion.name} is already registered`);
-      setOpenToast(true);
-      return; // Don't close dropdown
+      // Navigate to profile page for registered names
+      navigate(`/${suggestion.name}`);
+      return;
     }
 
     if (suggestion.status === "Reserved") {
@@ -192,10 +192,21 @@ const SearchName: React.FC = () => {
         const parts = suggestion.name.split('.');
         const subname = parts[0]; // e.g., "bagman" from "bagman.founder.voi"
         navigate(`/register/founder.voi/${subname}`);
-      } else if (suggestion.name.endsWith('.voi')) {
-        // For .voi names: navigate to /register/name
+      } else if (suggestion.name.endsWith('.of.voi')) {
+        // For .of.voi names (auto-completed): navigate to /register/of.voi/subname
+        const parts = suggestion.name.split('.');
+        const subname = parts[0]; // e.g., "asdf" from "asdf.of.voi"
+        navigate(`/register/of.voi/${subname}`);
+      } else if (suggestion.name.endsWith('.voi') && !suggestion.name.includes('.', suggestion.name.indexOf('.voi') - 1)) {
+        // For base .voi names: navigate to /register/name
         const baseName = suggestion.name.replace(".voi", "");
         navigate(`/register/${baseName}`);
+      } else if (suggestion.name.includes('.')) {
+        // For subnames (contains dots): navigate to /register/parent/subname
+        const parts = suggestion.name.split('.');
+        const subname = parts[0];
+        const parentDomain = parts.slice(1).join('.');
+        navigate(`/register/${parentDomain}/${subname}`);
       }
     }
   };

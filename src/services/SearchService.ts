@@ -118,6 +118,173 @@ class SearchService {
     }
   }
 
+  private async checkBaseNameAvailability(baseName: string): Promise<SearchResult[]> {
+    const results: SearchResult[] = [];
+    
+    // Define domain options for base names
+    const domainOptions = [
+      { domain: 'voi', priority: 1 },
+      { domain: 'founder.voi', priority: 2 }
+    ];
+
+    // Check each domain option and collect results
+    const domainResults: SearchResult[] = [];
+    
+    for (const { domain, priority } of domainOptions) {
+      const fullName = `${baseName}.${domain}`;
+      
+      const { isRegistered, owner } = await this.checkNameAvailability(fullName);
+      
+      domainResults.push({
+        id: fullName,
+        type: "name",
+        title: fullName,
+        subtitle: isRegistered && owner ? `Owned by ${this.formatAddress(owner)}` : "Available for registration",
+        status: isRegistered ? "registered" : "available",
+        price: isRegistered ? undefined : this.getNamePrice(fullName),
+        owner: isRegistered ? owner : undefined,
+        priority, // Add priority for sorting
+      });
+
+      // Add variations for .voi domain (always show variations regardless of main name status)
+      if (domain === 'voi') {
+        // Only add one variation: name{year}.voi
+        const currentYear = new Date().getFullYear();
+        const yearVariation = `${baseName}${currentYear}.voi`;
+        
+        const varResult = await this.checkNameAvailability(yearVariation);
+        
+        if (!varResult.isRegistered) {
+          domainResults.push({
+            id: yearVariation,
+            type: "name",
+            title: yearVariation,
+            subtitle: "Available for registration",
+            status: "available",
+            price: this.getNamePrice(yearVariation),
+            priority: 3, // Variations have lower priority
+          });
+        }
+      }
+    }
+    
+    // Sort domain results by priority and add to main results
+    domainResults.sort((a, b) => (a.priority || 999) - (b.priority || 999));
+    
+    // Limit to maximum 3 suggestions
+    const limitedResults = domainResults.slice(0, 3);
+    results.push(...limitedResults);
+    
+    return results;
+  }
+
+  private async checkSubnameAvailability(fullName: string): Promise<SearchResult[]> {
+    const results: SearchResult[] = [];
+    
+    try {
+      // Parse the subname to get parent domain
+      const parts = fullName.split('.');
+      if (parts.length < 2) {
+        return results; // Not a valid subname
+      }
+      
+      const subname = parts[0];
+      const parentDomain = parts.slice(1).join('.');
+      
+      // Check if parent domain has a subname registrar
+      const subnameRegistrar = await this.getSubnameRegistrar(parentDomain);
+      
+      if (subnameRegistrar) {
+        // Check if base_cost is missing or "0" - if so, drop from options
+        if (!subnameRegistrar.base_cost || subnameRegistrar.base_cost === "0") {
+          // Don't add to results - subname registrar exists but not available for purchase
+          return results;
+        }
+        
+        // Check availability using the subname registrar
+        const { isRegistered, owner } = await this.checkNameAvailability(fullName);
+        
+        results.push({
+          id: fullName,
+          type: "name",
+          title: fullName,
+          subtitle: isRegistered && owner 
+            ? `Owned by ${this.formatAddress(owner)}` 
+            : "Available for registration",
+          status: isRegistered ? "registered" : "available",
+          price: isRegistered ? undefined : this.getSubnamePrice(fullName, subnameRegistrar),
+          owner: isRegistered ? owner : undefined,
+          priority: 1,
+        });
+      } else {
+        // No subname registrar found - treat as unavailable
+        results.push({
+          id: fullName,
+          type: "name",
+          title: fullName,
+          subtitle: "No subname registrar found",
+          status: "reserved",
+          priority: 1,
+        });
+      }
+    } catch (error) {
+      console.error(`Error checking subname availability for ${fullName}:`, error);
+      results.push({
+        id: fullName,
+        type: "name",
+        title: fullName,
+        subtitle: "Error checking availability",
+        status: "reserved",
+        priority: 1,
+      });
+    }
+    
+    return results;
+  }
+
+  private async getSubnameRegistrar(parentDomain: string): Promise<{
+    subname_registrar: string;
+    contract: string;
+    payment_token?: string;
+    symbol?: string;
+    decimals?: string;
+    base_cost?: string;
+  } | null> {
+    try {
+      const { ResolverService } = await import("../services/resolver");
+      const { namehash } = await import("../utils/namehash");
+      const { stringToUint8Array } = await import("../services/registry");
+      
+      const resolver = new ResolverService("mainnet");
+      const subnameRegistrarR = await resolver.text(
+        await namehash(parentDomain),
+        stringToUint8Array("subname_registrar", 22)
+      );
+      
+      if (subnameRegistrarR.success && subnameRegistrarR.returnValue) {
+        const subnameRegistrarData = JSON.parse(
+          new TextDecoder().decode(subnameRegistrarR.returnValue).replace(/\0/g, '')
+        );
+        return subnameRegistrarData;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error(`Error getting subname registrar for ${parentDomain}:`, error);
+      return null;
+    }
+  }
+
+  private getSubnamePrice(name: string, subnameRegistrar: any): number {
+    // Use base cost from subname registrar if available
+    if (subnameRegistrar.base_cost) {
+      return Number(subnameRegistrar.base_cost) / 1000000; // Convert from micro units
+    }
+    
+    // Fallback to default pricing
+    return this.getNamePrice(name);
+  }
+
   // Search History Management
   public addToHistory(query: string, resultType?: string): void {
     if (!query.trim()) return;
@@ -216,63 +383,27 @@ class SearchService {
     try {
       const results: SearchResult[] = [];
 
+      // Auto-complete .of to .of.voi
+      let searchQuery = trimmedQuery;
+      if (trimmedQuery.endsWith('.of')) {
+        searchQuery = trimmedQuery + '.voi';
+      }
+
       // Check if it's a .voi name or potential name
-      if (trimmedQuery.includes('.voi') || trimmedQuery.includes('.founder') || trimmedQuery.match(/^[a-zA-Z0-9]+$/)) {
-        const baseName = trimmedQuery.replace(/\.(voi|founder)$/, '');
+      if (searchQuery.includes('.voi') || searchQuery.includes('.founder') || trimmedQuery.match(/^[a-zA-Z0-9]+$/)) {
+        const baseName = searchQuery.replace(/\.(voi|founder)$/, '');
         
-        // Define domain options
-        const domainOptions = [
-          { domain: 'voi', priority: 1 },
-          { domain: 'founder.voi', priority: 2 }
-        ];
-
-        // Check each domain option and collect results
-        const domainResults: SearchResult[] = [];
-        
-        for (const { domain, priority } of domainOptions) {
-          const fullName = `${baseName}.${domain}`;
-          
-          const { isRegistered, owner } = await this.checkNameAvailability(fullName);
-          
-          domainResults.push({
-            id: fullName,
-            type: "name",
-            title: fullName,
-            subtitle: isRegistered && owner ? `Owned by ${this.formatAddress(owner)}` : "Available for registration",
-            status: isRegistered ? "registered" : "available",
-            price: isRegistered ? undefined : this.getNamePrice(fullName),
-            owner: isRegistered ? owner : undefined,
-            priority, // Add priority for sorting
-          });
-
-          // Add variations for .voi domain (always show variations regardless of main name status)
-          if (domain === 'voi' && !trimmedQuery.includes('.')) {
-            // Only add one variation: name{year}.voi
-            const currentYear = new Date().getFullYear();
-            const yearVariation = `${baseName}${currentYear}.voi`;
-            
-            const varResult = await this.checkNameAvailability(yearVariation);
-            
-            if (!varResult.isRegistered) {
-              domainResults.push({
-                id: yearVariation,
-                type: "name",
-                title: yearVariation,
-                subtitle: "Available for registration",
-                status: "available",
-                price: this.getNamePrice(yearVariation),
-                priority: 3, // Variations have lower priority
-              });
-            }
-          }
+        // Check if this is a subname (has more than one dot) or base name
+        const dotCount = (searchQuery.match(/\./g) || []).length;
+        if (dotCount > 1) {
+          // This is a subname - check subname registrars
+          const subnameResults = await this.checkSubnameAvailability(searchQuery);
+          results.push(...subnameResults);
+        } else {
+          // This is a base name - check base registrar
+          const baseResults = await this.checkBaseNameAvailability(baseName);
+          results.push(...baseResults);
         }
-        
-        // Sort domain results by priority and add to main results
-        domainResults.sort((a, b) => (a.priority || 999) - (b.priority || 999));
-        
-        // Limit to maximum 3 suggestions
-        const limitedResults = domainResults.slice(0, 3);
-        results.push(...limitedResults);
       }
 
       // Check if it's an Algorand address (58 characters, base32)

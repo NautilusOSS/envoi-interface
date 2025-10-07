@@ -18,6 +18,7 @@ import { CONTRACT, abi } from "ulujs";
 import { APP_SPEC as VNSRegistrarSpec } from "@/clients/VNSRegistrarClient";
 import { APP_SPEC as VNSResolverSpec } from "@/clients/VNSPublicResolverClient";
 import { TRANSACTION_FEES } from "@/constants/fees";
+import BigNumber from "bignumber.js";
 
 export interface PriceBreakdown {
   basePrice: number;
@@ -34,6 +35,7 @@ export interface UseNameRegistrationProps {
   initialPaymentToken?: number;
   initialPaymentTokenDecimals?: number;
   initialPaymentTokenSymbol?: string;
+  initialUnitPrice?: number;
 }
 
 export const useNameRegistration = ({
@@ -44,6 +46,7 @@ export const useNameRegistration = ({
   initialPaymentToken,
   initialPaymentTokenDecimals,
   initialPaymentTokenSymbol,
+  initialUnitPrice,
 }: UseNameRegistrationProps) => {
   const [name, setName] = useState(
     initialName ? initialName.split(".")[0] : ""
@@ -76,7 +79,13 @@ export const useNameRegistration = ({
   //   aUSDC: 5,
   //   UNIT: 50,
   // };
-  const unitPrice = 2000;
+  const unitPrice = initialUnitPrice ?? 2000;
+  console.log(
+    "useNameRegistration - unitPrice:",
+    unitPrice,
+    "initialUnitPrice:",
+    initialUnitPrice
+  );
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.toLowerCase();
@@ -125,8 +134,15 @@ export const useNameRegistration = ({
   useEffect(() => {
     const basePrice = getNamePrice(name, unitPrice);
     const totalPrice = basePrice * parseInt(duration.toString());
+    console.log("useNameRegistration - price calculation:", {
+      name,
+      unitPrice,
+      basePrice,
+      duration,
+      totalPrice,
+    });
     setPrice(totalPrice);
-  }, [name, duration, paymentAssetSymbol]);
+  }, [name, duration, paymentAssetSymbol, unitPrice]);
 
   const isReserved = `${name}.voi` in rsvps;
   const reservedOwner = isReserved ? rsvps[`${name}.voi`] : null;
@@ -927,8 +943,13 @@ export const useNameRegistration = ({
 
         // Approve spending
         {
+          const priceBI = BigInt(
+            new BigNumber(price)
+              .multipliedBy(new BigNumber(10).pow(tok.decimals))
+              .toFixed(0)
+          );
           const paramSpender = algosdk.getApplicationAddress(vns.registrar);
-          const paramAmount = price * 10 ** tok.decimals;
+          const paramAmount = priceBI;
           const txnO = (
             await builder.arc200.arc200_approve(paramSpender, paramAmount)
           )?.obj;
@@ -941,26 +962,9 @@ export const useNameRegistration = ({
           });
         }
 
-        // arc200 transfer from user to registrar
-        {
-          const txnO = (
-            await builder.arc200.arc200_transfer(
-              algosdk.getApplicationAddress(vns.registrar),
-              0
-            )
-          )?.obj;
-          buildN.push({
-            ...txnO,
-            payment: 28502,
-            note: new TextEncoder().encode(
-              `envoi arc200 transfer 0 ${paymentTokenSymbol} to ${name} renewal`
-            ),
-          });
-        }
-
         // Renew name
         {
-          const paramDuration = Number(duration) * 365 * 24 * 60 * 60; // Convert years to seconds
+          const paramDuration = Number(duration) * 365 * 24 * 60 * 60 + 300; // Convert years to seconds
           const txnO = (
             await builder.registrar.renew(
               stringToUint8Array(`${name.split(".")[0]}`, 32),

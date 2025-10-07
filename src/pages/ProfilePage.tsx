@@ -66,12 +66,16 @@ import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import SystemUpdateIcon from "@mui/icons-material/SystemUpdate";
 import ErrorIcon from "@mui/icons-material/Error";
+import PaymentIcon from "@mui/icons-material/Payment";
 import { TRANSACTION_FEES } from "@/constants/fees";
+import { getPaymentTokens } from "@/utils/dex";
+import Autocomplete from "@mui/material/Autocomplete";
 import { useNameRegistration } from "@/hooks/useNameRegistration";
 import { useNameRegistry } from "@/hooks/useNameRegistry";
 import { stripTrailingZeroBytes } from "@/utils/string";
 import MDEditor from "@uiw/react-md-editor";
 import { VnsRegistrarClient } from "@/clients/VNSRegistrarClient";
+import BigNumber from "bignumber.js";
 
 const currentVNSRegistrarContractVersion = 1;
 const currentVNSRegistrarDeploymentVersion = 4;
@@ -188,12 +192,23 @@ const AVAILABLE_FIELDS: ProfileField[] = [
   },
 ];
 
+interface SubnameRegistrar {
+  subname_registrar: string;
+  contract: string;
+  payment_token?: string;
+  symbol?: string;
+  decimals?: string;
+  base_cost?: string;
+  renewal_base_fee?: string;
+}
+
 interface ExtendModalProps {
   open: boolean;
   onClose: () => void;
   name: string;
   onConfirm: (duration: string) => void;
   paymentTokenSymbol: string;
+  parentSubnameRegistrar?: SubnameRegistrar | null;
 }
 
 const ExtendModal: React.FC<ExtendModalProps> = ({
@@ -202,10 +217,40 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
   name,
   onConfirm,
   paymentTokenSymbol,
+  parentSubnameRegistrar,
 }) => {
   const { theme } = useTheme();
+
+  // Use symbol from subname_registrar if available, otherwise fall back to prop
+  // Apply symbol override to convert "EV" to "VOI"
+  const symbolOverride = (symbol: string) => {
+    switch (symbol) {
+      case "EV":
+      case "VOI":
+        return "VOI";
+      default:
+        return symbol;
+    }
+  };
+  const displaySymbol = symbolOverride(
+    parentSubnameRegistrar?.symbol || paymentTokenSymbol
+  );
+
+  const initialUnitPrice = parentSubnameRegistrar?.renewal_base_fee
+    ? Number(parentSubnameRegistrar.renewal_base_fee)
+    : undefined;
+  console.log(
+    "Extend modal - initialUnitPrice from parentSubnameRegistrar:",
+    initialUnitPrice,
+    "parentSubnameRegistrar:",
+    parentSubnameRegistrar
+  );
+
   const { calculateTotalCost, setDuration, duration, getPriceBreakdownJSX } =
-    useNameRegistration({ initialName: name });
+    useNameRegistration({
+      initialName: name,
+      initialUnitPrice,
+    });
   return (
     <Modal open={open} onClose={onClose}>
       <Box
@@ -360,8 +405,7 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
               fontWeight: 600,
             }}
           >
-            {calculateTotalCost().namePrice.toLocaleString()}{" "}
-            {paymentTokenSymbol}
+            {calculateTotalCost().namePrice.toLocaleString()} {displaySymbol}
           </Typography>
           <Typography
             variant="caption"
@@ -383,9 +427,9 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
             }}
           >
             Total:{" "}
-            {paymentTokenSymbol === "VOI"
+            {displaySymbol === "VOI"
               ? `${calculateTotalCost().total.toLocaleString()} VOI`
-              : `${calculateTotalCost().namePrice.toLocaleString()} ${paymentTokenSymbol} + ${calculateTotalCost().fees.toLocaleString()} VOI`}
+              : `${calculateTotalCost().namePrice.toLocaleString()} ${displaySymbol} + ${calculateTotalCost().fees.toLocaleString()} VOI`}
           </Typography>
         </Box>
 
@@ -451,6 +495,7 @@ interface ConfirmExtendModalProps {
   paymentToken: number;
   paymentTokenDecimals: number;
   paymentTokenSymbol: string;
+  parentSubnameRegistrar?: SubnameRegistrar | null;
 }
 
 const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
@@ -464,9 +509,41 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
   paymentTokenSymbol,
   duration,
   onConfirm,
+  parentSubnameRegistrar,
 }) => {
   const { theme } = useTheme();
   const [isConfirming, setIsConfirming] = useState(false);
+
+  // Use symbol and decimals from subname_registrar if available, otherwise fall back to props
+  // Apply symbol override to convert "EV" to "VOI"
+  const symbolOverride = (symbol: string) => {
+    switch (symbol) {
+      case "EV":
+      case "VOI":
+        return "VOI";
+      default:
+        return symbol;
+    }
+  };
+  const displaySymbol = symbolOverride(
+    parentSubnameRegistrar?.symbol || paymentTokenSymbol
+  );
+  const displayDecimals = parentSubnameRegistrar?.decimals
+    ? Number(parentSubnameRegistrar.decimals)
+    : paymentTokenDecimals;
+  const displayPaymentToken = parentSubnameRegistrar?.payment_token
+    ? Number(parentSubnameRegistrar.payment_token)
+    : paymentToken;
+
+  const initialUnitPrice = parentSubnameRegistrar?.renewal_base_fee
+    ? Number(parentSubnameRegistrar.renewal_base_fee)
+    : undefined;
+  console.log(
+    "Extend modal - initialUnitPrice from parentSubnameRegistrar:",
+    initialUnitPrice,
+    "parentSubnameRegistrar:",
+    parentSubnameRegistrar
+  );
 
   const {
     calculateTotalCost,
@@ -480,19 +557,21 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
     initialDuration: parseInt(duration),
     initialParentName: parentName,
     initialParentAppId: parentAppId,
-    initialPaymentToken: paymentToken,
-    initialPaymentTokenDecimals: paymentTokenDecimals,
-    initialPaymentTokenSymbol: paymentTokenSymbol,
+    initialPaymentToken: displayPaymentToken,
+    initialPaymentTokenDecimals: displayDecimals,
+    initialPaymentTokenSymbol: displaySymbol,
+    initialUnitPrice,
   });
 
   console.log({
     name,
     parentName,
     parentAppId,
-    paymentToken,
-    paymentTokenDecimals,
-    paymentTokenSymbol,
+    paymentToken: displayPaymentToken,
+    paymentTokenDecimals: displayDecimals,
+    paymentTokenSymbol: displaySymbol,
     duration,
+    parentSubnameRegistrar,
   });
 
   console.log("name", name);
@@ -518,9 +597,9 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
         name,
         parentName,
         parentAppId,
-        paymentToken,
-        paymentTokenDecimals,
-        paymentTokenSymbol
+        displayPaymentToken,
+        displayDecimals,
+        displaySymbol
       );
       onClose();
     } finally {
@@ -708,9 +787,8 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
                 fontWeight: 600,
               }}
             >
-              {calculateTotalCost().namePrice.toLocaleString()}{" "}
-              {paymentTokenSymbol} +{" "}
-              {calculateTotalCost().fees.toLocaleString()} VOI
+              {calculateTotalCost().namePrice.toLocaleString()} {displaySymbol}{" "}
+              + {calculateTotalCost().fees.toLocaleString()} VOI
               <Tooltip title={getPriceBreakdownJSX()} arrow>
                 <IconButton
                   size="small"
@@ -1120,6 +1198,363 @@ const ConfirmSetDefaultModal: React.FC<ConfirmSetDefaultModalProps> = ({
               </Box>
             ) : (
               "Set as Default"
+            )}
+          </Button>
+        </Box>
+      </Box>
+    </Modal>
+  );
+};
+
+interface RegistrationPaymentsModalProps {
+  open: boolean;
+  onClose: () => void;
+  name: string;
+  onConfirm: (
+    paymentToken: number,
+    registrationFee: string,
+    renewalFee: string
+  ) => void;
+}
+
+const RegistrationPaymentsModal: React.FC<RegistrationPaymentsModalProps> = ({
+  open,
+  onClose,
+  name,
+  onConfirm,
+}) => {
+  const { theme } = useTheme();
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [selectedPaymentToken, setSelectedPaymentToken] = useState<
+    Awaited<ReturnType<typeof getPaymentTokens>>[0] | null
+  >(null);
+  const [registrationFee, setRegistrationFee] = useState<string>("");
+  const [renewalFee, setRenewalFee] = useState<string>("");
+  const [availableTokens, setAvailableTokens] = useState<
+    Awaited<ReturnType<typeof getPaymentTokens>>
+  >([]);
+  const [isLoadingTokens, setIsLoadingTokens] = useState(false);
+
+  // Load payment tokens when modal opens
+  React.useEffect(() => {
+    if (open) {
+      setIsLoadingTokens(true);
+      getPaymentTokens()
+        .then((tokens) => {
+          // Override VOI token with contract ID 828295
+          const updatedTokens = tokens.map((token) => {
+            if (token.tokenId === 390001) {
+              return {
+                ...token,
+                contractId: "828295",
+              };
+            }
+            return token;
+          });
+          setAvailableTokens(updatedTokens);
+          // Set VOI as default if available
+          const voiToken = updatedTokens.find(
+            (token) => token.tokenId === 390001
+          );
+          if (voiToken) {
+            setSelectedPaymentToken(voiToken);
+          }
+        })
+        .catch((error) => {
+          console.error("Error loading payment tokens:", error);
+          // Set VOI as fallback
+          const fallbackToken = {
+            tokenId: 390001,
+            symbol: "VOI",
+            name: "VOI",
+            decimals: 6,
+            price: "1",
+            contractId: "828295",
+          };
+          setAvailableTokens([fallbackToken]);
+          setSelectedPaymentToken(fallbackToken);
+        })
+        .finally(() => {
+          setIsLoadingTokens(false);
+        });
+    }
+  }, [open]);
+
+  const handleConfirm = async () => {
+    if (!registrationFee.trim() || !selectedPaymentToken) return;
+
+    setIsConfirming(true);
+    try {
+      await onConfirm(
+        selectedPaymentToken.tokenId,
+        registrationFee,
+        renewalFee
+      );
+      onClose();
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose}>
+      <Box
+        className="edit-modal"
+        sx={{
+          bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+          border: `1px solid ${
+            theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+          }`,
+          borderRadius: "12px",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.4)"
+              : "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+          p: 3,
+          position: "relative",
+          minWidth: "400px",
+          maxWidth: "500px",
+          width: "90vw",
+          maxHeight: "90vh",
+          overflowY: "auto",
+        }}
+      >
+        <Typography
+          variant="h6"
+          component="h2"
+          sx={{
+            mb: 3,
+            textAlign: "center",
+            fontSize: "1.5rem",
+            fontWeight: 600,
+            color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+          }}
+        >
+          Set Payments
+        </Typography>
+
+        <Typography
+          sx={{
+            mb: 3,
+            color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
+            textAlign: "center",
+          }}
+        >
+          Configure the payment settings for <strong>{name}</strong> subdomain
+          registrations.
+        </Typography>
+
+        <Box sx={{ mb: 3 }}>
+          <Typography
+            variant="subtitle2"
+            sx={{
+              mb: 1,
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+              fontWeight: 600,
+            }}
+          >
+            Payment Token
+          </Typography>
+          <Autocomplete
+            options={availableTokens}
+            value={selectedPaymentToken}
+            onChange={(_, newValue) => setSelectedPaymentToken(newValue)}
+            getOptionLabel={(option) => `${option.symbol} (${option.name})`}
+            loading={isLoadingTokens}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                placeholder="Select payment token"
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    bgcolor:
+                      theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+                    "& fieldset": {
+                      borderColor:
+                        theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
+                    },
+                    "&:hover fieldset": {
+                      borderColor:
+                        theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+                    },
+                    "&.Mui-focused fieldset": {
+                      borderColor: "#8B5CF6",
+                    },
+                  },
+                }}
+              />
+            )}
+            renderOption={(props, option) => (
+              <Box
+                component="li"
+                {...props}
+                sx={{ display: "flex", alignItems: "center", gap: 1 }}
+              >
+                <img
+                  src={`https://asset-verification.nautilus.sh/icons/${
+                    option.tokenId === 390001 ? 0 : option.tokenId
+                  }.png`}
+                  alt={option.symbol}
+                  style={{ width: 24, height: 24, borderRadius: "50%" }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+                <Box>
+                  <Typography variant="body2" fontWeight={600}>
+                    {option.symbol}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {option.name} (ID:{" "}
+                    {option.tokenId === 390001 && option.contractId
+                      ? option.contractId
+                      : option.tokenId}
+                    )
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+            isOptionEqualToValue={(option, value) =>
+              option.tokenId === value.tokenId
+            }
+            sx={{
+              "& .MuiAutocomplete-paper": {
+                bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+                border: `1px solid ${
+                  theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+                }`,
+              },
+            }}
+          />
+        </Box>
+
+        <Box sx={{ mb: 3 }}>
+          <Typography
+            variant="subtitle2"
+            sx={{
+              mb: 1,
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+              fontWeight: 600,
+            }}
+          >
+            Registration Fee
+          </Typography>
+          <TextField
+            fullWidth
+            value={registrationFee}
+            onChange={(e) => setRegistrationFee(e.target.value)}
+            placeholder="Enter registration fee amount"
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+                "& fieldset": {
+                  borderColor:
+                    theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
+                },
+                "&:hover fieldset": {
+                  borderColor:
+                    theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+                },
+                "&.Mui-focused fieldset": {
+                  borderColor: "#8B5CF6",
+                },
+              },
+            }}
+          />
+        </Box>
+
+        <Box sx={{ mb: 3 }}>
+          <Typography
+            variant="subtitle2"
+            sx={{
+              mb: 1,
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+              fontWeight: 600,
+            }}
+          >
+            Renewal Fee
+          </Typography>
+          <TextField
+            fullWidth
+            value={renewalFee}
+            onChange={(e) => setRenewalFee(e.target.value)}
+            placeholder="Enter renewal fee amount"
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+                "& fieldset": {
+                  borderColor:
+                    theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
+                },
+                "&:hover fieldset": {
+                  borderColor:
+                    theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+                },
+                "&.Mui-focused fieldset": {
+                  borderColor: "#8B5CF6",
+                },
+              },
+            }}
+          />
+        </Box>
+
+        <Box sx={{ display: "flex", gap: 2 }}>
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={onClose}
+            disabled={isConfirming}
+            sx={{
+              flex: 1,
+              bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
+              border: `1px solid ${
+                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
+              }`,
+              color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
+              fontWeight: 600,
+              "&:hover": {
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#F3F4F6",
+                borderColor:
+                  theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+              },
+              "&:disabled": {
+                bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#F3F4F6",
+                borderColor:
+                  theme.palette.mode === "dark" ? "#374151" : "#E5E7EB",
+                color: theme.palette.mode === "dark" ? "#6B7280" : "#9CA3AF",
+              },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={handleConfirm}
+            disabled={
+              isConfirming || !registrationFee.trim() || !selectedPaymentToken
+            }
+            sx={{
+              flex: 1,
+              bgcolor: "#8B5CF6",
+              color: "white",
+              fontWeight: 600,
+              "&:hover": {
+                bgcolor: "#7C3AED",
+              },
+              "&:disabled": {
+                bgcolor: theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB",
+                color: theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+              },
+            }}
+          >
+            {isConfirming ? (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <CircularProgress size={20} color="inherit" />
+                Setting...
+              </Box>
+            ) : (
+              "Set Payments"
             )}
           </Button>
         </Box>
@@ -3733,13 +4168,11 @@ const ProfilePage: React.FC = () => {
   const [isNodeClawbackModalOpen, setIsNodeClawbackModalOpen] = useState(false);
   const [isReverseAddressModalOpen, setIsReverseAddressModalOpen] =
     useState(false);
+  const [isRegistrationPaymentsModalOpen, setIsRegistrationPaymentsModalOpen] =
+    useState(false);
   const [pendingSubname, setPendingSubname] = useState<string>("");
   const [pendingRecipientAddress, setPendingRecipientAddress] =
     useState<string>("");
-  interface SubnameRegistrar {
-    subname_registrar: string;
-    contract: string;
-  }
   const [subnameRegistrar, setSubnameRegistrar] =
     useState<SubnameRegistrar | null>(null);
   const [parentSubnameRegistrar, setParentSubnameRegistrar] =
@@ -3837,6 +4270,14 @@ const ProfilePage: React.FC = () => {
           throw new Error("Failed to get owner of token");
         }
         const owner = ownerOfR.returnValue;
+        const expiryR = await registrar.expiration(
+          uint8ArrayToBigInt(await namehash(name))
+        );
+        if (!expiryR.success) {
+          throw new Error("Failed to get expiry of token");
+        }
+        const expiry = expiryR.returnValue;
+        setExpiry(new Date(Number(expiry) * 1000));
         setOwner(owner);
         setIsOwner(owner === activeAccount?.address);
         setTokenOwner(owner);
@@ -3875,6 +4316,43 @@ const ProfilePage: React.FC = () => {
             stripTrailingZeroBytes(subnameRegistrarR.returnValue)
           );
           setSubnameRegistrar(subnameRegistrar);
+
+          // Update payment token info from subname_registrar if available
+          if (subnameRegistrar.payment_token) {
+            setPaymentToken(Number(subnameRegistrar.payment_token));
+            console.log(
+              "Using payment token from subname_registrar:",
+              subnameRegistrar.payment_token
+            );
+          }
+          if (subnameRegistrar.symbol) {
+            // Apply symbol override to convert "EV" to "VOI"
+            const symbolOverride = (symbol: string) => {
+              switch (symbol) {
+                case "EV":
+                case "VOI":
+                  return "VOI";
+                default:
+                  return symbol;
+              }
+            };
+            const displaySymbol = symbolOverride(subnameRegistrar.symbol);
+            setPaymentTokenSymbol(displaySymbol);
+            console.log(
+              "Using symbol from subname_registrar:",
+              subnameRegistrar.symbol,
+              "->",
+              displaySymbol
+            );
+          }
+          if (subnameRegistrar.decimals) {
+            setPaymentTokenDecimals(Number(subnameRegistrar.decimals));
+            console.log(
+              "Using decimals from subname_registrar:",
+              subnameRegistrar.decimals
+            );
+          }
+
           const contract = new VnsRegistrarClient(
             {
               resolveBy: "id",
@@ -3995,52 +4473,61 @@ const ProfilePage: React.FC = () => {
 
         console.log("appId", appId);
 
-        const ciRegistrar = new CONTRACT(
-          appId,
-          algodClient,
-          indexerClient,
-          { ...VNSRegistrarSpec.contract, events: [] },
-          {
-            addr:
-              activeAccount?.address || algosdk.getApplicationAddress(appId),
-            sk: new Uint8Array(),
-          }
-        );
-        const getPaymentTokenR = await ciRegistrar.get_payment_token();
-        if (!getPaymentTokenR.success) {
-          setPaymentToken(0);
-          setPaymentTokenDecimals(0);
-          setPaymentTokenSymbol("");
-        } else {
-          const paymentToken = Number(getPaymentTokenR.returnValue);
-          if (paymentToken === 0) {
-            setPaymentToken(0);
-            setPaymentTokenDecimals(0);
-            setPaymentTokenSymbol("");
-          }
-          setPaymentToken(paymentToken);
-          const ciArc200 = new CONTRACT(
-            paymentToken,
+        // Payment token info is now set from subname_registrar data above
+        // Only fetch from contract if subname_registrar doesn't have the info
+        if (!subnameRegistrar?.payment_token) {
+          const ciRegistrar = new CONTRACT(
+            appId,
             algodClient,
             indexerClient,
-            abi.nt200,
+            { ...VNSRegistrarSpec.contract, events: [] },
             {
               addr:
                 activeAccount?.address || algosdk.getApplicationAddress(appId),
               sk: new Uint8Array(),
             }
           );
-          const getPaymentTokenDecimalsR = await ciArc200.arc200_decimals();
-          if (!getPaymentTokenDecimalsR.success) {
+          const getPaymentTokenR = await ciRegistrar.get_payment_token();
+          if (!getPaymentTokenR.success) {
+            setPaymentToken(0);
             setPaymentTokenDecimals(0);
-            //throw new Error("Failed to get payment token decimals");
-          }
-          setPaymentTokenDecimals(Number(getPaymentTokenDecimalsR.returnValue));
-          const getPaymentTokenSymbolR = await ciArc200.arc200_symbol();
-          if (!getPaymentTokenSymbolR.success) {
             setPaymentTokenSymbol("");
+          } else {
+            const paymentToken = Number(getPaymentTokenR.returnValue);
+            if (paymentToken === 0) {
+              setPaymentToken(0);
+              setPaymentTokenDecimals(0);
+              setPaymentTokenSymbol("");
+            } else {
+              setPaymentToken(paymentToken);
+              const ciArc200 = new CONTRACT(
+                paymentToken,
+                algodClient,
+                indexerClient,
+                abi.nt200,
+                {
+                  addr:
+                    activeAccount?.address ||
+                    algosdk.getApplicationAddress(appId),
+                  sk: new Uint8Array(),
+                }
+              );
+              const getPaymentTokenDecimalsR = await ciArc200.arc200_decimals();
+              if (!getPaymentTokenDecimalsR.success) {
+                setPaymentTokenDecimals(0);
+              } else {
+                setPaymentTokenDecimals(
+                  Number(getPaymentTokenDecimalsR.returnValue)
+                );
+              }
+              const getPaymentTokenSymbolR = await ciArc200.arc200_symbol();
+              if (!getPaymentTokenSymbolR.success) {
+                setPaymentTokenSymbol("");
+              } else {
+                setPaymentTokenSymbol(getPaymentTokenSymbolR.returnValue);
+              }
+            }
           }
-          setPaymentTokenSymbol(getPaymentTokenSymbolR.returnValue);
         }
       })();
     }
@@ -4726,24 +5213,7 @@ const ProfilePage: React.FC = () => {
     })();
   }, [owner]);
 
-  // useEffect(() => {
-  //   if (!name || !parentAppId) return;
-  //   (async () => {
-  //     const node = await namehash(name || "");
-  //     const tokenId = uint8ArrayToBigInt(node);
-  //     const arc72 = new ARC72Service(
-  //       "mainnet",
-  //       activeAccount?.address,
-  //       parentAppId
-  //     );
-  //     const owner = await arc72.ownerOf(tokenId);
-  //     setOwner(owner);
-  //     setIsOwner(owner === activeAccount?.address);
-  //   })();
-  // }, [name, activeAccount, parentAppId]);
-
   useEffect(() => {
-    const registry = new RegistryService("mainnet");
     const registrar = new RegistrarService(
       "mainnet",
       activeAccount?.address,
@@ -6298,6 +6768,217 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const handleSetRegistrationPayments = async (
+    paymentToken: number,
+    registrationFee: string,
+    renewalFee: string
+  ) => {
+    setIsPendingTx(true);
+    try {
+      if (!activeAccount) {
+        enqueueSnackbar(
+          "Please connect your wallet to set registration payments",
+          {
+            variant: "error",
+          }
+        );
+        return;
+      }
+
+      // Apply VOI token override - use contract ID 828295 instead of token ID 390001
+      const actualPaymentToken =
+        paymentToken === 390001 ? 828295 : paymentToken;
+      let symbol = paymentToken === 390001 ? "VOI" : undefined;
+      let decimals = paymentToken === 390001 ? 6 : undefined;
+
+      // TODO: Implement the actual payment setting logic here
+      // This would typically involve calling a smart contract method
+      // to set the payment token and amount for subdomain registrations
+
+      console.log("Setting registration payments:", {
+        subnameRegistrar,
+        parentAppId,
+        originalTokenId: paymentToken,
+        actualPaymentToken,
+        registrationFee,
+        name,
+        isVoiOverride: paymentToken === 390001,
+      });
+
+      // Check if subname registrar exists
+      if (!subnameRegistrar?.contract) {
+        throw new Error("Subname registrar not available for this domain");
+      }
+
+      const { algodClient, indexerClient } = getAlgorandClients();
+
+      // Initialize subname registrar contract
+      const ci = new CONTRACT(
+        Number(subnameRegistrar.contract),
+        algodClient,
+        indexerClient,
+        abi.custom,
+        { addr: activeAccount.address, sk: new Uint8Array() }
+      );
+
+      const vns = {
+        registry: 797607,
+        resolver: 797608,
+      };
+
+      const builder = {
+        registrar: new CONTRACT(
+          Number(subnameRegistrar.contract),
+          algodClient,
+          indexerClient,
+          { ...VNSRegistrarSpec.contract, events: [] },
+          { addr: activeAccount.address, sk: new Uint8Array() },
+          true,
+          false,
+          true
+        ),
+      };
+
+      const buildN = [];
+
+      // set base cost
+      {
+        // Get decimals from payment token
+        const ciArc200 = new CONTRACT(
+          actualPaymentToken,
+          algodClient,
+          indexerClient,
+          abi.nt200,
+          { addr: activeAccount.address, sk: new Uint8Array() }
+        );
+        if (!decimals) {
+          const decimalsResult = await ciArc200.arc200_decimals();
+          if (!decimalsResult.success) {
+            throw new Error("Failed to get decimals of payment token");
+          }
+          decimals = Number(decimalsResult.returnValue);
+        }
+        if (!symbol) {
+          const symbolResult = await ciArc200.arc200_symbol();
+          if (!symbolResult.success) {
+            throw new Error("Failed to get symbol of payment token");
+          }
+          symbol = stripTrailingZeroBytes(symbolResult.returnValue);
+        }
+        const paymentAmountBI = BigInt(
+          new BigNumber(registrationFee)
+            .multipliedBy(new BigNumber(10).pow(decimals))
+            .toFixed(0)
+        );
+        const txnO = (await builder.registrar.set_base_cost(paymentAmountBI))
+          ?.obj;
+        buildN.push({
+          ...txnO,
+          note: new TextEncoder().encode(
+            `envoi registrar setPaymentToken ${name} ${registrationFee} ${symbol}`
+          ),
+        });
+      }
+      // set cost multiplier to 1
+      {
+        const txnO = (await builder.registrar.set_cost_multiplier(1))?.obj;
+        buildN.push({
+          ...txnO,
+          note: new TextEncoder().encode(
+            `envoi registrar setCostMultiplier ${name} 1`
+          ),
+        });
+      }
+      // set payment token
+      {
+        const txnO = (
+          await builder.registrar.set_payment_token(actualPaymentToken)
+        )?.obj;
+        buildN.push({
+          ...txnO,
+          note: new TextEncoder().encode(
+            `envoi registrar setPaymentToken ${name} ${actualPaymentToken}`
+          ),
+        });
+      }
+      // set renewal base fee
+      {
+        const renewalFeeBI = BigInt(
+          new BigNumber(renewalFee)
+            .multipliedBy(new BigNumber(10).pow(decimals))
+            .toFixed(0)
+        );
+        const txnO = (
+          await builder.registrar.set_renewal_base_fee(renewalFeeBI)
+        )?.obj;
+        buildN.push({
+          ...txnO,
+          note: new TextEncoder().encode(
+            `envoi registrar setRenewalBaseFee ${name} ${renewalFee}`
+          ),
+        });
+      }
+      // update registrar subname_registrar text record
+      {
+        const txnO = (
+          await builder.registrar.setText(
+            stringToUint8Array(`subname_registrar`, 22),
+            stringToUint8Array(
+              JSON.stringify({
+                ...subnameRegistrar,
+                payment_token: actualPaymentToken,
+                base_cost: registrationFee,
+                renewal_base_fee: renewalFee,
+                symbol,
+                decimals,
+              }),
+              256
+            )
+          )
+        )?.obj;
+        buildN.push({
+          ...txnO,
+          note: new TextEncoder().encode(
+            `envoi registrar setText subname_registrar ${subnameRegistrar.contract} ${actualPaymentToken} ${registrationFee}`
+          ),
+        });
+      }
+
+      ci.setFee(2000);
+      ci.setEnableGroupResourceSharing(true);
+      ci.setExtraTxns(buildN);
+      const customR = await ci.custom();
+
+      console.log("customR", customR);
+
+      if (!customR.success) {
+        throw new Error("Failed to set registration payments");
+      }
+
+      const stxns = await signTransactions(
+        customR.txns.map(
+          (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+        )
+      );
+
+      await algodClient.sendRawTransaction(stxns as Uint8Array[]).do();
+
+      enqueueSnackbar(`Registration payments have been set for ${name}!`, {
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Error setting registration payments:", error);
+      enqueueSnackbar(
+        "Failed to set registration payments. Please try again.",
+        {
+          variant: "error",
+        }
+      );
+    } finally {
+      setIsPendingTx(false);
+    }
+  };
+
   const handleMint = async () => {
     setIsPendingTx(true);
     try {
@@ -7159,80 +7840,83 @@ const ProfilePage: React.FC = () => {
               </div>
             </div>
 
-            {primaryName && primaryName.trim() !== "" && !primaryName.includes('\x00'.repeat(256)) && (
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
-                  }}
-                >
-                  Primary Name
-                </Typography>
+            {primaryName &&
+              primaryName.trim() !== "" &&
+              !primaryName.includes("\x00".repeat(256)) && (
                 <div
                   style={{
                     display: "flex",
+                    justifyContent: "space-between",
                     alignItems: "center",
-                    gap: "8px",
                   }}
                 >
                   <Typography
                     variant="body2"
                     sx={{
-                      fontFamily: "monospace",
                       color:
-                        theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                        theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
                     }}
                   >
-                    {primaryName}
+                    Primary Name
                   </Typography>
-                  <button
-                    onClick={() => {
-                      if (primaryName) {
-                        navigator.clipboard.writeText(primaryName);
-                        enqueueSnackbar("Primary name copied to clipboard!", {
-                          variant: "success",
-                        });
-                      }
-                    }}
+                  <div
                     style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      padding: "4px",
-                      borderRadius: "4px",
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "center",
-                      color:
-                        theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                      gap: "8px",
                     }}
-                    title="Copy primary name"
                   >
-                    <ContentCopyIcon fontSize="small" />
-                  </button>
-                  <a
-                    href={`/#/${primaryName}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      color:
-                        theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
-                      textDecoration: "none",
-                    }}
-                    title="Open profile"
-                  >
-                    <LaunchIcon fontSize="small" />
-                  </a>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontFamily: "monospace",
+                        color:
+                          theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                      }}
+                    >
+                      {primaryName}
+                    </Typography>
+                    <button
+                      onClick={() => {
+                        if (primaryName) {
+                          navigator.clipboard.writeText(primaryName);
+                          enqueueSnackbar("Primary name copied to clipboard!", {
+                            variant: "success",
+                          });
+                        }
+                      }}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: "4px",
+                        borderRadius: "4px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color:
+                          theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                      }}
+                      title="Copy primary name"
+                    >
+                      <ContentCopyIcon fontSize="small" />
+                    </button>
+                    <a
+                      href={`/#/${primaryName}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        color:
+                          theme.palette.mode === "dark" ? "#9CA3AF" : "#6B7280",
+                        textDecoration: "none",
+                      }}
+                      title="Open profile"
+                    >
+                      <LaunchIcon fontSize="small" />
+                    </a>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {expiry && new Date(expiry).getTime() > 0 && (
               <div
@@ -8013,7 +8697,8 @@ const ProfilePage: React.FC = () => {
 
         {/* Admin Actions Section */}
         {(shouldShowClawback ||
-          (isOwner && name && name.split(".").length < 3)) && (
+          (isOwner && name && name.split(".").length < 3) ||
+          (isOwner && name)) && (
           <div
             style={{
               backgroundColor:
@@ -8109,6 +8794,40 @@ const ProfilePage: React.FC = () => {
                 >
                   New Subname
                   <PlusIcon size={16} />
+                </Button>
+              )}
+              {isOwner && name && (
+                <Button
+                  variant="contained"
+                  onClick={() => setIsRegistrationPaymentsModalOpen(true)}
+                  sx={{
+                    bgcolor:
+                      theme.palette.mode === "dark" ? "#374151" : "white",
+                    color:
+                      theme.palette.mode === "dark" ? "#F9FAFB" : "#8B5CF6",
+                    "&:hover": {
+                      bgcolor:
+                        theme.palette.mode === "dark" ? "#4B5563" : "#F3F4F6",
+                    },
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    padding: "0.5rem 1rem",
+                    borderRadius: "0.5rem",
+                    fontWeight: "600",
+                    fontSize: "0.875rem",
+                    boxShadow:
+                      theme.palette.mode === "dark"
+                        ? "0 2px 4px rgba(0, 0, 0, 0.3)"
+                        : "0 2px 4px rgba(0, 0, 0, 0.1)",
+                    border:
+                      theme.palette.mode === "dark"
+                        ? "1px solid #4B5563"
+                        : "none",
+                  }}
+                >
+                  Set Payments
+                  <PaymentIcon sx={{ fontSize: 16 }} />
                 </Button>
               )}
             </div>
@@ -9205,6 +9924,7 @@ const ProfilePage: React.FC = () => {
         name={name || ""}
         onConfirm={handleExtendConfirm}
         paymentTokenSymbol={paymentTokenSymbol}
+        parentSubnameRegistrar={parentSubnameRegistrar}
       />
 
       <ConfirmExtendModal
@@ -9218,6 +9938,7 @@ const ProfilePage: React.FC = () => {
         paymentToken={paymentToken}
         paymentTokenDecimals={paymentTokenDecimals}
         paymentTokenSymbol={paymentTokenSymbol}
+        parentSubnameRegistrar={parentSubnameRegistrar}
       />
 
       <TransferModal
@@ -9257,6 +9978,13 @@ const ProfilePage: React.FC = () => {
         onClose={() => setIsSetDefaultModalOpen(false)}
         name={name || ""}
         onConfirm={handleSetAsDefault}
+      />
+
+      <RegistrationPaymentsModal
+        open={isRegistrationPaymentsModalOpen}
+        onClose={() => setIsRegistrationPaymentsModalOpen(false)}
+        name={name || ""}
+        onConfirm={handleSetRegistrationPayments}
       />
 
       <ConfirmClawbackModal

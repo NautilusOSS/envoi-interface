@@ -26,7 +26,11 @@ export interface Pool {
 export interface PaymentToken {
   tokenId: number;
   symbol: string;
+  name?: string;
   decimals: number;
+  price?: number | string;
+  contractId?: string;
+  tvl?: string;
   pool?: {
     contractId: string;
   };
