@@ -257,9 +257,8 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
         className="edit-modal"
         sx={{
           bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
-          border: `1px solid ${
-            theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
-          }`,
+          border: `1px solid ${theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+            }`,
           borderRadius: "12px",
           boxShadow:
             theme.palette.mode === "dark"
@@ -446,9 +445,8 @@ const ExtendModal: React.FC<ExtendModalProps> = ({
             onClick={onClose}
             sx={{
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
-              border: `1px solid ${
-                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
-              }`,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
+                }`,
               color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
               fontWeight: 600,
               "&:hover": {
@@ -613,9 +611,8 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
         className="edit-modal"
         sx={{
           bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
-          border: `1px solid ${
-            theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
-          }`,
+          border: `1px solid ${theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+            }`,
           borderRadius: "12px",
           boxShadow:
             theme.palette.mode === "dark"
@@ -663,9 +660,8 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
               p: 2,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
-              border: `1px solid ${
-                theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
-              }`,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+                }`,
             }}
           >
             <Typography
@@ -693,9 +689,8 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
               p: 2,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
-              border: `1px solid ${
-                theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
-              }`,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+                }`,
             }}
           >
             <Typography
@@ -723,9 +718,8 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
               p: 2,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
-              border: `1px solid ${
-                theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
-              }`,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+                }`,
             }}
           >
             <Typography
@@ -768,9 +762,8 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
               p: 2,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
-              border: `1px solid ${
-                theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
-              }`,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+                }`,
             }}
           >
             <Typography
@@ -813,9 +806,8 @@ const ConfirmExtendModal: React.FC<ConfirmExtendModalProps> = ({
             sx={{
               flex: 1,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
-              border: `1px solid ${
-                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
-              }`,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
+                }`,
               color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
               fontWeight: 600,
               "&:hover": {
@@ -916,9 +908,8 @@ const TransferModal: React.FC<TransferModalProps> = ({
         className="edit-modal"
         sx={{
           bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
-          border: `1px solid ${
-            theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
-          }`,
+          border: `1px solid ${theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+            }`,
           borderRadius: "12px",
           boxShadow:
             theme.palette.mode === "dark"
@@ -1026,9 +1017,8 @@ const TransferModal: React.FC<TransferModalProps> = ({
             onClick={onClose}
             sx={{
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
-              border: `1px solid ${
-                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
-              }`,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
+                }`,
               color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
               fontWeight: 600,
               "&:hover": {
@@ -1101,9 +1091,8 @@ const ConfirmSetDefaultModal: React.FC<ConfirmSetDefaultModalProps> = ({
         className="edit-modal"
         sx={{
           bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
-          border: `1px solid ${
-            theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
-          }`,
+          border: `1px solid ${theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+            }`,
           borderRadius: "12px",
           boxShadow:
             theme.palette.mode === "dark"
@@ -1152,9 +1141,8 @@ const ConfirmSetDefaultModal: React.FC<ConfirmSetDefaultModalProps> = ({
             sx={{
               flex: 1,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
-              border: `1px solid ${
-                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
-              }`,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
+                }`,
               color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
               fontWeight: 600,
               "&:hover": {
@@ -1302,9 +1290,8 @@ const RegistrationPaymentsModal: React.FC<RegistrationPaymentsModalProps> = ({
         className="edit-modal"
         sx={{
           bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
-          border: `1px solid ${
-            theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
-          }`,
+          border: `1px solid ${theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+            }`,
           borderRadius: "12px",
           boxShadow:
             theme.palette.mode === "dark"
@@ -1391,9 +1378,8 @@ const RegistrationPaymentsModal: React.FC<RegistrationPaymentsModalProps> = ({
                 sx={{ display: "flex", alignItems: "center", gap: 1 }}
               >
                 <img
-                  src={`https://asset-verification.nautilus.sh/icons/${
-                    option.tokenId === 390001 ? 0 : option.tokenId
-                  }.png`}
+                  src={`https://asset-verification.nautilus.sh/icons/${option.tokenId === 390001 ? 0 : option.tokenId
+                    }.png`}
                   alt={option.symbol}
                   style={{ width: 24, height: 24, borderRadius: "50%" }}
                   onError={(e) => {
@@ -1420,9 +1406,8 @@ const RegistrationPaymentsModal: React.FC<RegistrationPaymentsModalProps> = ({
             sx={{
               "& .MuiAutocomplete-paper": {
                 bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
-                border: `1px solid ${
-                  theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
-                }`,
+                border: `1px solid ${theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+                  }`,
               },
             }}
           />
@@ -1507,9 +1492,8 @@ const RegistrationPaymentsModal: React.FC<RegistrationPaymentsModalProps> = ({
             sx={{
               flex: 1,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
-              border: `1px solid ${
-                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
-              }`,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
+                }`,
               color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
               fontWeight: 600,
               "&:hover": {
@@ -1609,9 +1593,8 @@ const NodeTransferModal: React.FC<NodeTransferModalProps> = ({
         className="edit-modal"
         sx={{
           bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
-          border: `1px solid ${
-            theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
-          }`,
+          border: `1px solid ${theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+            }`,
           borderRadius: "12px",
           boxShadow:
             theme.palette.mode === "dark"
@@ -1719,9 +1702,8 @@ const NodeTransferModal: React.FC<NodeTransferModalProps> = ({
             onClick={onClose}
             sx={{
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
-              border: `1px solid ${
-                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
-              }`,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
+                }`,
               color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
               fontWeight: 600,
               "&:hover": {
@@ -1798,9 +1780,8 @@ const ConfirmTransferModal: React.FC<ConfirmTransferModalProps> = ({
         className="edit-modal"
         sx={{
           bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
-          border: `1px solid ${
-            theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
-          }`,
+          border: `1px solid ${theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+            }`,
           borderRadius: "12px",
           boxShadow:
             theme.palette.mode === "dark"
@@ -1827,9 +1808,8 @@ const ConfirmTransferModal: React.FC<ConfirmTransferModalProps> = ({
             mb: 3,
             p: 2,
             bgcolor: theme.palette.mode === "dark" ? "#374151" : "#FEF2F2",
-            border: `1px solid ${
-              theme.palette.mode === "dark" ? "#EF4444" : "#FECACA"
-            }`,
+            border: `1px solid ${theme.palette.mode === "dark" ? "#EF4444" : "#FECACA"
+              }`,
             borderRadius: "8px",
             display: "flex",
             alignItems: "center",
@@ -1856,9 +1836,8 @@ const ConfirmTransferModal: React.FC<ConfirmTransferModalProps> = ({
               p: 2,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
-              border: `1px solid ${
-                theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
-              }`,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+                }`,
             }}
           >
             <Typography
@@ -1886,9 +1865,8 @@ const ConfirmTransferModal: React.FC<ConfirmTransferModalProps> = ({
               p: 2,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
-              border: `1px solid ${
-                theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
-              }`,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+                }`,
             }}
           >
             <Typography
@@ -1918,9 +1896,8 @@ const ConfirmTransferModal: React.FC<ConfirmTransferModalProps> = ({
               p: 2,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
-              border: `1px solid ${
-                theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
-              }`,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+                }`,
             }}
           >
             <Typography
@@ -1953,9 +1930,8 @@ const ConfirmTransferModal: React.FC<ConfirmTransferModalProps> = ({
             sx={{
               flex: 1,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
-              border: `1px solid ${
-                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
-              }`,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
+                }`,
               color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
               fontWeight: 600,
               "&:hover": {
@@ -2056,9 +2032,8 @@ const MintModal: React.FC<MintModalProps> = ({
         className="edit-modal"
         sx={{
           bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
-          border: `1px solid ${
-            theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
-          }`,
+          border: `1px solid ${theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+            }`,
           borderRadius: "12px",
           boxShadow:
             theme.palette.mode === "dark"
@@ -2197,9 +2172,8 @@ const MintModal: React.FC<MintModalProps> = ({
             disabled={isPendingTx}
             sx={{
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
-              border: `1px solid ${
-                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
-              }`,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
+                }`,
               color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
               fontWeight: 600,
               "&:hover": {
@@ -2282,9 +2256,8 @@ const ConfirmClawbackModal: React.FC<ConfirmClawbackModalProps> = ({
         className="edit-modal"
         sx={{
           bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
-          border: `1px solid ${
-            theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
-          }`,
+          border: `1px solid ${theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+            }`,
           borderRadius: "12px",
           boxShadow:
             theme.palette.mode === "dark"
@@ -2331,9 +2304,8 @@ const ConfirmClawbackModal: React.FC<ConfirmClawbackModalProps> = ({
             p: 2,
             bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
             borderRadius: "8px",
-            border: `1px solid ${
-              theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
-            }`,
+            border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+              }`,
           }}
         >
           <Typography
@@ -2372,9 +2344,8 @@ const ConfirmClawbackModal: React.FC<ConfirmClawbackModalProps> = ({
             disabled={isConfirming}
             sx={{
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
-              border: `1px solid ${
-                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
-              }`,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
+                }`,
               color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
               fontWeight: 600,
               "&:hover": {
@@ -2447,9 +2418,8 @@ const ConfirmNodeClawbackModal: React.FC<ConfirmNodeClawbackModalProps> = ({
         className="edit-modal"
         sx={{
           bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
-          border: `1px solid ${
-            theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
-          }`,
+          border: `1px solid ${theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+            }`,
           borderRadius: "12px",
           boxShadow:
             theme.palette.mode === "dark"
@@ -2496,9 +2466,8 @@ const ConfirmNodeClawbackModal: React.FC<ConfirmNodeClawbackModalProps> = ({
             p: 2,
             bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
             borderRadius: "8px",
-            border: `1px solid ${
-              theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
-            }`,
+            border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+              }`,
           }}
         >
           <Typography
@@ -2537,9 +2506,8 @@ const ConfirmNodeClawbackModal: React.FC<ConfirmNodeClawbackModalProps> = ({
             disabled={isConfirming}
             sx={{
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
-              border: `1px solid ${
-                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
-              }`,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
+                }`,
               color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
               fontWeight: 600,
               "&:hover": {
@@ -3100,9 +3068,8 @@ const ConfirmNodeTransferModal: React.FC<ConfirmNodeTransferModalProps> = ({
         className="edit-modal"
         sx={{
           bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
-          border: `1px solid ${
-            theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
-          }`,
+          border: `1px solid ${theme.palette.mode === "dark" ? "#374151" : "#E5E7EB"
+            }`,
           borderRadius: "12px",
           boxShadow:
             theme.palette.mode === "dark"
@@ -3129,9 +3096,8 @@ const ConfirmNodeTransferModal: React.FC<ConfirmNodeTransferModalProps> = ({
             mb: 3,
             p: 2,
             bgcolor: theme.palette.mode === "dark" ? "#374151" : "#FEF2F2",
-            border: `1px solid ${
-              theme.palette.mode === "dark" ? "#EF4444" : "#FECACA"
-            }`,
+            border: `1px solid ${theme.palette.mode === "dark" ? "#EF4444" : "#FECACA"
+              }`,
             borderRadius: "8px",
             display: "flex",
             alignItems: "center",
@@ -3158,9 +3124,8 @@ const ConfirmNodeTransferModal: React.FC<ConfirmNodeTransferModalProps> = ({
               p: 2,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
-              border: `1px solid ${
-                theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
-              }`,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+                }`,
             }}
           >
             <Typography
@@ -3188,9 +3153,8 @@ const ConfirmNodeTransferModal: React.FC<ConfirmNodeTransferModalProps> = ({
               p: 2,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
-              border: `1px solid ${
-                theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
-              }`,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+                }`,
             }}
           >
             <Typography
@@ -3220,9 +3184,8 @@ const ConfirmNodeTransferModal: React.FC<ConfirmNodeTransferModalProps> = ({
               p: 2,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
               borderRadius: 1,
-              border: `1px solid ${
-                theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
-              }`,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#E5E7EB"
+                }`,
             }}
           >
             <Typography
@@ -3255,9 +3218,8 @@ const ConfirmNodeTransferModal: React.FC<ConfirmNodeTransferModalProps> = ({
             sx={{
               flex: 1,
               bgcolor: theme.palette.mode === "dark" ? "#374151" : "#F9FAFB",
-              border: `1px solid ${
-                theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
-              }`,
+              border: `1px solid ${theme.palette.mode === "dark" ? "#4B5563" : "#D1D5DB"
+                }`,
               color: theme.palette.mode === "dark" ? "#F9FAFB" : "#374151",
               fontWeight: 600,
               "&:hover": {
@@ -3901,18 +3863,18 @@ const SubnameProgressModal: React.FC<SubnameProgressModalProps> = ({
                     index < currentStep
                       ? "#10B981"
                       : index === currentStep
-                      ? theme.palette.mode === "dark"
-                        ? "#3B82F6"
-                        : "#3B82F6"
-                      : theme.palette.mode === "dark"
-                      ? "#374151"
-                      : "#E5E7EB",
+                        ? theme.palette.mode === "dark"
+                          ? "#3B82F6"
+                          : "#3B82F6"
+                        : theme.palette.mode === "dark"
+                          ? "#374151"
+                          : "#E5E7EB",
                   color:
                     index <= currentStep
                       ? "#FFFFFF"
                       : theme.palette.mode === "dark"
-                      ? "#6B7280"
-                      : "#9CA3AF",
+                        ? "#6B7280"
+                        : "#9CA3AF",
                 }}
               >
                 {index < currentStep ? <CheckCircleIcon /> : step.icon}
@@ -4214,7 +4176,7 @@ const ProfilePage: React.FC = () => {
       }
       if (
         parentSubnameRegistrar?.subname_registrar ===
-          name.split(".").slice(1).join(".") &&
+        name.split(".").slice(1).join(".") &&
         !isNaN(Number(parentSubnameRegistrar?.contract))
       ) {
         const parentAppId = Number(parentSubnameRegistrar?.contract);
@@ -4837,8 +4799,7 @@ const ProfilePage: React.FC = () => {
       const pageBytes = Buffer.byteLength(bioPages[i], "utf8");
       if (pageBytes > 256) {
         setBioError(
-          `Bio page ${
-            i + 1
+          `Bio page ${i + 1
           } must be 256 bytes or less (currently ${pageBytes} bytes)`
         );
         return false;
@@ -5086,9 +5047,8 @@ const ProfilePage: React.FC = () => {
           return (
             <Tooltip
               key={date}
-              title={`${dayName}, ${monthName} ${dayNumber}, ${year}: ${count} contribution${
-                count !== 1 ? "s" : ""
-              }`}
+              title={`${dayName}, ${monthName} ${dayNumber}, ${year}: ${count} contribution${count !== 1 ? "s" : ""
+                }`}
               arrow
               placement="top"
             >
@@ -5816,7 +5776,7 @@ const ProfilePage: React.FC = () => {
     setIsConfirmExtendModalOpen(true);
   };
 
-  const {} = useNameRegistration({
+  const { } = useNameRegistration({
     initialName: name,
     initialDuration: parseInt(selectedDuration),
   });
@@ -7281,63 +7241,63 @@ const ProfilePage: React.FC = () => {
             {name?.charAt(0).toUpperCase()}
           </Avatar>
           <h1 className="profile-name">{display || name}</h1>
-          {(isOwner || isController) && (
-            <div
-              style={{
-                position: "absolute",
-                right: "1rem",
-                top: "1rem",
-                display: "flex",
-                gap: "0.5rem",
-              }}
-            >
-              {false && isController && nodeOwner === zeroAddress && (
-                <Button
-                  variant="contained"
-                  onClick={() => setIsMintModalOpen(true)}
-                  sx={{
+          <div
+            style={{
+              position: "absolute",
+              right: "1rem",
+              top: "1rem",
+              display: "flex",
+              gap: "0.5rem",
+            }}
+          >
+            {nodeOwner === activeAccount?.address && (
+              <Button
+                variant="contained"
+                onClick={handleExtend}
+                sx={{
+                  bgcolor:
+                    theme.palette.mode === "dark" ? "#374151" : "white",
+                  color:
+                    theme.palette.mode === "dark" ? "#F9FAFB" : "#8B5CF6",
+                  "&:hover": {
                     bgcolor:
-                      theme.palette.mode === "dark" ? "#374151" : "white",
-                    color:
-                      theme.palette.mode === "dark" ? "#F9FAFB" : "#10B981",
-                    "&:hover": {
-                      bgcolor:
-                        theme.palette.mode === "dark" ? "#4B5563" : "#F0FDF4",
-                    },
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    padding: "0.5rem 1rem",
-                    borderRadius: "0.5rem",
-                    fontWeight: "600",
-                    fontSize: "0.875rem",
-                    boxShadow:
-                      theme.palette.mode === "dark"
-                        ? "0 2px 4px rgba(0, 0, 0, 0.3)"
-                        : "0 2px 4px rgba(0, 0, 0, 0.1)",
-                    border:
-                      theme.palette.mode === "dark"
-                        ? "1px solid #4B5563"
-                        : "none",
-                  }}
-                >
-                  Mint
-                  <PlusIcon />
-                </Button>
-              )}
+                      theme.palette.mode === "dark" ? "#4B5563" : "#F5F3FF",
+                  },
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.5rem 1rem",
+                  borderRadius: "0.5rem",
+                  fontWeight: "600",
+                  fontSize: "0.875rem",
+                  boxShadow:
+                    theme.palette.mode === "dark"
+                      ? "0 2px 4px rgba(0, 0, 0, 0.3)"
+                      : "0 2px 4px rgba(0, 0, 0, 0.1)",
+                  border:
+                    theme.palette.mode === "dark"
+                      ? "1px solid #4B5563"
+                      : "none",
+                }}
+              >
+                Extend
+                <FastForwardIcon />
+              </Button>
+            )}
+            {(isOwner || isController) && (
               <>
-                {isOwner && (
+                {false && isController && nodeOwner === zeroAddress && (
                   <Button
                     variant="contained"
-                    onClick={handleExtend}
+                    onClick={() => setIsMintModalOpen(true)}
                     sx={{
                       bgcolor:
                         theme.palette.mode === "dark" ? "#374151" : "white",
                       color:
-                        theme.palette.mode === "dark" ? "#F9FAFB" : "#8B5CF6",
+                        theme.palette.mode === "dark" ? "#F9FAFB" : "#10B981",
                       "&:hover": {
                         bgcolor:
-                          theme.palette.mode === "dark" ? "#4B5563" : "#F5F3FF",
+                          theme.palette.mode === "dark" ? "#4B5563" : "#F0FDF4",
                       },
                       display: "flex",
                       alignItems: "center",
@@ -7356,8 +7316,8 @@ const ProfilePage: React.FC = () => {
                           : "none",
                     }}
                   >
-                    Extend
-                    <FastForwardIcon />
+                    Mint
+                    <PlusIcon />
                   </Button>
                 )}
                 {!subnameRegistrar && (
@@ -7395,8 +7355,8 @@ const ProfilePage: React.FC = () => {
                   </Button>
                 )}
               </>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
@@ -8314,8 +8274,8 @@ const ProfilePage: React.FC = () => {
                   >
                     {algosdk.getApplicationAddress(parentAppId)
                       ? `${algosdk
-                          .getApplicationAddress(parentAppId)
-                          .slice(0, 6)}...${algosdk
+                        .getApplicationAddress(parentAppId)
+                        .slice(0, 6)}...${algosdk
                           .getApplicationAddress(parentAppId)
                           .slice(-4)}`
                       : "Loading..."}
@@ -8598,100 +8558,100 @@ const ProfilePage: React.FC = () => {
 
             {(subnameRegistrarContractVersion !== null ||
               subnameRegistrarDeploymentVersion !== null) && (
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color:
-                      theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
-                  }}
-                >
-                  Version
-                </Typography>
                 <div
                   style={{
                     display: "flex",
+                    justifyContent: "space-between",
                     alignItems: "center",
-                    gap: "0.5rem",
                   }}
                 >
                   <Typography
                     variant="body2"
                     sx={{
-                      fontFamily: "monospace",
                       color:
-                        theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                        theme.palette.mode === "dark" ? "#D1D5DB" : "#6B7280",
                     }}
                   >
-                    {subnameRegistrarContractVersion !== undefined &&
-                    subnameRegistrarDeploymentVersion !== undefined
-                      ? `${subnameRegistrarContractVersion}.${subnameRegistrarDeploymentVersion}`
-                      : "Loading..."}
+                    Version
                   </Typography>
-                  {subnameRegistrarContractVersion !== null &&
-                    subnameRegistrarDeploymentVersion !== null &&
-                    subnameRegistrarContractVersion <=
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontFamily: "monospace",
+                        color:
+                          theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                      }}
+                    >
+                      {subnameRegistrarContractVersion !== undefined &&
+                        subnameRegistrarDeploymentVersion !== undefined
+                        ? `${subnameRegistrarContractVersion}.${subnameRegistrarDeploymentVersion}`
+                        : "Loading..."}
+                    </Typography>
+                    {subnameRegistrarContractVersion !== null &&
+                      subnameRegistrarDeploymentVersion !== null &&
+                      subnameRegistrarContractVersion <=
                       currentVNSRegistrarContractVersion &&
-                    subnameRegistrarDeploymentVersion <
+                      subnameRegistrarDeploymentVersion <
                       currentVNSRegistrarDeploymentVersion && (
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={handleUpdate}
-                        disabled={isPendingTx || !subnameRegistrar?.contract}
-                        sx={{
-                          minWidth: "auto",
-                          padding: "2px 6px",
-                          fontSize: "0.75rem",
-                          height: "24px",
-                          bgcolor:
-                            theme.palette.mode === "dark" ? "#374151" : "white",
-                          color:
-                            theme.palette.mode === "dark"
-                              ? "#F9FAFB"
-                              : "#3B82F6",
-                          borderColor:
-                            theme.palette.mode === "dark"
-                              ? "#4B5563"
-                              : "#D1D5DB",
-                          "&:hover": {
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={handleUpdate}
+                          disabled={isPendingTx || !subnameRegistrar?.contract}
+                          sx={{
+                            minWidth: "auto",
+                            padding: "2px 6px",
+                            fontSize: "0.75rem",
+                            height: "24px",
                             bgcolor:
-                              theme.palette.mode === "dark"
-                                ? "#4B5563"
-                                : "#EBF4FF",
-                            borderColor:
-                              theme.palette.mode === "dark"
-                                ? "#6B7280"
-                                : "#3B82F6",
-                          },
-                          "&:disabled": {
-                            bgcolor:
-                              theme.palette.mode === "dark"
-                                ? "#1F2937"
-                                : "#F3F4F6",
+                              theme.palette.mode === "dark" ? "#374151" : "white",
                             color:
                               theme.palette.mode === "dark"
-                                ? "#6B7280"
-                                : "#9CA3AF",
+                                ? "#F9FAFB"
+                                : "#3B82F6",
                             borderColor:
                               theme.palette.mode === "dark"
-                                ? "#374151"
-                                : "#E5E7EB",
-                          },
-                        }}
-                      >
-                        {isPendingTx ? "..." : "Update"}
-                      </Button>
-                    )}
+                                ? "#4B5563"
+                                : "#D1D5DB",
+                            "&:hover": {
+                              bgcolor:
+                                theme.palette.mode === "dark"
+                                  ? "#4B5563"
+                                  : "#EBF4FF",
+                              borderColor:
+                                theme.palette.mode === "dark"
+                                  ? "#6B7280"
+                                  : "#3B82F6",
+                            },
+                            "&:disabled": {
+                              bgcolor:
+                                theme.palette.mode === "dark"
+                                  ? "#1F2937"
+                                  : "#F3F4F6",
+                              color:
+                                theme.palette.mode === "dark"
+                                  ? "#6B7280"
+                                  : "#9CA3AF",
+                              borderColor:
+                                theme.palette.mode === "dark"
+                                  ? "#374151"
+                                  : "#E5E7EB",
+                            },
+                          }}
+                        >
+                          {isPendingTx ? "..." : "Update"}
+                        </Button>
+                      )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
           </div>
         </div>
 
@@ -8699,140 +8659,140 @@ const ProfilePage: React.FC = () => {
         {(shouldShowClawback ||
           (isOwner && name && name.split(".").length < 3) ||
           (isOwner && name)) && (
-          <div
-            style={{
-              backgroundColor:
-                theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
-              borderRadius: "12px",
-              padding: "1.5rem",
-              marginBottom: "1rem",
-              boxShadow:
-                theme.palette.mode === "dark"
-                  ? "0 4px 6px -1px rgba(0, 0, 0, 0.3)"
-                  : "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-              border:
-                theme.palette.mode === "dark"
-                  ? "1px solid #374151"
-                  : "1px solid #E5E7EB",
-            }}
-          >
-            <Typography
-              variant="h6"
-              sx={{
-                color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+            <div
+              style={{
+                backgroundColor:
+                  theme.palette.mode === "dark" ? "#1F2937" : "#FFFFFF",
+                borderRadius: "12px",
+                padding: "1.5rem",
                 marginBottom: "1rem",
-                fontWeight: 600,
+                boxShadow:
+                  theme.palette.mode === "dark"
+                    ? "0 4px 6px -1px rgba(0, 0, 0, 0.3)"
+                    : "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                border:
+                  theme.palette.mode === "dark"
+                    ? "1px solid #374151"
+                    : "1px solid #E5E7EB",
               }}
             >
-              Admin Actions
-            </Typography>
+              <Typography
+                variant="h6"
+                sx={{
+                  color: theme.palette.mode === "dark" ? "#F9FAFB" : "#111827",
+                  marginBottom: "1rem",
+                  fontWeight: 600,
+                }}
+              >
+                Admin Actions
+              </Typography>
 
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
-              {shouldShowClawback && (
-                <Button
-                  variant="contained"
-                  onClick={handleClawback}
-                  sx={{
-                    bgcolor:
-                      theme.palette.mode === "dark" ? "#374151" : "white",
-                    color:
-                      theme.palette.mode === "dark" ? "#F9FAFB" : "#F59E0B",
-                    "&:hover": {
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
+                {shouldShowClawback && (
+                  <Button
+                    variant="contained"
+                    onClick={handleClawback}
+                    sx={{
                       bgcolor:
-                        theme.palette.mode === "dark" ? "#4B5563" : "#FFFBEB",
-                    },
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    padding: "0.5rem 1rem",
-                    borderRadius: "0.5rem",
-                    fontWeight: "600",
-                    fontSize: "0.875rem",
-                    boxShadow:
-                      theme.palette.mode === "dark"
-                        ? "0 2px 4px rgba(0, 0, 0, 0.3)"
-                        : "0 2px 4px rgba(0, 0, 0, 0.1)",
-                    border:
-                      theme.palette.mode === "dark"
-                        ? "1px solid #4B5563"
-                        : "none",
-                  }}
-                >
-                  Clawback
-                  <UndoIcon size={16} />
-                </Button>
-              )}
-              {isOwner && name && name.split(".").length < 3 && (
-                <Button
-                  variant="contained"
-                  onClick={handleCreateSubname}
-                  sx={{
-                    bgcolor:
-                      theme.palette.mode === "dark" ? "#374151" : "white",
-                    color:
-                      theme.palette.mode === "dark" ? "#F9FAFB" : "#10B981",
-                    "&:hover": {
+                        theme.palette.mode === "dark" ? "#374151" : "white",
+                      color:
+                        theme.palette.mode === "dark" ? "#F9FAFB" : "#F59E0B",
+                      "&:hover": {
+                        bgcolor:
+                          theme.palette.mode === "dark" ? "#4B5563" : "#FFFBEB",
+                      },
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      padding: "0.5rem 1rem",
+                      borderRadius: "0.5rem",
+                      fontWeight: "600",
+                      fontSize: "0.875rem",
+                      boxShadow:
+                        theme.palette.mode === "dark"
+                          ? "0 2px 4px rgba(0, 0, 0, 0.3)"
+                          : "0 2px 4px rgba(0, 0, 0, 0.1)",
+                      border:
+                        theme.palette.mode === "dark"
+                          ? "1px solid #4B5563"
+                          : "none",
+                    }}
+                  >
+                    Clawback
+                    <UndoIcon size={16} />
+                  </Button>
+                )}
+                {isOwner && name && name.split(".").length < 3 && (
+                  <Button
+                    variant="contained"
+                    onClick={handleCreateSubname}
+                    sx={{
                       bgcolor:
-                        theme.palette.mode === "dark" ? "#4B5563" : "#F0FDF4",
-                    },
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    padding: "0.5rem 1rem",
-                    borderRadius: "0.5rem",
-                    fontWeight: "600",
-                    fontSize: "0.875rem",
-                    boxShadow:
-                      theme.palette.mode === "dark"
-                        ? "0 2px 4px rgba(0, 0, 0, 0.3)"
-                        : "0 2px 4px rgba(0, 0, 0, 0.1)",
-                    border:
-                      theme.palette.mode === "dark"
-                        ? "1px solid #4B5563"
-                        : "none",
-                  }}
-                >
-                  New Subname
-                  <PlusIcon size={16} />
-                </Button>
-              )}
-              {isOwner && name && (
-                <Button
-                  variant="contained"
-                  onClick={() => setIsRegistrationPaymentsModalOpen(true)}
-                  sx={{
-                    bgcolor:
-                      theme.palette.mode === "dark" ? "#374151" : "white",
-                    color:
-                      theme.palette.mode === "dark" ? "#F9FAFB" : "#8B5CF6",
-                    "&:hover": {
+                        theme.palette.mode === "dark" ? "#374151" : "white",
+                      color:
+                        theme.palette.mode === "dark" ? "#F9FAFB" : "#10B981",
+                      "&:hover": {
+                        bgcolor:
+                          theme.palette.mode === "dark" ? "#4B5563" : "#F0FDF4",
+                      },
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      padding: "0.5rem 1rem",
+                      borderRadius: "0.5rem",
+                      fontWeight: "600",
+                      fontSize: "0.875rem",
+                      boxShadow:
+                        theme.palette.mode === "dark"
+                          ? "0 2px 4px rgba(0, 0, 0, 0.3)"
+                          : "0 2px 4px rgba(0, 0, 0, 0.1)",
+                      border:
+                        theme.palette.mode === "dark"
+                          ? "1px solid #4B5563"
+                          : "none",
+                    }}
+                  >
+                    New Subname
+                    <PlusIcon size={16} />
+                  </Button>
+                )}
+                {isOwner && name && (
+                  <Button
+                    variant="contained"
+                    onClick={() => setIsRegistrationPaymentsModalOpen(true)}
+                    sx={{
                       bgcolor:
-                        theme.palette.mode === "dark" ? "#4B5563" : "#F3F4F6",
-                    },
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    padding: "0.5rem 1rem",
-                    borderRadius: "0.5rem",
-                    fontWeight: "600",
-                    fontSize: "0.875rem",
-                    boxShadow:
-                      theme.palette.mode === "dark"
-                        ? "0 2px 4px rgba(0, 0, 0, 0.3)"
-                        : "0 2px 4px rgba(0, 0, 0, 0.1)",
-                    border:
-                      theme.palette.mode === "dark"
-                        ? "1px solid #4B5563"
-                        : "none",
-                  }}
-                >
-                  Set Payments
-                  <PaymentIcon sx={{ fontSize: 16 }} />
-                </Button>
-              )}
+                        theme.palette.mode === "dark" ? "#374151" : "white",
+                      color:
+                        theme.palette.mode === "dark" ? "#F9FAFB" : "#8B5CF6",
+                      "&:hover": {
+                        bgcolor:
+                          theme.palette.mode === "dark" ? "#4B5563" : "#F3F4F6",
+                      },
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      padding: "0.5rem 1rem",
+                      borderRadius: "0.5rem",
+                      fontWeight: "600",
+                      fontSize: "0.875rem",
+                      boxShadow:
+                        theme.palette.mode === "dark"
+                          ? "0 2px 4px rgba(0, 0, 0, 0.3)"
+                          : "0 2px 4px rgba(0, 0, 0, 0.1)",
+                      border:
+                        theme.palette.mode === "dark"
+                          ? "1px solid #4B5563"
+                          : "none",
+                    }}
+                  >
+                    Set Payments
+                    <PaymentIcon sx={{ fontSize: 16 }} />
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Owner Controls Section - Only visible to owner */}
         {isOwner && (
@@ -9031,10 +8991,10 @@ const ProfilePage: React.FC = () => {
                     setNewTwitter(
                       e.target.value.includes("/")
                         ? e.target.value
-                            .replace(/\/+$/, "")
-                            .split("/")
-                            .pop()
-                            ?.trim() || ""
+                          .replace(/\/+$/, "")
+                          .split("/")
+                          .pop()
+                          ?.trim() || ""
                         : e.target.value.replace(/^@/, "").trim()
                     )
                   }
@@ -9319,11 +9279,10 @@ const ProfilePage: React.FC = () => {
                   {`${(newBio || "").length} characters, ${Buffer.byteLength(
                     newBio || "",
                     "utf8"
-                  )} bytes${
-                    newBioPages.length > 1
+                  )} bytes${newBioPages.length > 1
                       ? ` (${newBioPages.length} pages)`
                       : ""
-                  }`}
+                    }`}
                 </Typography>
               </div>
             )}
@@ -9755,18 +9714,17 @@ const ProfilePage: React.FC = () => {
                 const metadata: NFTMetadata = JSON.parse(nft.metadata);
                 const imageUrl = metadata?.image?.startsWith("ipfs://")
                   ? `https://ipfs.io/ipfs/${metadata?.image?.replace(
-                      "ipfs://",
-                      ""
-                    )}`
+                    "ipfs://",
+                    ""
+                  )}`
                   : metadata.image;
                 return (
                   <div
                     key={`nft-${nft.contractId}-${nft.tokenId}`}
-                    className={`nft-item ${
-                      selectedNftId === `nft-${nft.contractId}-${nft.tokenId}`
+                    className={`nft-item ${selectedNftId === `nft-${nft.contractId}-${nft.tokenId}`
                         ? "selected"
                         : ""
-                    }`}
+                      }`}
                     onClick={() => handleNftSelect(nft)}
                   >
                     <img src={imageUrl} alt={metadata.name} />
